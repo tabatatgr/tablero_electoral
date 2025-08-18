@@ -718,6 +718,61 @@
             { year: 2024, model: 'plan-c', index: 3.9, color: '#0055a5' }
         ];
 
+        // Generate scatter plot
+        function generateScatterPlot() {
+            const chart = document.getElementById('scatter-chart');
+            const grid = document.getElementById('chart-grid');
+
+            // Clear existing points and grid
+            const existingPoints = chart.querySelectorAll('.scatter-point');
+            const existingGrid = grid.querySelectorAll('.grid-line');
+            existingPoints.forEach(point => point.remove());
+            existingGrid.forEach(line => line.remove());
+
+            // Chart dimensions
+            const chartRect = chart.getBoundingClientRect();
+            const plotWidth = chartRect.width - 80; // Account for margins
+            const plotHeight = chartRect.height - 80;
+
+            // Data ranges
+            const minYear = 2018;
+            const maxYear = 2024;
+            const minIndex = 2.5;
+            const maxIndex = 6.5;
+
+            // Generate grid lines
+            for (let year = minYear; year <= maxYear; year += 2) {
+                const x = ((year - minYear) / (maxYear - minYear)) * 100;
+                const gridLine = document.createElement('div');
+                gridLine.className = 'grid-line vertical';
+                gridLine.style.left = `${x}%`;
+                grid.appendChild(gridLine);
+            }
+
+            for (let index = 3; index <= 6; index += 0.5) {
+                const y = ((maxIndex - index) / (maxIndex - minIndex)) * 100;
+                const gridLine = document.createElement('div');
+                gridLine.className = 'grid-line horizontal';
+                gridLine.style.top = `${y}%`;
+                grid.appendChild(gridLine);
+            }
+
+            // Generate scatter points
+            gallagherData.forEach(data => {
+                const x = ((data.year - minYear) / (maxYear - minYear)) * 100;
+                const y = ((maxIndex - data.index) / (maxIndex - minIndex)) * 100;
+
+                const point = document.createElement('div');
+                point.className = 'scatter-point';
+                point.style.left = `calc(50px + ${x}% - 4px)`;
+                point.style.top = `calc(30px + ${y}% - 4px)`;
+                point.style.background = data.color;
+                point.title = `${data.year} - ${data.model}: ${data.index}`;
+
+                chart.appendChild(point);
+            });
+        }
+
         // Generate seat map
         function generateSeatMap(composition) {
             const grid = document.getElementById('seat-grid');
