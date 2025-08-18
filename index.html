@@ -766,51 +766,71 @@
             const chart = document.getElementById('scatter-chart');
             const grid = document.getElementById('chart-grid');
 
-            // Clear existing points and grid
+            // Clear existing points, grid, and diagonal line
             const existingPoints = chart.querySelectorAll('.scatter-point');
             const existingGrid = grid.querySelectorAll('.grid-line');
+            const existingDiagonal = chart.querySelectorAll('.diagonal-line');
             existingPoints.forEach(point => point.remove());
             existingGrid.forEach(line => line.remove());
+            existingDiagonal.forEach(line => line.remove());
 
-            // Chart dimensions
-            const chartRect = chart.getBoundingClientRect();
-            const plotWidth = chartRect.width - 80; // Account for margins
-            const plotHeight = chartRect.height - 80;
+            // Get current selections
+            const year = document.querySelector('[data-group="year"].active')?.dataset.value || '2021';
+            const model = document.querySelector('[data-group="model"].active')?.dataset.value || 'vigente';
+            const chamber = document.querySelector('[data-group="chamber"].active')?.dataset.value || 'diputados';
 
-            // Data ranges
-            const minYear = 2018;
-            const maxYear = 2024;
-            const minIndex = 2.5;
-            const maxIndex = 6.5;
+            // Get party data
+            const currentPartyData = partyData[year]?.[model]?.[chamber];
+            if (!currentPartyData) return;
+
+            // Data ranges (0-60% for better visualization)
+            const maxPercent = 60;
 
             // Generate grid lines
-            for (let year = minYear; year <= maxYear; year += 2) {
-                const x = ((year - minYear) / (maxYear - minYear)) * 100;
-                const gridLine = document.createElement('div');
-                gridLine.className = 'grid-line vertical';
-                gridLine.style.left = `${x}%`;
-                grid.appendChild(gridLine);
+            for (let percent = 0; percent <= maxPercent; percent += 10) {
+                const position = (percent / maxPercent) * 100;
+
+                // Vertical grid lines
+                const vGridLine = document.createElement('div');
+                vGridLine.className = 'grid-line vertical';
+                vGridLine.style.left = `${position}%`;
+                grid.appendChild(vGridLine);
+
+                // Horizontal grid lines
+                const hGridLine = document.createElement('div');
+                hGridLine.className = 'grid-line horizontal';
+                hGridLine.style.top = `${100 - position}%`;
+                grid.appendChild(hGridLine);
             }
 
-            for (let index = 3; index <= 6; index += 0.5) {
-                const y = ((maxIndex - index) / (maxIndex - minIndex)) * 100;
-                const gridLine = document.createElement('div');
-                gridLine.className = 'grid-line horizontal';
-                gridLine.style.top = `${y}%`;
-                grid.appendChild(gridLine);
-            }
+            // Add diagonal line for perfect proportionality
+            const diagonalLine = document.createElement('div');
+            diagonalLine.className = 'diagonal-line';
+            diagonalLine.style.position = 'absolute';
+            diagonalLine.style.left = '50px';
+            diagonalLine.style.top = '30px';
+            diagonalLine.style.width = 'calc(100% - 80px)';
+            diagonalLine.style.height = 'calc(100% - 80px)';
+            diagonalLine.style.background = 'linear-gradient(135deg, transparent 49%, #3b3f8d 49%, #3b3f8d 51%, transparent 51%)';
+            diagonalLine.style.opacity = '0.3';
+            diagonalLine.style.pointerEvents = 'none';
+            chart.appendChild(diagonalLine);
 
-            // Generate scatter points
-            gallagherData.forEach(data => {
-                const x = ((data.year - minYear) / (maxYear - minYear)) * 100;
-                const y = ((maxIndex - data.index) / (maxIndex - minIndex)) * 100;
+            // Generate scatter points for each party
+            currentPartyData.forEach(data => {
+                const x = (data.votes / maxPercent) * 100;
+                const y = 100 - (data.seats / maxPercent) * 100; // Invert Y axis
 
                 const point = document.createElement('div');
                 point.className = 'scatter-point';
-                point.style.left = `calc(50px + ${x}% - 4px)`;
-                point.style.top = `calc(30px + ${y}% - 4px)`;
+                point.style.left = `calc(50px + ${x}% - 6px)`;
+                point.style.top = `calc(30px + ${y}% - 6px)`;
                 point.style.background = data.color;
-                point.title = `${data.year} - ${data.model}: ${data.index}`;
+                point.style.width = '12px';
+                point.style.height = '12px';
+                point.style.border = '2px solid white';
+                point.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+                point.title = `${data.party}: ${data.votes}% votos, ${data.seats}% escaños`;
 
                 chart.appendChild(point);
             });
