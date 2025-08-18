@@ -728,18 +728,22 @@
             }
         };
 
-        // Gallagher Index data for scatter plot
-        const gallagherData = [
-            { year: 2018, model: 'vigente', index: 4.2, color: '#3b3f8d' },
-            { year: 2018, model: 'plan-a', index: 3.8, color: '#8b2231' },
-            { year: 2018, model: 'plan-c', index: 3.1, color: '#0055a5' },
-            { year: 2021, model: 'vigente', index: 5.0, color: '#3b3f8d' },
-            { year: 2021, model: 'plan-a', index: 4.1, color: '#8b2231' },
-            { year: 2021, model: 'plan-c', index: 3.4, color: '#0055a5' },
-            { year: 2024, model: 'vigente', index: 5.8, color: '#3b3f8d' },
-            { year: 2024, model: 'plan-a', index: 4.6, color: '#8b2231' },
-            { year: 2024, model: 'plan-c', index: 3.9, color: '#0055a5' }
-        ];
+        // Party data for scatter plot (votes vs seats percentage)
+        const partyData = {
+            2021: {
+                vigente: {
+                    diputados: [
+                        { party: 'MORENA', votes: 41.8, seats: 53.4, color: '#8b2231' },
+                        { party: 'PAN', votes: 28.2, seats: 21.2, color: '#0055a5' },
+                        { party: 'PRI', votes: 16.5, seats: 13.8, color: '#c8102e' },
+                        { party: 'PT', votes: 3.8, seats: 7.6, color: '#d52b1e' },
+                        { party: 'PVEM', votes: 3.2, seats: 2.6, color: '#43b02a' },
+                        { party: 'MC', votes: 4.1, seats: 1.0, color: '#f58025' },
+                        { party: 'PRD', votes: 2.4, seats: 0.4, color: '#ffc107' }
+                    ]
+                }
+            }
+        };
 
         // Generate scatter plot
         function generateScatterPlot() {
