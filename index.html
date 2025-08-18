@@ -694,7 +694,7 @@
                 vigente: {
                     diputados: {
                         MORENA: 267,
-                        PAN: 106, 
+                        PAN: 106,
                         PRI: 69,
                         PT: 38,
                         PVEM: 13,
@@ -704,6 +704,19 @@
                 }
             }
         };
+
+        // Gallagher Index data for scatter plot
+        const gallagherData = [
+            { year: 2018, model: 'vigente', index: 4.2, color: '#3b3f8d' },
+            { year: 2018, model: 'plan-a', index: 3.8, color: '#8b2231' },
+            { year: 2018, model: 'plan-c', index: 3.1, color: '#0055a5' },
+            { year: 2021, model: 'vigente', index: 5.0, color: '#3b3f8d' },
+            { year: 2021, model: 'plan-a', index: 4.1, color: '#8b2231' },
+            { year: 2021, model: 'plan-c', index: 3.4, color: '#0055a5' },
+            { year: 2024, model: 'vigente', index: 5.8, color: '#3b3f8d' },
+            { year: 2024, model: 'plan-a', index: 4.6, color: '#8b2231' },
+            { year: 2024, model: 'plan-c', index: 3.9, color: '#0055a5' }
+        ];
 
         // Generate seat map
         function generateSeatMap(composition) {
