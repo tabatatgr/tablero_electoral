@@ -836,9 +836,9 @@
             const diagonalLine = document.createElement('div');
             diagonalLine.className = 'diagonal-line';
             diagonalLine.style.position = 'absolute';
-            diagonalLine.style.left = '50px';
+            diagonalLine.style.left = '60px';
             diagonalLine.style.top = '30px';
-            diagonalLine.style.width = 'calc(100% - 80px)';
+            diagonalLine.style.width = 'calc(100% - 90px)';
             diagonalLine.style.height = 'calc(100% - 80px)';
             diagonalLine.style.background = 'linear-gradient(135deg, transparent 49%, #3b3f8d 49%, #3b3f8d 51%, transparent 51%)';
             diagonalLine.style.opacity = '0.3';
@@ -847,12 +847,21 @@
 
             // Generate scatter points for each party
             currentPartyData.forEach(data => {
-                const x = (data.votes / maxPercent) * 100;
-                const y = 100 - (data.seats / maxPercent) * 100; // Invert Y axis
+                // Calculate position within the chart area
+                const chartArea = chart.querySelector('.chart-grid');
+                const chartWidth = chartArea.offsetWidth;
+                const chartHeight = chartArea.offsetHeight;
+
+                // Calculate percentage position within available space
+                const xPercent = Math.min(data.votes / maxPercent, 1); // Cap at 100%
+                const yPercent = Math.min(data.seats / maxPercent, 1); // Cap at 100%
+
+                const x = xPercent * 100;
+                const y = (1 - yPercent) * 100; // Invert Y axis
 
                 const point = document.createElement('div');
                 point.className = 'scatter-point';
-                point.style.left = `calc(50px + ${x}% - 6px)`;
+                point.style.left = `calc(60px + ${x}% - 6px)`;
                 point.style.top = `calc(30px + ${y}% - 6px)`;
                 point.style.background = data.color;
                 point.style.width = '12px';
