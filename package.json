@@ -1,0 +1,15 @@
+{
+  "name": "code",
+  "version": "1.0.0",
+  "description": "Project setup",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "build": "echo 'Build script'",
+    "start": "npx serve . -p 3000"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}
