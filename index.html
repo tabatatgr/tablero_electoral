@@ -304,6 +304,136 @@
             line-height: 16px;
         }
 
+        .scatter-plot-section {
+            margin-top: 32px;
+        }
+
+        .scatter-plot-container {
+            padding: 24px;
+            background: rgba(192,194,234,0.09);
+            border-radius: 12px;
+        }
+
+        .scatter-plot-title {
+            color: #3b3f8f;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 22px;
+            margin-bottom: 20px;
+        }
+
+        .scatter-plot-chart {
+            width: 100%;
+            height: 400px;
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            border: 1px solid rgba(59,63,143,0.1);
+        }
+
+        .chart-axis {
+            position: absolute;
+            background: #3b3f8d;
+        }
+
+        .axis-x {
+            bottom: 50px;
+            left: 50px;
+            right: 30px;
+            height: 2px;
+        }
+
+        .axis-y {
+            left: 50px;
+            top: 30px;
+            bottom: 50px;
+            width: 2px;
+        }
+
+        .axis-label {
+            position: absolute;
+            color: #3b3f8d;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .axis-label.x-label {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .axis-label.y-label {
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: center;
+        }
+
+        .scatter-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .scatter-point:hover {
+            transform: scale(1.5);
+            z-index: 10;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-text {
+            color: #3b3f8d;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .chart-grid {
+            position: absolute;
+            top: 30px;
+            left: 50px;
+            right: 30px;
+            bottom: 50px;
+        }
+
+        .grid-line {
+            position: absolute;
+            background: rgba(59,63,143,0.1);
+        }
+
+        .grid-line.horizontal {
+            width: 100%;
+            height: 1px;
+        }
+
+        .grid-line.vertical {
+            height: 100%;
+            width: 1px;
+        }
+
         @media (max-width: 1200px) {
             .dashboard-container {
                 padding: 0 24px;
