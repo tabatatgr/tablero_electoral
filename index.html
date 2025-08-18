@@ -792,7 +792,7 @@
             // Data ranges (0-60% for better visualization)
             const maxPercent = 60;
 
-            // Generate grid lines
+            // Generate grid lines and axis labels
             for (let percent = 0; percent <= maxPercent; percent += 10) {
                 const position = (percent / maxPercent) * 100;
 
@@ -807,6 +807,29 @@
                 hGridLine.className = 'grid-line horizontal';
                 hGridLine.style.top = `${100 - position}%`;
                 grid.appendChild(hGridLine);
+
+                // Add axis numbers
+                if (percent > 0) {
+                    // X-axis numbers
+                    const xLabel = document.createElement('div');
+                    xLabel.style.position = 'absolute';
+                    xLabel.style.left = `calc(50px + ${position}% - 10px)`;
+                    xLabel.style.bottom = '25px';
+                    xLabel.style.fontSize = '10px';
+                    xLabel.style.color = '#3b3f8d';
+                    xLabel.textContent = `${percent}%`;
+                    chart.appendChild(xLabel);
+
+                    // Y-axis numbers
+                    const yLabel = document.createElement('div');
+                    yLabel.style.position = 'absolute';
+                    yLabel.style.left = '20px';
+                    yLabel.style.top = `calc(30px + ${100 - position}% - 8px)`;
+                    yLabel.style.fontSize = '10px';
+                    yLabel.style.color = '#3b3f8d';
+                    yLabel.textContent = `${percent}%`;
+                    chart.appendChild(yLabel);
+                }
             }
 
             // Add diagonal line for perfect proportionality
