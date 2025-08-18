@@ -840,12 +840,15 @@
             const year = document.querySelector('[data-group="year"].active')?.dataset.value || '2021';
             const model = document.querySelector('[data-group="model"].active')?.dataset.value || 'vigente';
             const chamber = document.querySelector('[data-group="chamber"].active')?.dataset.value || 'diputados';
-            
+
             // Update seat map with current data
             const currentData = seatData[year]?.[model]?.[chamber];
             if (currentData) {
                 generateSeatMap(currentData);
             }
+
+            // Generate scatter plot
+            generateScatterPlot();
         }
 
         // Initialize dashboard
