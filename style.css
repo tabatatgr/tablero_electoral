@@ -91,12 +91,13 @@ body {
   margin: 0 auto;
   padding: 48px 56px;
   position: relative;
+  padding-bottom: 0 !important;
 }
 
 .dashboard-title {
   width: 100%;
   padding: 0;
-  margin-bottom: 32px;
+  margin-bottom: 0 !important;
   flex-direction: column;
   justify-content: flex-start;
   align-items: flex-start;
@@ -227,6 +228,7 @@ body {
   align-items: center;
   gap: 32px;
   display: flex;
+  margin-bottom: 16px !important; /* Match gap to year/cámara buttons */
 }
 
 .control-group {
@@ -388,6 +390,7 @@ body {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   max-height: 5000px;
   opacity: 1;
+  margin-top: 16px !important; /* Match gap to year/cámara buttons */
 }
 
 .parameters-section.collapsed {
@@ -1349,7 +1352,7 @@ input[type="range"].form-input:active::-moz-range-thumb {
   
   .controls-row {
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
   }
   
   .control-group {
@@ -1459,10 +1462,6 @@ input[type="range"].form-input:active::-moz-range-thumb {
   }
   
   .step-title {
-    font-size: 16px;
-  }
-  
-  .parameter-title {
     font-size: 16px;
   }
   
@@ -2855,7 +2854,6 @@ input[type="range"]:active::-moz-range-thumb,
 .overrep-value-box:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(95, 114, 114, 0.4);
-  background: linear-gradient(135deg, #4A6565, #3A5555);
 }
 
 /* Threshold specific styles */
@@ -3236,4 +3234,23 @@ input[type="range"]:active::-moz-range-thumb,
   .floating-controls {
     display: none;
   }
+}
+
+/* Disabled state for threshold radio options and slider */
+.parameter-card.threshold .radio-option.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+#threshold-slider:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Disabled state for Primera Minoría slider and value */
+#input-first-minority:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+#input-first-minority-value[style*="opacity: 0.5"] {
+  opacity: 0.5;
 }

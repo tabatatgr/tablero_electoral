@@ -28,66 +28,41 @@
                         <div class="spacer"></div>
                         <div class="main-title">Herramienta de Simulación Electoral</div>
                     </div>
-                        <div class="chamber-tabs" role="tablist" aria-label="Selección de cámara">
-                            <div class="tab-button" data-state="Active" role="tab" aria-selected="false" tabindex="0">
-                                <div>Cámara de diputados</div>
-                            </div>
-                            <div class="tab-button active" data-state="Default" role="tab" aria-selected="true" tabindex="0">
-                                <div>Cámara de senadores</div>
+                    <div class="chamber-tabs" role="tablist" aria-label="Selección de cámara">
+                        <div class="tab-button" data-state="Active" role="tab" aria-selected="false" tabindex="0">
+                            <div>Cámara de diputados</div>
+                        </div>
+                        <div class="tab-button active" data-state="Default" role="tab" aria-selected="true" tabindex="0">
+                            <div>Cámara de senadores</div>
+                        </div>
+                    </div>
+                    <div class="controls-row">
+                        <div class="control-group">
+                            <div class="control-label">Año</div>
+                            <div class="control-pills" role="radiogroup" aria-label="Selección de año">
+                                <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">2018</div>
+                                <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2021</div>
+                                <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2024</div>
                             </div>
                         </div>
-                        <div class="controls-row">
-                            <div class="control-group">
-                                <div class="control-label">Año</div>
-                                <div class="control-pills" role="radiogroup" aria-label="Selección de año">
-                                    <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">2018</div>
-                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2021</div>
-                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2024</div>
-                                </div>
-                            </div>
-                            <div class="control-group right-align">
-                                <div class="control-label">Modelo</div>
-                                <div class="control-pills" role="radiogroup" aria-label="Selección de modelo">
-                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Vigente</div>
-                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan A</div>
-                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan C</div>
-                                    <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">Personalizado</div>
-                                </div>
+                        <div class="control-group right-align">
+                            <div class="control-label">Modelo</div>
+                            <div class="control-pills" role="radiogroup" aria-label="Selección de modelo">
+                                <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Vigente</div>
+                                <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan A</div>
+                                <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan C</div>
+                                <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">Personalizado</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Parameters Control Toggle -->
-        <div class="parameters-control">
-            <button class="parameters-toggle" id="parameters-toggle">
-                <span class="toggle-icon">⚙️</span>
-                <span class="toggle-text">Editar Parámetros</span>
-                <span class="toggle-arrow">▼</span>
-            </button>
-        </div>
 
         <!-- Parameters Section (Collapsible) -->
-        <div class="parameters-section" id="parameters-section">        <!-- Parameters Title -->
-        <div class="parameters-control">
-            <button class="parameters-toggle" id="parameters-toggle">
-                <span class="toggle-icon">⚙️</span>
-                <span class="toggle-text">Editar Parámetros</span>
-                <span class="toggle-arrow">▼</span>
-            </button>
-        </div>
-
-        <!-- Parameters Section - Collapsible -->
         <div class="parameters-section" id="parameters-section">
-            <div class="parameters-title">Parámetros de Simulación</div>
+            <div class="parameters-title">Parámetros</div>
     
         <!-- Step 1: Shocks de Votación -->
-        <div class="parameter-step">
-            <div class="step-number">1</div>
-            <div class="step-title">Shocks de Votación</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card shocks">
                 <div class="parameter-title-section">
@@ -125,23 +100,18 @@
                         <input type="range" class="shock-slider" id="shock-mc" min="-20" max="20" step="0.1" value="0">
                     </div>
                 </div>
-                <div class="parameter-label">Con renormalización por territorio</div>
             </div>
         </div>
 
         <!-- Step 2: Magnitud -->
-        <div class="parameter-step">
-            <div class="step-number">2</div>
-            <div class="step-title">Magnitud</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card magnitude">
                 <div class="parameter-title-section">
                     <div class="parameter-title">Total de Cámara</div>
                 </div>
                 <div class="form-group">
-                    <label class="parameter-label" for="input-magnitud">Total de escaños:</label>
-                    <input type="number" class="form-input" id="input-magnitud" min="1" max="700" step="1" value="128">
+                    <label class="parameter-label" for="input-magnitud">Total de escaños: <span id="input-magnitud-value">128</span></label>
+                    <input type="range" class="form-input" id="input-magnitud" min="1" max="700" step="1" value="128">
                 </div>
                 <div class="validation-note">
                 </div>
@@ -149,16 +119,18 @@
         </div>
 
         <!-- Step 3: Umbral -->
-        <div class="parameter-step">
-            <div class="step-number">3</div>
-            <div class="step-title">Umbral de Inclusión</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card threshold">
                 <div class="parameter-title-section">
                     <div class="parameter-title">Configuración del Umbral</div>
                 </div>
                 <div class="parameter-content">
+                    <div class="form-group">
+                        <label class="parameter-label" for="threshold-switch">¿Activar umbral?</label>
+                        <div class="control-switch" id="threshold-switch" data-switch="On" role="switch" aria-checked="true" aria-label="Activar umbral" tabindex="0">
+                            <div class="switch-slider"></div>
+                        </div>
+                    </div>
                     <div class="radio-option" data-state="On">
                         <div class="radio-button">
                             <div class="radio-dot"></div>
@@ -183,10 +155,6 @@
         </div>
 
         <!-- Step 4: Cláusula de Sobrerrepresentación -->
-        <div class="parameter-step" id="step-sobrerrepresentacion">
-            <div class="step-number">4</div>
-            <div class="step-title">Cláusula de Sobrerrepresentación (Solo Diputados)</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card overrepresentation" id="overrepresentation-card" style="display:none;">
                 <div class="parameter-title-section">
@@ -218,8 +186,8 @@
                         </div>
                     </div>
                     <div class="form-group" id="seat-cap-input-group" style="display:none; margin-top:8px;">
-                        <label class="parameter-label" for="seat-cap-input">Máximo de escaños por partido:</label>
-                        <input type="number" class="form-input" id="seat-cap-input" min="1" max="500" step="1" value="300">
+                        <label class="parameter-label" for="seat-cap-input">Máximo de escaños por partido: <span id="seat-cap-input-value">300</span></label>
+                        <input type="range" class="form-input" id="seat-cap-input" min="1" max="500" step="1" value="300">
                     </div>
                     <div class="parameter-note">Si un partido supera el tope, los escaños excedentes se redistribuyen por RP.</div>
                 </div>
@@ -227,10 +195,6 @@
         </div>
 
         <!-- Step 5: Coaliciones -->
-        <div class="parameter-step">
-            <div class="step-number">5</div>
-            <div class="step-title">Coaliciones</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card coalition">
                 <div class="parameter-title-section">
@@ -245,10 +209,6 @@
         </div>
 
         <!-- Step 6: Regla Electoral -->
-        <div class="parameter-step">
-            <div class="step-number">6</div>
-            <div class="step-title">Regla Electoral</div>
-        </div>
         <div class="parameters-grid">
             <div class="parameter-card rules">
                 <div class="parameter-title-section">
@@ -280,26 +240,44 @@
                     </div>
                     <div class="mixto-inputs" id="mixto-inputs" style="margin-top:12px;">
                         <div class="form-group">
-                            <label class="parameter-label" for="input-mr">Escaños por Mayoría Relativa:</label>
-                            <input type="number" class="form-input" id="input-mr" min="0" max="700" step="1" value="0">
+                            <label class="parameter-label" for="input-mr">Escaños por Mayoría Relativa: <span id="input-mr-value">0</span></label>
+                            <input type="range" class="form-input" id="input-mr" min="0" max="700" step="1" value="0">
                         </div>
                         <div class="form-group">
-                            <label class="parameter-label" for="input-rp">Escaños por Representación Proporcional:</label>
-                            <input type="number" class="form-input" id="input-rp" min="0" max="700" step="1" value="0">
+                            <label class="parameter-label" for="input-rp">Escaños por Representación Proporcional: <span id="input-rp-value">0</span></label>
+                            <input type="range" class="form-input" id="input-rp" min="0" max="700" step="1" value="0">
                         </div>
                         <div class="validation-message" id="mixto-validation" style="display:none; margin-top:8px; padding:8px; background:#fee; border:1px solid #fcc; border-radius:4px; color:#c33; font-size:13px;">
-                            ⚠️ La suma de escaños MR + RP debe ser igual al total de la cámara
+                             La suma de escaños debe ser igual al total de la cámara
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Step 7: Método de Reparto -->
-        <div class="parameter-step">
-            <div class="step-number">7</div>
-            <div class="step-title">Método de Reparto RP</div>
+        <!-- Step 6.1: Primera Minoría -->
+        <div class="parameters-grid">
+            <div class="parameter-card first-minority" id="first-minority-card" style="display:none;">
+                <div class="parameter-title-section">
+                    <div class="parameter-title">Primera Minoría</div>
+                </div>
+                <div class="parameter-content">
+                    <div class="form-group">
+                        <label class="parameter-label" for="first-minority-switch">¿Activar primera minoría?</label>
+                        <div class="control-switch" id="first-minority-switch" data-switch="On" role="switch" aria-checked="true" aria-label="Activar primera minoría" tabindex="0">
+                            <div class="switch-slider"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="parameter-label" for="input-first-minority">Escaños por Primera Minoría: <span id="input-first-minority-value">0</span></label>
+                        <input type="range" class="form-input" id="input-first-minority" min="0" max="700" step="1" value="0">
+                    </div>
+                </div>
+            </div>
         </div>
+
+
+        <!-- Step 7: Método de Reparto -->
         <div class="parameters-grid">
             <div class="parameter-card method">
                 <div class="parameter-title-section">
@@ -320,16 +298,6 @@
                             <option value="sainte-lague">Sainte-Laguë</option>
                         </select>
                     </div>
-                    <!-- Primera minoría (solo Senado) -->
-                    <div class="form-group" id="first-minority-group" style="display:none;">
-                        <label class="parameter-label" for="first-minority-switch">¿Asignar escaños por Primera Minoría?</label>
-                        <div class="control-switch" id="first-minority-switch" data-switch="On" role="switch" aria-checked="true" aria-label="Activar primera minoría" tabindex="0">
-                            <div class="switch-slider"></div>
-                        </div>
-                        <div class="parameter-note">Otorga un escaño adicional al partido con más votos sin ganar en cada entidad.</div>
-                    </div>
-                </div>
-            </div>
             
         </div>
         </div> <!-- End Parameters Section -->

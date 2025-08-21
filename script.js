@@ -635,6 +635,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Inicializar validación
     initializeMixtoValidation();
+
+    // Mostrar valores dinámicos de sliders numéricos
+    function bindSliderValue(sliderId, valueId) {
+        const slider = document.getElementById(sliderId);
+        const valueSpan = document.getElementById(valueId);
+        if (slider && valueSpan) {
+            valueSpan.textContent = slider.value;
+            slider.addEventListener('input', function() {
+                valueSpan.textContent = this.value;
+            });
+        }
+    }
+    bindSliderValue('input-magnitud', 'input-magnitud-value');
+    bindSliderValue('seat-cap-input', 'seat-cap-input-value');
+    bindSliderValue('input-mr', 'input-mr-value');
+    bindSliderValue('input-rp', 'input-rp-value');
+    bindSliderValue('primera-minoria-seats', 'primera-minoria-seats-value');
 });
 
 // ===== FUNCIONALIDAD MEJORADA PARA SLIDERS Y VALUE BOXES =====
@@ -964,7 +981,7 @@ function initializeMixtoValidation() {
         if (mixtoValidation) {
             if (sum !== totalValue && sum > 0) {
                 mixtoValidation.style.display = 'block';
-                mixtoValidation.innerHTML = `⚠️ La suma de escaños MR (${mrValue}) + RP (${rpValue}) = ${sum} debe ser igual al total de la cámara (${totalValue})`;
+                mixtoValidation.innerHTML = `La suma de escaños Mayoría Relativa (${mrValue}) + Representación Proporcional (${rpValue}) = ${sum} debe ser igual al total de la cámara (${totalValue})`;
                 inputMR.style.borderColor = '#DC2626';
                 inputRP.style.borderColor = '#DC2626';                } else {
                     mixtoValidation.style.display = 'none';
@@ -1095,3 +1112,77 @@ function handleFirstMinorityVisibility() {
         firstMinorityGroup.style.display = senadoresActive ? 'block' : 'none';
     }
 }
+
+// Mostrar/ocultar Primera Minoría según cámara y regla electoral
+function toggleFirstMinorityCard() {
+    const isSenado = document.querySelector('.tab-button.active')?.textContent?.toLowerCase().includes('senador');
+    let selectedRule = null;
+    document.querySelectorAll('.parameter-card.rules .radio-option').forEach(opt => {
+        if (opt.getAttribute('data-state') === 'On') {
+            selectedRule = opt.querySelector('.radio-label')?.textContent?.trim();
+        }
+    });
+    const show = isSenado && (selectedRule === 'Mixto' || selectedRule === 'Mayoría Relativa');
+    const card = document.getElementById('first-minority-card');
+    if (card) card.style.display = show ? '' : 'none';
+}
+
+// Llama a la función en los eventos relevantes
+// Al cambiar de cámara
+const tabButtons = document.querySelectorAll('.tab-button');
+tabButtons.forEach(btn => btn.addEventListener('click', toggleFirstMinorityCard));
+// Al cambiar de regla electoral
+const ruleOptions = document.querySelectorAll('.parameter-card.rules .radio-option');
+ruleOptions.forEach(opt => opt.addEventListener('click', function() {
+    setTimeout(toggleFirstMinorityCard, 50);
+}));
+// Al cargar la página
+window.addEventListener('DOMContentLoaded', toggleFirstMinorityCard);
+
+// ===== THRESHOLD SWITCH LOGIC =====
+document.addEventListener('DOMContentLoaded', function() {
+    const thresholdSwitch = document.getElementById('threshold-switch');
+    const thresholdSlider = document.getElementById('threshold-slider');
+    const thresholdValueBox = document.getElementById('threshold-value-box');
+    const thresholdRadios = document.querySelectorAll('.parameter-card.threshold .radio-option');
+
+    if (thresholdSwitch && thresholdSlider && thresholdValueBox) {
+        function setThresholdEnabled(enabled) {
+            thresholdSlider.disabled = !enabled;
+            thresholdValueBox.style.opacity = enabled ? '1' : '0.5';
+            thresholdRadios.forEach(radio => {
+                radio.classList.toggle('disabled', !enabled);
+                radio.setAttribute('tabindex', enabled ? '0' : '-1');
+            });
+        }
+        thresholdSwitch.addEventListener('click', function() {
+            const isOn = thresholdSwitch.getAttribute('data-switch') === 'On';
+            thresholdSwitch.setAttribute('data-switch', isOn ? 'Off' : 'On');
+            thresholdSwitch.setAttribute('aria-checked', isOn ? 'false' : 'true');
+            setThresholdEnabled(!isOn);
+            // Optionally, trigger recalculation
+            if (typeof triggerRecalculation === 'function') triggerRecalculation();
+        });
+        // Initialize state
+        setThresholdEnabled(true);
+    }
+
+    // ===== PRIMERA MINORÍA SWITCH LOGIC =====
+    const firstMinoritySwitch = document.getElementById('first-minority-switch');
+    const firstMinoritySlider = document.getElementById('input-first-minority');
+    const firstMinorityValue = document.getElementById('input-first-minority-value');
+    if (firstMinoritySwitch && firstMinoritySlider && firstMinorityValue) {
+        function setFirstMinorityEnabled(enabled) {
+            firstMinoritySlider.disabled = !enabled;
+            firstMinorityValue.style.opacity = enabled ? '1' : '0.5';
+        }
+        firstMinoritySwitch.addEventListener('click', function() {
+            const isOn = firstMinoritySwitch.getAttribute('data-switch') === 'On';
+            firstMinoritySwitch.setAttribute('data-switch', isOn ? 'Off' : 'On');
+            firstMinoritySwitch.setAttribute('aria-checked', isOn ? 'false' : 'true');
+            setFirstMinorityEnabled(!isOn);
+            if (typeof triggerRecalculation === 'function') triggerRecalculation();
+        });
+        setFirstMinorityEnabled(true);
+    }
+});
