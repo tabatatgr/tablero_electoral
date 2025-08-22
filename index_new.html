@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Electoral - Impacto de Reformas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="root">
+        <!-- Header -->
+        <div class="header-section">
+            <div class="header-content">
+                <div class="header-title">Reforma Electoral</div>
+            </div>
+            <div class="header-date">Fecha de corte: 18-08-2025</div>
+        </div>
+
+        <!-- Layout Container -->
+        <div class="layout-container">
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Abrir panel de control">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            
+            <!-- Control Sidebar -->
+            <div class="control-sidebar" id="control-sidebar">
+                <div class="sidebar-header">
+                    <h3 class="sidebar-title">Panel de Control</h3>
+                    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Contraer panel">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M3 7h10l-3-3m0 6l3-3"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="sidebar-content">
+                    <!-- Step 0: Configuración Maestra -->
+                    <div class="control-group master-controls" data-group="master">
+                        <button class="group-toggle" data-target="master">
+                            <span class="group-title">Configuración Base</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content" id="group-master">
+                            <div class="control-item">
+                                <label class="control-label">Cámara</label>
+                                <div class="master-toggle-group" role="tablist">
+                                    <button class="master-toggle" data-chamber="diputados" role="tab">
+                                        <span class="toggle-text">Diputados</span>
+                                        <span class="toggle-count">500</span>
+                                    </button>
+                                    <button class="master-toggle active" data-chamber="senadores" role="tab">
+                                        <span class="toggle-text">Senadores</span>
+                                        <span class="toggle-count">128</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="control-item">
+                                <label class="shock-label" for="shock-pri">PRI</label>
+                                <input type="range" class="slider" id="shock-pri" min="-20" max="20" step="0.1" value="0">
+                            </div>
+                            <div class="shock-input-group">
+                                <div class="shock-value-box" id="shock-value-pt">+0.0%</div>
+                                <label class="shock-label" for="shock-pt">PT</label>
+                                <input type="range" class="slider" id="shock-pt" min="-20" max="20" step="0.1" value="0">
+                            </div>
+                            <div class="shock-input-group">
+                                <div class="shock-value-box" id="shock-value-pvem">+0.0%</div>
+                                <label class="shock-label" for="shock-pvem">PVEM</label>
+                                <input type="range" class="slider" id="shock-pvem" min="-20" max="20" step="0.1" value="0">
+                            </div>
+                            <div class="shock-input-group">
+                                <div class="shock-value-box" id="shock-value-mc">+0.0%</div>
+                                <label class="shock-label" for="shock-mc">MC</label>
+                                <input type="range" class="slider" id="shock-mc" min="-20" max="20" step="0.1" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Magnitud -->
+                    <div class="control-group" data-group="magnitude">
+                        <button class="group-toggle" data-target="magnitude">
+                            <span class="group-title">2. Total de Cámara</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-magnitude">
+                            <div class="control-item">
+                                <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
+                                <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Umbral -->
+                    <div class="control-group" data-group="threshold">
+                        <button class="group-toggle" data-target="threshold">
+                            <span class="group-title">3. Configuración del Umbral</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-threshold">
+                            <div class="control-item">
+                                <label class="control-label">¿Activar umbral?</label>
+                                <div class="toggle-switch">
+                                    <div class="switch active" id="threshold-switch" data-switch="On" role="switch" aria-checked="true">
+                                        <div class="switch-handle"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-item">
+                                <div class="radio-group">
+                                    <div class="radio-item">
+                                        <input class="radio" type="radio" id="radio-national" name="threshold-type" value="national" checked>
+                                        <label class="radio-label" for="radio-national">Nacional (%)</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input class="radio" type="radio" id="radio-state" name="threshold-type" value="state">
+                                        <label class="radio-label" for="radio-state">Estatal (%)</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-item">
+                                <div class="threshold-controls">
+                                    <div class="threshold-value-box" id="threshold-value-box">3.0%</div>
+                                    <label class="control-label">Porcentaje mínimo:</label>
+                                    <input type="range" class="control-slider threshold-slider" id="threshold-slider" min="0" max="20" step="0.1" value="3">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Cláusula de Sobrerrepresentación -->
+                    <div class="control-group deputy-only" data-group="overrepresentation" id="overrepresentation-group" style="display:none;">
+                        <button class="group-toggle" data-target="overrepresentation">
+                            <span class="group-title">4. Límite de Sobrerrepresentación</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-overrepresentation">
+                            <div class="control-item">
+                                <div class="overrep-value-box" id="overrep-value-box">8.0%</div>
+                                <label class="control-label">Límite sobre % voto nacional:</label>
+                                <input type="range" class="control-slider overrep-slider" id="overrep-slider" min="0" max="20" step="0.1" value="8">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4.1: Tope de Escaños por Partido -->
+                    <div class="control-group deputy-only" data-group="seat-cap" id="seat-cap-group" style="display:none;">
+                        <button class="group-toggle" data-target="seat-cap">
+                            <span class="group-title">4.1. Tope de escaños por partido</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-seat-cap">
+                            <div class="control-item">
+                                <label class="control-label">¿Limitar máximo de escaños por partido?</label>
+                                <div class="toggle-switch">
+                                    <div class="switch" id="seat-cap-switch" data-switch="Off" role="switch" aria-checked="false">
+                                        <div class="switch-handle"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-item" id="seat-cap-input-group" style="display:none;">
+                                <label class="control-label">Máximo de escaños por partido: <span id="seat-cap-input-value">300</span></label>
+                                <input type="range" class="control-slider" id="seat-cap-input" min="1" max="500" step="1" value="300">
+                                <div class="parameter-note">Si un partido supera el tope, los escaños excedentes se redistribuyen por RP.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Coaliciones -->
+                    <div class="control-group" data-group="coalition">
+                        <button class="group-toggle" data-target="coalition">
+                            <span class="group-title">5. ¿Utilizar coaliciones para repartir escaños?</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-coalition">
+                            <div class="control-item">
+                                <div class="toggle-switch">
+                                    <div class="switch active" id="coalition-switch" data-switch="On" role="switch" aria-checked="true">
+                                        <div class="switch-handle"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Regla Electoral -->
+                    <div class="control-group" data-group="rules">
+                        <button class="group-toggle" data-target="rules">
+                            <span class="group-title">6. Tipo de Regla</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-rules">
+                            <div class="control-item">
+                                <div class="radio-group">
+                                    <div class="radio-item">
+                                        <input class="radio" type="radio" id="radio-mr" name="electoral-rule" value="mr">
+                                        <label class="radio-label" for="radio-mr">Mayoría Relativa</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input class="radio" type="radio" id="radio-rp" name="electoral-rule" value="rp">
+                                        <label class="radio-label" for="radio-rp">Representación Proporcional</label>
+                                    </div>
+                                    <div class="radio-item">
+                                        <input class="radio" type="radio" id="radio-mixto" name="electoral-rule" value="mixto" checked>
+                                        <label class="radio-label" for="radio-mixto">
+                                            Mixto
+                                            <div class="radio-sublabel">Mayoría Relativa + Representación Proporcional</div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-item mixto-inputs" id="mixto-inputs">
+                                <div class="dual-slider">
+                                    <div class="slider-group">
+                                        <label class="slider-label">MR <span id="input-mr-value">64</span></label>
+                                        <input type="range" class="control-slider" id="input-mr" min="0" max="700" step="1" value="64">
+                                    </div>
+                                    <div class="slider-group">
+                                        <label class="slider-label">RP <span id="input-rp-value">64</span></label>
+                                        <input type="range" class="control-slider" id="input-rp" min="0" max="700" step="1" value="64">
+                                    </div>
+                                </div>
+                                <div class="validation-message hidden" id="mixto-validation">
+                                    ⚠️ La suma de escaños debe ser igual al total de la cámara
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6.1: Primera Minoría -->
+                    <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:none;">
+                        <button class="group-toggle" data-target="first-minority">
+                            <span class="group-title">6.1. Primera Minoría</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-first-minority">
+                            <div class="control-item">
+                                <label class="control-label">¿Activar primera minoría?</label>
+                                <div class="toggle-switch">
+                                    <div class="switch active" id="first-minority-switch" data-switch="On" role="switch" aria-checked="true">
+                                        <div class="switch-handle"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-item">
+                                <label class="control-label">Escaños por Primera Minoría: <span id="input-first-minority-value">0</span></label>
+                                <input type="range" class="control-slider" id="input-first-minority" min="0" max="700" step="1" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 7: Método de Reparto -->
+                    <div class="control-group" data-group="method">
+                        <button class="group-toggle" data-target="method">
+                            <span class="group-title">7. Método de Asignación</span>
+                            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                            </svg>
+                        </button>
+                        <div class="group-content expanded" id="group-method">
+                            <div class="control-item">
+                                <label class="control-label">Cociente + restos:</label>
+                                <select class="control-select" id="quota-method">
+                                    <option value="hare" selected>Hare</option>
+                                    <option value="droop">Droop</option>
+                                </select>
+                            </div>
+                            <div class="control-item">
+                                <label class="control-label">Divisores:</label>
+                                <select class="control-select" id="divisor-method">
+                                    <option value="dhondt" selected>D'Hondt</option>
+                                    <option value="sainte-lague">Sainte-Laguë</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Sidebar Overlay -->
+            <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Dashboard Header -->
+                <div class="dashboard-title">
+                    <div class="title-content">
+                        <div class="title-header">
+                            <div class="spacer"></div>
+                            <div class="main-title">Herramienta de Simulación Electoral</div>
+                        </div>
+                        <div class="chamber-tabs" role="tablist" aria-label="Selección de cámara">
+                            <div class="tab-button" data-state="Active" role="tab" aria-selected="false" tabindex="0">
+                                <div>Cámara de diputados</div>
+                            </div>
+                            <div class="tab-button active" data-state="Default" role="tab" aria-selected="true" tabindex="0">
+                                <div>Cámara de senadores</div>
+                            </div>
+                        </div>
+                        <div class="controls-row">
+                            <div class="control-group">
+                                <div class="control-label">Año</div>
+                                <div class="control-pills" role="radiogroup" aria-label="Selección de año">
+                                    <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">2018</div>
+                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2021</div>
+                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">2024</div>
+                                </div>
+                            </div>
+                            <div class="control-group right-align">
+                                <div class="control-label">Modelo</div>
+                                <div class="control-pills" role="radiogroup" aria-label="Selección de modelo">
+                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Vigente</div>
+                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan A</div>
+                                    <div class="pill-button" role="radio" aria-checked="false" tabindex="0">Plan C</div>
+                                    <div class="pill-button active" role="radio" aria-checked="true" tabindex="0">Personalizado</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chamber Composition -->
+                <div class="chamber-composition">
+                    <div class="composition-title">Composición de la Cámara de Senadores</div>
+                    <div class="composition-container">
+                        <div class="composition-content">
+                            <div class="seat-map" role="img" aria-label="Distribución de escaños en la Cámara de Senadores">
+                                <div class="seat-grid">
+                                    <!-- Las filas se generarán dinámicamente con JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <div class="results-panel">
+                                <div class="results-title">Resultados por partido</div>
+                                <div class="party-results">
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #8B2231;"></div>
+                                        <div class="party-name">MORENA</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">69 escaños</div>
+                                            <div class="party-percentage">53.9%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #0055A5;"></div>
+                                        <div class="party-name">PAN</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">22 escaños</div>
+                                            <div class="party-percentage">17.2%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #0D7137;"></div>
+                                        <div class="party-name">PRI</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">16 escaños</div>
+                                            <div class="party-percentage">12.5%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #D52B1E;"></div>
+                                        <div class="party-name">PT</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">8 escaños</div>
+                                            <div class="party-percentage">6.3%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #5CE23D;"></div>
+                                        <div class="party-name">PVEM</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">6 escaños</div>
+                                            <div class="party-percentage">4.7%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #F58025;"></div>
+                                        <div class="party-name">MC</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">4 escaños</div>
+                                            <div class="party-percentage">3.1%</div>
+                                        </div>
+                                    </div>
+                                    <div class="party-result">
+                                        <div class="party-color" style="background: #FFCC00;"></div>
+                                        <div class="party-name">PRD</div>
+                                        <div class="party-stats">
+                                            <div class="party-seats">3 escaños</div>
+                                            <div class="party-percentage">2.3%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Indicators -->
+                <div class="key-indicators">
+                    <div class="indicators-header">
+                        <div class="indicators-title">Indicadores</div>
+                        <div class="indicators-grid">
+                            <div class="indicator-card total-seats">
+                                <div class="indicator-header single">
+                                    <div class="indicator-title">Total de escaños por partido</div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value">128</div>
+                                </div>
+                                <div class="indicator-change">Senadores</div>
+                            </div>
+                            
+                            <div class="indicator-card votes-vs-seats">
+                                <div class="indicator-header">
+                                    <div class="indicator-title">% votos vs % escaños</div>
+                                    <div class="info-icon">
+                                        <div class="info-dot"></div>
+                                        <div class="info-dot"></div>
+                                        <div class="info-dot"></div>
+                                    </div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value">±2.1%</div>
+                                </div>
+                                <div class="indicator-change">Diferencia promedio</div>
+                            </div>
+
+                            <div class="indicator-card gallagher-index">
+                                <div class="indicator-header">
+                                    <div class="indicator-title">Índice de Gallagher</div>
+                                    <div class="info-icon">
+                                        <div class="info-dot"></div>
+                                        <div class="info-dot"></div>
+                                        <div class="info-dot"></div>
+                                    </div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value large">5.2</div>
+                                </div>
+                                <div class="indicator-change small">Global y por cámara</div>
+                            </div>
+
+                            <div class="indicator-card total-votes">
+                                <div class="indicator-header single">
+                                    <div class="indicator-title">Totales del Sistema</div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value">60.1M</div>
+                                </div>
+                                <div class="indicator-change">Votos totales</div>
+                            </div>
+
+                            <div class="indicator-card thresholds">
+                                <div class="indicator-header single">
+                                    <div class="indicator-title">Umbral de inclusión</div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value">3%</div>
+                                </div>
+                                <div class="indicator-change">Nacional aplicado</div>
+                            </div>
+
+                            <div class="indicator-card representation-threshold">
+                                <div class="indicator-header single">
+                                    <div class="indicator-title">Umbral de representación</div>
+                                </div>
+                                <div class="indicator-value-section">
+                                    <div class="indicator-value">8pp</div>
+                                </div>
+                                <div class="indicator-change">Cláusula aplicada</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- End layout-container -->
+    </div>
+</body>
+</html>

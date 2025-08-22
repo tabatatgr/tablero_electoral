@@ -1,0 +1,27 @@
+.header-section {
+  width: 100%;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 32px 0 32px;
+}
+.header-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0F2027;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+.header-date {
+  font-size: 14px;
+  color: #6B7280;
+  padding: 0 32px 18px 32px;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  font-weight: 500;
+}
