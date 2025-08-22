@@ -1,0 +1,81 @@
+/* SeatChart component styles */
+.seat-chart-container {
+  display: flex;
+  align-items: center; /* Centers content vertically */
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 16px 0;
+  width: 100%;
+  min-height: 340px; /* Adjusted for larger SVG */
+  gap: 16px; /* Reduced gap between chart and legend */
+}
+
+.seat-chart-svg {
+  flex: 2.5; /* Give more space to the seat chart */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 340px; /* Adjusted for larger SVG */
+  background: transparent;
+}
+
+.seat-chart-legend {
+  flex: 0 0 200px; /* Fixed width for legend, takes less space */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 16px; /* Reduced spacing between chart and legend */
+  gap: 8px; /* Reduced gap between legend items */
+  max-width: 200px;
+}
+
+.legend-title {
+  font-weight: 600;
+  font-size: 0.95rem; /* Slightly smaller title */
+  margin-bottom: 6px; /* Reduced margin */
+  color: #374151;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px; /* Reduced margin between items */
+  gap: 8px; /* Reduced gap between elements */
+  font-size: 14px; /* Slightly smaller font */
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  flex-wrap: wrap; /* Allow wrapping if needed */
+}
+
+.legend-color {
+  width: 14px; /* Slightly smaller color circle */
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 6px; /* Reduced margin */
+  display: inline-block;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.legend-label {
+  min-width: 50px; /* Reduced min-width */
+  font-weight: 500;
+  color: #374151;
+  letter-spacing: -0.01em;
+  flex: 1; /* Take available space */
+  line-height: 1.2; /* Better line height for wrapping */
+}
+
+.legend-seats, .legend-percent {
+  color: #6B7280;
+  font-size: 12px; /* Smaller font for numbers */
+  margin-left: 4px; /* Reduced margin */
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap; /* Prevent wrapping of numbers */
+}
