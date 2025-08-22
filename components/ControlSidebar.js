@@ -66,32 +66,32 @@ class ControlSidebar extends HTMLElement {
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-morena">+0.0%</div>
                     <label class="shock-label" for="shock-morena">MORENA</label>
-                    <input type="range" class="shock-slider" id="shock-morena" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-morena" min="-20" max="20" step="0.1" value="0">
                   </div>
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-pan">+0.0%</div>
                     <label class="shock-label" for="shock-pan">PAN</label>
-                    <input type="range" class="shock-slider" id="shock-pan" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-pan" min="-20" max="20" step="0.1" value="0">
                   </div>
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-pri">+0.0%</div>
                     <label class="shock-label" for="shock-pri">PRI</label>
-                    <input type="range" class="shock-slider" id="shock-pri" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-pri" min="-20" max="20" step="0.1" value="0">
                   </div>
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-pt">+0.0%</div>
                     <label class="shock-label" for="shock-pt">PT</label>
-                    <input type="range" class="shock-slider" id="shock-pt" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-pt" min="-20" max="20" step="0.1" value="0">
                   </div>
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-pvem">+0.0%</div>
                     <label class="shock-label" for="shock-pvem">PVEM</label>
-                    <input type="range" class="shock-slider" id="shock-pvem" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-pvem" min="-20" max="20" step="0.1" value="0">
                   </div>
                   <div class="shock-input-group">
                     <div class="shock-value-box" id="shock-value-mc">+0.0%</div>
                     <label class="shock-label" for="shock-mc">MC</label>
-                    <input type="range" class="shock-slider" id="shock-mc" min="-20" max="20" step="0.1" value="0">
+                    <input type="range" class="control-slider" id="shock-mc" min="-20" max="20" step="0.1" value="0">
                   </div>
                 </div>
               </div>
@@ -130,20 +130,14 @@ class ControlSidebar extends HTMLElement {
                 </div>
               </div>
               <div class="control-item">
-                <div class="radio-options">
-                  <div class="radio-option" data-state="On" id="radio-national">
-                    <div class="radio-button">
-                      <div class="radio-dot"></div>
-                    </div>
-                    <div class="radio-text">
-                      <div class="radio-label">Nacional (%)</div>
-                    </div>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input class="radio" type="radio" id="radio-national" name="threshold-type" value="national" checked>
+                    <label class="radio-label" for="radio-national">Nacional (%)</label>
                   </div>
-                  <div class="radio-option" data-state="Off" id="radio-state">
-                    <div class="radio-button"></div>
-                    <div class="radio-text">
-                      <div class="radio-label">Estatal (%)</div>
-                    </div>
+                  <div class="radio-item">
+                    <input class="radio" type="radio" id="radio-state" name="threshold-type" value="state">
+                    <label class="radio-label" for="radio-state">Estatal (%)</label>
                   </div>
                 </div>
               </div>
@@ -224,38 +218,32 @@ class ControlSidebar extends HTMLElement {
             </button>
             <div class="group-content expanded" id="group-rules">
               <div class="control-item">
-                <div class="radio-options">
-                  <div class="radio-option" data-state="Off" id="radio-mr">
-                    <div class="radio-button"></div>
-                    <div class="radio-text">
-                      <div class="radio-label">Mayoría Relativa</div>
-                    </div>
+                <div class="radio-group">
+                  <div class="radio-item">
+                    <input class="radio" type="radio" id="radio-mr" name="electoral-rule" value="mr">
+                    <label class="radio-label" for="radio-mr">Mayoría Relativa</label>
                   </div>
-                  <div class="radio-option" data-state="Off" id="radio-rp">
-                    <div class="radio-button"></div>
-                    <div class="radio-text">
-                      <div class="radio-label">Representación Proporcional</div>
-                    </div>
+                  <div class="radio-item">
+                    <input class="radio" type="radio" id="radio-rp" name="electoral-rule" value="rp">
+                    <label class="radio-label" for="radio-rp">Representación Proporcional</label>
                   </div>
-                  <div class="radio-option" data-state="On" id="radio-mixto">
-                    <div class="radio-button">
-                      <div class="radio-dot"></div>
-                    </div>
-                    <div class="radio-text">
-                      <div class="radio-label">Mixto</div>
+                  <div class="radio-item">
+                    <input class="radio" type="radio" id="radio-mixto" name="electoral-rule" value="mixto" checked>
+                    <label class="radio-label" for="radio-mixto">
+                      Mixto
                       <div class="radio-sublabel">Mayoría Relativa + Representación Proporcional</div>
-                    </div>
+                    </label>
                   </div>
                 </div>
               </div>
               <div class="control-item mixto-inputs" id="mixto-inputs">
                 <div class="dual-slider">
                   <div class="slider-group">
-                    <label class="slider-label">MR <span id="input-mr-value">64</span></label>
+                    <label class="slider-label">Mayoría Relativa <span id="input-mr-value">64</span></label>
                     <input type="range" class="control-slider" id="input-mr" min="0" max="700" step="1" value="64">
                   </div>
                   <div class="slider-group">
-                    <label class="slider-label">RP <span id="input-rp-value">64</span></label>
+                    <label class="slider-label">Representación Proporcional <span id="input-rp-value">64</span></label>
                     <input type="range" class="control-slider" id="input-rp" min="0" max="700" step="1" value="64">
                   </div>
                 </div>
@@ -375,7 +363,7 @@ class ControlSidebar extends HTMLElement {
       });
     });
     // Sliders (shocks, magnitude, threshold, MR/RP, etc.)
-    const shockSliders = this.querySelectorAll('.shock-slider');
+    const shockSliders = this.querySelectorAll('.control-slider[id^="shock-"]');
     shockSliders.forEach(slider => {
       slider.addEventListener('input', function() {
         const partyName = this.id.replace('shock-', '');
@@ -409,6 +397,35 @@ class ControlSidebar extends HTMLElement {
       });
       thresholdValueBox.textContent = `${thresholdSlider.value}%`;
     }
+
+    // Overrepresentation slider
+    const overrepSlider = this.querySelector('#overrep-slider');
+    const overrepValueBox = this.querySelector('#overrep-value-box');
+    if (overrepSlider && overrepValueBox) {
+      overrepSlider.addEventListener('input', function() {
+        overrepValueBox.textContent = `${this.value}%`;
+      });
+      overrepValueBox.textContent = `${overrepSlider.value}%`;
+    }
+
+    // MR/RP sliders
+    const mrSlider = this.querySelector('#input-mr');
+    const mrValue = this.querySelector('#input-mr-value');
+    if (mrSlider && mrValue) {
+      mrSlider.addEventListener('input', function() {
+        mrValue.textContent = this.value;
+      });
+      mrValue.textContent = mrSlider.value;
+    }
+
+    const rpSlider = this.querySelector('#input-rp');
+    const rpValue = this.querySelector('#input-rp-value');
+    if (rpSlider && rpValue) {
+      rpSlider.addEventListener('input', function() {
+        rpValue.textContent = this.value;
+      });
+      rpValue.textContent = rpSlider.value;
+    }
     // Toggles (switches)
     const switches = this.querySelectorAll('.control-switch, .switch');
     switches.forEach(switchEl => {
@@ -418,20 +435,24 @@ class ControlSidebar extends HTMLElement {
         switchEl.dataset.switch = isActive ? 'On' : 'Off';
       });
     });
-    // Radio buttons
-    const radioOptions = this.querySelectorAll('.radio-option');
-    radioOptions.forEach(option => {
-      option.addEventListener('click', function() {
-        const group = option.parentElement;
-        if (!group) return;
-        group.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
-        option.classList.add('selected');
-        // Add dot if not present
-        if (!option.querySelector('.radio-dot')) {
-          const dot = document.createElement('div');
-          dot.className = 'radio-dot';
-          option.appendChild(dot);
-        }
+    // Radio buttons - native implementation
+    const radioGroups = ['threshold-type', 'electoral-rule'];
+    radioGroups.forEach(groupName => {
+      const radios = this.querySelectorAll(`input[name="${groupName}"]`);
+      radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+          if (this.checked) {
+            console.log(`📻 ${groupName} selected: ${this.value}`);
+            
+            // Handle specific logic for electoral rule changes
+            if (groupName === 'electoral-rule') {
+              const mixtoInputs = document.getElementById('mixto-inputs');
+              if (mixtoInputs) {
+                mixtoInputs.style.display = this.value === 'mixto' ? 'block' : 'none';
+              }
+            }
+          }
+        });
       });
     });
     // Add more control initializations as needed...
@@ -439,3 +460,66 @@ class ControlSidebar extends HTMLElement {
 }
 
 customElements.define('control-sidebar', ControlSidebar);
+
+function createControlSidebar() {
+  const sidebar = document.createElement('div');
+  sidebar.className = 'control-sidebar';
+
+  const sliderField = document.createElement('div');
+  sliderField.className = 'slider-field';
+
+  const label = document.createElement('label');
+  label.htmlFor = 'umbral';
+  label.className = 'slider-label';
+  label.textContent = 'Umbral (%)';
+
+  const input = document.createElement('input');
+  input.id = 'umbral';
+  input.className = 'slider';
+  input.type = 'range';
+  input.min = '0';
+  input.max = '100';
+  input.defaultValue = '30';
+  input.step = '1';
+
+  const valueChip = document.createElement('div');
+  valueChip.className = 'slider-value';
+  valueChip.dataset.for = 'umbral';
+  valueChip.textContent = '30%';
+
+  sliderField.appendChild(label);
+  sliderField.appendChild(input);
+  sliderField.appendChild(valueChip);
+  sidebar.appendChild(sliderField);
+
+  function setFill(input) {
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const val = Number(input.value || 0);
+    const pct = ((val - min) * 100) / (max - min);
+    input.style.setProperty('--fill', pct + '%');
+
+    const chip = sliderField.querySelector(`.slider-value[data-for="${input.id}"]`);
+    if (chip) {
+      chip.textContent = `${val}%`;
+    }
+  }
+
+  input.addEventListener('input', () => setFill(input));
+  input.addEventListener('change', () => setFill(input));
+
+  // Initialize the slider fill on load
+  setFill(input);
+
+  return sidebar;
+}
+
+if (!customElements.get('control-sidebar')) {
+  class ControlSidebarElement extends HTMLElement {
+    connectedCallback() {
+      const sidebar = createControlSidebar();
+      this.appendChild(sidebar);
+    }
+  }
+  customElements.define('control-sidebar', ControlSidebarElement);
+}

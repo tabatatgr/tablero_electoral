@@ -193,72 +193,43 @@ function updateKPIIndicators(chamber) {
 }
 
 // ===== SLIDERS =====
-function initializeSliders() {
-    console.log('🔧 Initializing sliders...');
-    
-    // Shock sliders
-    const shockSliders = document.querySelectorAll('.shock-slider');
-    console.log(`Found ${shockSliders.length} shock sliders`);
-    
-    shockSliders.forEach(slider => {
-        slider.addEventListener('input', function() {
-            const partyName = this.id.replace('shock-', '');
-            const valueBox = document.getElementById(`shock-value-${partyName}`);
-            if (valueBox) {
-                const value = parseFloat(this.value);
-                valueBox.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
-                console.log(`🎚️ Shock slider updated: ${partyName} = ${value}%`);
-            }
-        });
-        
-        // Initialize display value
-        const partyName = slider.id.replace('shock-', '');
-        const valueBox = document.getElementById(`shock-value-${partyName}`);
+function initializeSliderComponent(sliderClass, valueSuffix) {
+    const sliders = document.querySelectorAll(sliderClass);
+    console.log(`Found ${sliders.length} sliders for class: ${sliderClass}`);
+
+    sliders.forEach(slider => {
+        const valueBox = document.getElementById(`${slider.id}${valueSuffix}`);
         if (valueBox) {
+            // Set initial value
             const value = parseFloat(slider.value);
             valueBox.textContent = `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+
+            // Add event listener
+            slider.addEventListener('input', function() {
+                const updatedValue = parseFloat(this.value);
+                valueBox.textContent = `${updatedValue >= 0 ? '+' : ''}${updatedValue.toFixed(1)}%`;
+                console.log(`🎚️ Slider updated: ${slider.id} = ${updatedValue}%`);
+            });
         }
     });
-    
-    // Magnitude slider
-    const magnitudSlider = document.getElementById('input-magnitud');
-    const magnitudValue = document.getElementById('input-magnitud-value');
-    if (magnitudSlider && magnitudValue) {
-        magnitudSlider.addEventListener('input', function() {
-            magnitudValue.textContent = this.value;
-            console.log(`🎚️ Magnitude updated: ${this.value}`);
-        });
-    }
-    
-    // Threshold slider
-    const thresholdSlider = document.getElementById('threshold-slider');
-    const thresholdValueBox = document.getElementById('threshold-value-box');
-    if (thresholdSlider && thresholdValueBox) {
-        thresholdSlider.addEventListener('input', function() {
-            thresholdValueBox.textContent = `${this.value}%`;
-            console.log(`🎚️ Threshold updated: ${this.value}%`);
-        });
-    }
-    
-    // MR/RP sliders
-    bindSlider('input-mr', 'input-mr-value');
-    bindSlider('input-rp', 'input-rp-value');
-    bindSlider('input-first-minority', 'input-first-minority-value');
 }
 
-function bindSlider(sliderId, valueId) {
-    const slider = document.getElementById(sliderId);
-    const valueSpan = document.getElementById(valueId);
-    if (slider && valueSpan) {
-        // Set initial value
-        valueSpan.textContent = slider.value;
-        
-        // Add event listener
-        slider.addEventListener('input', function() {
-            valueSpan.textContent = this.value;
-            console.log(`🎚️ Slider ${sliderId} updated: ${this.value}`);
-        });
-    }
+function initializeSliders() {
+    console.log('🔧 Initializing all sliders...');
+
+    // Initialize shock sliders
+    initializeSliderComponent('.shock-slider', '-value');
+
+    // Initialize magnitude slider
+    initializeSliderComponent('#input-magnitud', '-value');
+
+    // Initialize threshold slider
+    initializeSliderComponent('#threshold-slider', '-value-box');
+
+    // Initialize MR/RP sliders
+    initializeSliderComponent('#input-mr', '-value');
+    initializeSliderComponent('#input-rp', '-value');
+    initializeSliderComponent('#input-first-minority', '-value');
 }
 
 // ===== TOGGLE SWITCHES =====
@@ -289,43 +260,38 @@ function initializeToggles() {
 
 // ===== RADIO BUTTONS =====
 function initializeRadioButtons() {
-    console.log('🔧 Initializing radio buttons...');
+    console.log('🔧 Initializing native radio buttons...');
     
-    const radioOptions = document.querySelectorAll('.radio-option');
-    console.log(`Found ${radioOptions.length} radio options`);
-    
-    radioOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            // Find the parent container to group radio buttons
-            const parentGroup = this.closest('.radio-options');
-            if (!parentGroup) return;
-            
-            const radioLabel = this.querySelector('.radio-label')?.textContent || 'unknown';
-            console.log(`📻 Radio selected: ${radioLabel}`);
-            
-            // Deselect all radio options in this group
-            const allOptions = parentGroup.querySelectorAll('.radio-option');
-            allOptions.forEach(opt => {
-                opt.setAttribute('data-state', 'Off');
-                const button = opt.querySelector('.radio-button');
-                const existingDot = button.querySelector('.radio-dot');
-                if (existingDot) {
-                    existingDot.remove();
-                }
-            });
-            
-            // Select the clicked option
-            this.setAttribute('data-state', 'On');
-            const button = this.querySelector('.radio-button');
-            
-            // Add dot if it doesn't exist
-            if (!button.querySelector('.radio-dot')) {
-                const dot = document.createElement('div');
-                dot.className = 'radio-dot';
-                button.appendChild(dot);
+    // Handle threshold type change
+    const thresholdRadios = document.querySelectorAll('input[name="threshold-type"]');
+    thresholdRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                console.log(`📻 Threshold type selected: ${this.value}`);
+                // Add any specific logic for threshold type change
             }
         });
     });
+    
+    // Handle electoral rule change
+    const ruleRadios = document.querySelectorAll('input[name="electoral-rule"]');
+    ruleRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                console.log(`📻 Electoral rule selected: ${this.value}`);
+                
+                // Show/hide mixto inputs based on selection
+                const mixtoInputs = document.getElementById('mixto-inputs');
+                if (mixtoInputs) {
+                    mixtoInputs.style.display = this.value === 'mixto' ? 'block' : 'none';
+                }
+                
+                // Add any other rule-specific logic here
+            }
+        });
+    });
+    
+    console.log(`✅ Radio buttons initialized successfully`);
 }
 
 // ===== SIDEBAR FUNCTIONALITY =====
@@ -399,23 +365,19 @@ function initializeEnhancedSidebar() {
 }
 
 // ===== UTILITY FUNCTIONS =====
-function handleRadioSelection(radioGroup, selectedOption) {
-    // Deselect all options in the group
-    radioGroup.forEach(option => {
-        option.setAttribute('data-state', 'Off');
-        const button = option.querySelector('.radio-button');
-        const dot = button.querySelector('.radio-dot');
-        if (dot) dot.remove();
-    });
-    
-    // Select the clicked option
-    selectedOption.setAttribute('data-state', 'On');
-    const button = selectedOption.querySelector('.radio-button');
-    if (!button.querySelector('.radio-dot')) {
-        const dot = document.createElement('div');
-        dot.className = 'radio-dot';
-        button.appendChild(dot);
+function handleRadioSelection(radioName, selectedValue) {
+    // For native radio buttons, we just need to set the checked state
+    const selectedRadio = document.querySelector(`input[name="${radioName}"][value="${selectedValue}"]`);
+    if (selectedRadio) {
+        selectedRadio.checked = true;
+        // Trigger change event for any listeners
+        selectedRadio.dispatchEvent(new Event('change', { bubbles: true }));
     }
+}
+
+function getSelectedRadioValue(radioName) {
+    const selectedRadio = document.querySelector(`input[name="${radioName}"]:checked`);
+    return selectedRadio ? selectedRadio.value : null;
 }
 
 console.log('📜 Electoral Dashboard script loaded');

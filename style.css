@@ -13,6 +13,9 @@
   /* Terciarios */
   --Green-600: #002F2A;
   --Green-500: #1E5B4F;
+
+  --g-600: #1E5B4F; /* Verde fuerte */
+  --focus-ring: rgba(30, 91, 79, 0.3);
 }
 
 * {
@@ -52,11 +55,11 @@ body {
 /* Layout Container */
 .layout-container {
   display: flex;
-  flex-direction: row; /* Aligns content horizontally */
+  flex-direction: row; 
   width: 100%;
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
   align-items: flex-start;
-  gap: 32px; /* Adds spacing between control panel and content */
+  gap: 32px; 
 }

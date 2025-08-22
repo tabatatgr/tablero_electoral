@@ -17,9 +17,9 @@ function initializeAllFunctionality() {
     try {
         // Only initialize global dashboard logic, not sidebar controls
         // If you have other global initializations, keep them here
-        console.log('✅ Dashboard initialized successfully!');
+        console.log('Dashboard initialized successfully!');
     } catch (error) {
-        console.error('❌ Error during initialization:', error);
+        console.error('Error during initialization:', error);
     }
 }
 
@@ -33,13 +33,13 @@ function initializeEnhancedSidebar() {
     const sidebarToggle = document.getElementById('sidebar-toggle');
     
     if (!mobileMenuBtn || !sidebar || !overlay) {
-        console.warn('❌ Missing sidebar elements');
+        console.warn('Missing sidebar elements');
         return;
     }
     
     // Mobile menu functionality
     mobileMenuBtn.addEventListener('click', function() {
-        console.log('📱 Mobile menu opened');
+        console.log('Mobile menu opened');
         sidebar.classList.add('open');
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -114,3 +114,28 @@ function handleRadioSelection(radioGroup, selectedOption) {
 }
 
 console.log('📜 Electoral Dashboard script loaded');
+
+(function(){
+  function setFill(input){
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const val = Number(input.value || 0);
+    const pct = ((val - min) * 100) / (max - min);
+    // Update CSS variable for WebKit
+    input.style.setProperty('--fill', pct + '%');
+
+    // Update value chip if it exists
+    const chip = document.querySelector('.slider-value[data-for="' + input.id + '"]');
+    if(chip){ chip.textContent = val + '%'; }
+  }
+
+  function initSlider(input){
+    setFill(input);
+    input.addEventListener('input', () => setFill(input));
+    input.addEventListener('change', () => setFill(input));
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.slider').forEach(initSlider);
+  });
+})();
