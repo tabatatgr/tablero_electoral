@@ -57,8 +57,7 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
 
 /* Grupos de control modernos */
 .control-group {
-  margin-left: 24px; /* Aligns with KPI start */
-  margin-right: 24px; /* Aligns with KPI end */
+  width: 100%;
   margin-bottom: 24px;
   background: #FFFFFF;
   border-radius: 12px;
@@ -133,7 +132,7 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: #0F2027; /* Dark green for visibility */
   margin-bottom: 10px;
   font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
   line-height: 20px;
@@ -567,4 +566,14 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
 .deputy-only.active {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Updated layout for horizontal alignment */
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 32px; /* Shared padding for KPIs and white box */
 }

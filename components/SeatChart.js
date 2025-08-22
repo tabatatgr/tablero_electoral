@@ -61,7 +61,7 @@ class SeatChart extends HTMLElement {
       </div>
     `).join('');
     this.innerHTML = `
-      <div class="seat-chart-container" style="transform: translateY(-2px);">
+      <div class="seat-chart-container" style="transform: translateY(-4px);">
         <div class="seat-chart-svg">
           <svg width="420" height="320" viewBox="0 0 420 320" aria-label="Distribución de escaños">
             ${seatElements.join('')}

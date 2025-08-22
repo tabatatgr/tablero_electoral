@@ -9,13 +9,13 @@ class ControlSidebar extends HTMLElement {
     this.innerHTML = `
       <aside class="control-sidebar">
         <div class="sidebar-header">
-          <h3 class="sidebar-title">Panel de Control</h3>
+          <h3 class="sidebar-title">Panel de control</h3>
         </div>
         <div class="sidebar-content">
           <!-- Step 0: Configuración Maestra -->
           <div class="control-group master-controls" data-group="master">
             <button class="group-toggle" data-target="master">
-              <span class="group-title">Configuración Base</span>
+              <span class="group-title">Configuración básica</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -33,6 +33,22 @@ class ControlSidebar extends HTMLElement {
                     <span class="toggle-count">128</span>
                   </button>
                 </div>
+              </div>
+              <div class="control-item">
+                <label class="control-label">Año</label>
+                <select class="control-select" id="year-select">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+              </div>
+              <div class="control-item">
+                <label class="control-label">Modelo</label>
+                <select class="control-select" id="model-select">
+                  <option value="plan-a">Plan A</option>
+                  <option value="plan-b">Plan B</option>
+                  <option value="custom">Personalizado</option>
+                </select>
               </div>
             </div>
           </div>
