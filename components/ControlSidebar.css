@@ -587,14 +587,37 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
   margin-top: 16px;
 }
 
-/* Deputy Only Groups */
-.deputy-only {
-  opacity: 0.6;
+/* Chamber-specific groups */
+.chamber-specific {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.chamber-specific[style*="display: none"] {
+  opacity: 0;
+  transform: translateY(-10px);
   pointer-events: none;
 }
 
-.deputy-only.active {
+.chamber-specific[style*="display: block"] {
   opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Legacy deputy-only classes for backwards compatibility */
+.deputy-only {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.deputy-only[style*="display: none"] {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.deputy-only[style*="display: block"] {
+  opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
 }
 
