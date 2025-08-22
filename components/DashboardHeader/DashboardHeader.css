@@ -1,0 +1,22 @@
+.header-section {
+  width: 100%;
+  background: #fff;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 0;
+}
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 32px 0 32px;
+}
+.header-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1E5B4F;
+}
+.header-date {
+  font-size: 14px;
+  color: #767676;
+  padding: 0 32px 16px 32px;
+}
