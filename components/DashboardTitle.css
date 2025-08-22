@@ -9,6 +9,7 @@
   box-shadow: none;
   padding: 0px 24px 14px 24px; /* Original padding */
   margin: 32px 0 24px 0; /* Original margins */
+  gap: 24px; /* Adds spacing between title, KPIs, and seat chart */
 }
 .dashboard-title-text {
   font-size: 2.2rem;
