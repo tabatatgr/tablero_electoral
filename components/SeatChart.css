@@ -1,0 +1,79 @@
+/* SeatChart component styles */
+.seat-chart-container {
+  display: flex;
+  align-items: center; /* Centers content vertically */
+  justify-content: space-between; /* Aligns seat chart to the left and legend to the right */
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 16px 0;
+  width: 100%;
+  min-height: 320px;
+  gap: 32px;
+}
+
+.seat-chart-svg {
+  flex: 1; /* Takes available space on the left */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 320px;
+  background: transparent;
+  margin-bottom: 16px;
+}
+
+.seat-chart-legend {
+  flex: 1; /* Takes available space on the right */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: 20px; /* Adds spacing between chart and legend */
+  gap: 12px;
+  padding: 16px 0 0 0;
+  min-width: 180px;
+}
+
+.legend-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: #374151;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 10px;
+  font-size: 15px;
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.legend-label {
+  min-width: 60px;
+  font-weight: 500;
+  color: #374151;
+  letter-spacing: -0.01em;
+}
+
+.legend-seats, .legend-percent {
+  color: #6B7280;
+  font-size: 13px;
+  margin-left: 6px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}

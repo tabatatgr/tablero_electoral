@@ -11,9 +11,13 @@
     <link rel="stylesheet" href="components/IndicadorBox/IndicadorBox.css">
     <link rel="stylesheet" href="components/DashboardHeader/DashboardHeader.css">
     <link rel="stylesheet" href="components/ControlSidebar.css">
-    <script type="module" src="components/IndicadorBox/IndicadorBox.js"></script>
+    <link rel="stylesheet" href="components/DashboardTitle.css">
+    <link rel="stylesheet" href="components/SeatChart.css">
+    <script type="module" src="components/IndicadorBox/index.js"></script>
     <script type="module" src="components/DashboardHeader/DashboardHeader.js"></script>
     <script type="module" src="components/ControlSidebar.js"></script>
+    <script type="module" src="components/DashboardTitle.js"></script>
+    <script type="module" src="components/SeatChart.js"></script>
     <script src="script.js"></script>
 </head>
 <body>
@@ -21,91 +25,18 @@
         <dashboard-header></dashboard-header>
         <div class="layout-container">
             <control-sidebar id="control-sidebar"></control-sidebar>
-            <div class="indicadores-resumen">
-                <indicador-box etiqueta="Total de escaños" valor="128" cantidad="128"></indicador-box>
-                <indicador-box etiqueta="% votos vs % escaños" valor="±2.1%" porcentaje="±2.1%"></indicador-box>
-                <indicador-box etiqueta="Índice de Gallagher" valor="5.2" cantidad="5.2"></indicador-box>
-                <indicador-box etiqueta="Totales del Sistema" valor="60.1M" cantidad="60.1M"></indicador-box>
-                <indicador-box etiqueta="Umbral de inclusión" valor="3%" cantidad="3%"></indicador-box>
-                <indicador-box etiqueta="Umbral de representación" valor="8pp" cantidad="8pp"></indicador-box>
-            </div>
+            <dashboard-title>
+                <div class="indicadores-resumen">
+                    <indicador-box etiqueta="Total de escaños" valor="128"></indicador-box>
+                    <indicador-box etiqueta="% votos vs % escaños" valor="±2.1%"></indicador-box>
+                    <indicador-box etiqueta="Índice de Gallagher" valor="5.2"></indicador-box>
+                    <indicador-box etiqueta="Totales del Sistema" valor="60.1M"></indicador-box>
+                    <indicador-box etiqueta="Umbral de representación" valor="8pp"></indicador-box>
+                </div>
+                <seat-chart></seat-chart>
+            </dashboard-title>
             <!-- Main Content Area -->
             <div class="main-content">
-                <!-- Chamber Composition -->
-                <div class="chamber-composition">
-                    <div class="composition-title">Composición de la Cámara de Senadores</div>
-                    <div class="composition-container">
-                        <div class="composition-content">
-                            <div class="seat-map" role="img" aria-label="Distribución de escaños en la Cámara de Senadores">
-                                <div class="seat-grid">
-                                    <!-- Las filas se generarán dinámicamente con JavaScript -->
-                                </div>
-                            </div>
-                            
-                            <div class="results-panel">
-                                <div class="results-title">Resultados por partido</div>
-                                <div class="party-results">
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #8B2231;"></div>
-                                        <div class="party-name">MORENA</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">69 escaños</div>
-                                            <div class="party-percentage">53.9%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #0055A5;"></div>
-                                        <div class="party-name">PAN</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">22 escaños</div>
-                                            <div class="party-percentage">17.2%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #0D7137;"></div>
-                                        <div class="party-name">PRI</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">16 escaños</div>
-                                            <div class="party-percentage">12.5%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #D52B1E;"></div>
-                                        <div class="party-name">PT</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">8 escaños</div>
-                                            <div class="party-percentage">6.3%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #5CE23D;"></div>
-                                        <div class="party-name">PVEM</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">6 escaños</div>
-                                            <div class="party-percentage">4.7%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #F58025;"></div>
-                                        <div class="party-name">MC</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">4 escaños</div>
-                                            <div class="party-percentage">3.1%</div>
-                                        </div>
-                                    </div>
-                                    <div class="party-result">
-                                        <div class="party-color" style="background: #FFCC00;"></div>
-                                        <div class="party-name">PRD</div>
-                                        <div class="party-stats">
-                                            <div class="party-seats">3 escaños</div>
-                                            <div class="party-percentage">2.3%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div> <!-- End layout-container -->
     </div>

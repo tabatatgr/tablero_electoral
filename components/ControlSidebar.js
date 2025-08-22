@@ -84,7 +84,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 2: Magnitud -->
           <div class="control-group" data-group="magnitude">
             <button class="group-toggle" data-target="magnitude">
-              <span class="group-title">2. Total de Cámara</span>
+              <span class="group-title">Magnitud de la cámara</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -99,7 +99,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 3: Umbral -->
           <div class="control-group" data-group="threshold">
             <button class="group-toggle" data-target="threshold">
-              <span class="group-title">3. Configuración del Umbral</span>
+              <span class="group-title">Configuración del umbral</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -143,7 +143,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 4: Cláusula de Sobrerrepresentación -->
           <div class="control-group deputy-only" data-group="overrepresentation" id="overrepresentation-group" style="display:none;">
             <button class="group-toggle" data-target="overrepresentation">
-              <span class="group-title">4. Límite de Sobrerrepresentación</span>
+              <span class="group-title">4. Límite de sobrerrepresentación</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -159,7 +159,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 4.1: Tope de Escaños por Partido -->
           <div class="control-group deputy-only" data-group="seat-cap" id="seat-cap-group" style="display:none;">
             <button class="group-toggle" data-target="seat-cap">
-              <span class="group-title">4.1. Tope de escaños por partido</span>
+              <span class="group-title">Tope de escaños por partido</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -183,7 +183,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 5: Coaliciones -->
           <div class="control-group" data-group="coalition">
             <button class="group-toggle" data-target="coalition">
-              <span class="group-title">5. ¿Utilizar coaliciones para repartir escaños?</span>
+              <span class="group-title"> Coaliciones</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -201,7 +201,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 6: Regla Electoral -->
           <div class="control-group" data-group="rules">
             <button class="group-toggle" data-target="rules">
-              <span class="group-title">6. Tipo de Regla</span>
+              <span class="group-title">Tipo de regla electoral</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -244,7 +244,7 @@ class ControlSidebar extends HTMLElement {
                   </div>
                 </div>
                 <div class="validation-message hidden" id="mixto-validation">
-                  ⚠️ La suma de escaños debe ser igual al total de la cámara
+                  La suma de escaños debe ser igual al total de la cámara
                 </div>
               </div>
             </div>
@@ -252,7 +252,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 6.1: Primera Minoría -->
           <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:none;">
             <button class="group-toggle" data-target="first-minority">
-              <span class="group-title">6.1. Primera Minoría</span>
+              <span class="group-title">Primera Minoría</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>
@@ -275,7 +275,7 @@ class ControlSidebar extends HTMLElement {
           <!-- Step 7: Método de Reparto -->
           <div class="control-group" data-group="method">
             <button class="group-toggle" data-target="method">
-              <span class="group-title">7. Método de Asignación</span>
+              <span class="group-title">Método de reparto</span>
               <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                 <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
               </svg>

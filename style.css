@@ -22,15 +22,17 @@
 }
 
 body {
-  font-family: 'Noto Sans', sans-serif;
-  background-color: var(--Neutro-200);
-  color: var(--Neutro-800);
+  font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  background-color: #F8FAFC;
+  color: #0F2027;
   line-height: 1.5;
   min-height: 100vh;
   overflow-x: auto;
   height: 100vh;
   min-height: 100vh;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .root {
@@ -38,7 +40,7 @@ body {
   max-width: 1440px;
   margin: 0 auto;
   position: relative;
-  background: var(--Neutro-200);
+  background: #F8FAFC;
   display: flex;
   flex-direction: column;
   height: 100vh;
