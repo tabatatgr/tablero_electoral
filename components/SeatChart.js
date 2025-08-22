@@ -44,8 +44,8 @@ class SeatChart extends HTMLElement {
       const radius = 90 + row * (seatRadius * 2 + seatGap);
       for (let i = 0; i < seats; i++) {
         const angle = Math.PI * (1 - i / (seats - 1));
-        const x = 180 + radius * Math.cos(angle);
-        const y = 200 + radius * Math.sin(angle);
+        const x = 240 + radius * Math.cos(angle); // Centered in wider SVG (480/2 = 240)
+        const y = 150 + radius * Math.sin(angle); // Moved up more (from 170 to 150)
         const color = partySeatMap[seatIndex] || '#eee';
         seatElements.push(`<circle cx="${x}" cy="${y}" r="${seatRadius}" fill="${color}" stroke="#fff" stroke-width="2" />`);
         seatIndex++;
@@ -63,7 +63,7 @@ class SeatChart extends HTMLElement {
     this.innerHTML = `
       <div class="seat-chart-container" style="transform: translateY(-4px);">
         <div class="seat-chart-svg">
-          <svg width="420" height="320" viewBox="0 0 420 320" aria-label="Distribución de escaños">
+          <svg width="480" height="340" viewBox="0 0 480 340" aria-label="Distribución de escaños">
             ${seatElements.join('')}
           </svg>
         </div>

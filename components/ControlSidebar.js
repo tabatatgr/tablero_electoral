@@ -26,11 +26,9 @@ class ControlSidebar extends HTMLElement {
                 <div class="master-toggle-group" role="tablist">
                   <button class="master-toggle" data-chamber="diputados" role="tab">
                     <span class="toggle-text">Diputados</span>
-                    <span class="toggle-count">500</span>
                   </button>
                   <button class="master-toggle active" data-chamber="senadores" role="tab">
                     <span class="toggle-text">Senadores</span>
-                    <span class="toggle-count">128</span>
                   </button>
                 </div>
               </div>
