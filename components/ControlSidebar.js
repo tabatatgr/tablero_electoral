@@ -472,14 +472,31 @@ class ControlSidebar extends HTMLElement {
       seatCapValue.textContent = seatCapSlider.value;
     }
 
-    // Toggles (switches)
+    // Toggles (switches) - improved handling
     const switches = this.querySelectorAll('.control-switch, .switch');
     switches.forEach(switchEl => {
       switchEl.addEventListener('click', function() {
         const isActive = switchEl.classList.toggle('active');
         switchEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
         switchEl.dataset.switch = isActive ? 'On' : 'Off';
+        
+        // Handle specific switch behaviors
+        const switchId = switchEl.id;
+        console.log(`🔄 Switch ${switchId} toggled: ${isActive ? 'ON' : 'OFF'}`);
+        
+        // Seat cap switch - show/hide additional controls
+        if (switchId === 'seat-cap-switch') {
+          const inputGroup = document.getElementById('seat-cap-input-group');
+          if (inputGroup) {
+            inputGroup.style.display = isActive ? 'block' : 'none';
+          }
+        }
       });
+      
+      // Initialize switch states
+      const isActive = switchEl.classList.contains('active');
+      switchEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      switchEl.dataset.switch = isActive ? 'On' : 'Off';
     });
 
     // Radio buttons - native implementation
@@ -528,7 +545,7 @@ class ControlSidebar extends HTMLElement {
       if (firstMinorityGroup) firstMinorityGroup.style.display = 'block';
     }
     
-    console.log(`🏛️ Initialized chamber controls for: ${selectedChamber}`);
+    console.log(`Initialized chamber controls for: ${selectedChamber}`);
   }
 }
 
