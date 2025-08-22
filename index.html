@@ -370,14 +370,14 @@
                     <div class="title-section">
                         <div class="main-title">Herramienta de Simulación Electoral</div>
                     </div>
-                    <div class="header-indicators">
-                        <div class="indicadores-resumen">
-                            <indicador-box etiqueta="Total de escaños" valor="128" cantidad="128" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
-                            <indicador-box etiqueta="% votos vs % escaños" valor="±2.1%" cantidad="±2.1%" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
-                            <indicador-box etiqueta="Índice de Gallagher" valor="5.2" cantidad="5.2" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
-                            <indicador-box etiqueta="Totales del Sistema" valor="60.1M" cantidad="60.1M" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
-                            <indicador-box etiqueta="Umbral de inclusión" valor="3%" cantidad="3%" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
-                            <indicador-box etiqueta="Umbral de representación" valor="8pp" cantidad="8pp" promedio="" porcentaje="" style="--fondo:#fff;"></indicador-box>
+                    <div class="subtitle-section">
+                    <div class="indicadores-resumen">
+                            <indicador-box etiqueta="Total de escaños" valor="128" style="--fondo:#fff;"></indicador-box>
+                            <indicador-box etiqueta="% votos vs % escaños" valor="±2.1%" style="--fondo:#fff;"></indicador-box>
+                            <indicador-box etiqueta="Índice de Gallagher" valor="5.2" style="--fondo:#fff;"></indicador-box>
+                            <indicador-box etiqueta="Totales del Sistema" valor="60.1M" style="--fondo:#fff;"></indicador-box>
+                            <indicador-box etiqueta="Umbral de inclusión" valor="3%" style="--fondo:#fff;"></indicador-box>
+                            <indicador-box etiqueta="Umbral de representación" valor="8pp" style="--fondo:#fff;"></indicador-box>
                         </div>
                     </div>
                 </div>
@@ -471,27 +471,14 @@
       render() {
         const etiqueta = this.getAttribute('etiqueta') || '';
         const valor = this.getAttribute('valor') || '';
-        const porcentaje = this.getAttribute('porcentaje') || '';
-        const cantidad = this.getAttribute('cantidad') || '';
-        const promedio = this.getAttribute('promedio') || '';
+        // const porcentaje = this.getAttribute('porcentaje') || '';
+        // const cantidad = this.getAttribute('cantidad') || '';
         // Clase para fondo: neutro siempre
         const fondoClase = 'fondo-verde';
-        const clase = porcentaje.toString().trim().startsWith('-') ? 'negativo' : 'positivo';
+        // const clase = porcentaje.toString().trim().startsWith('-') ? 'negativo' : 'positivo';
         this.innerHTML = `
           <div class="etiqueta">${etiqueta}</div>
-          <div class="contenedor-valores">
-            <div class="valor-actual ${fondoClase}">
-              <div class="porcentaje ${clase}">${porcentaje ? porcentaje + '%' : ''}</div>
-              <div class="cantidad">
-                <div>${cantidad}</div>
-                <div class="icono-flecha ${clase}"></div>
-              </div>
-            </div>
-            <div class="valor-promedio">
-              <div class="texto">Promedio</div>
-              <div class="valor">${promedio}</div>
-            </div>
-          </div>
+          <div class="valor">${valor}</div>
         `;
       }
     }
