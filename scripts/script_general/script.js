@@ -138,4 +138,119 @@ console.log('📜 Electoral Dashboard script loaded');
   document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.slider').forEach(initSlider);
   });
+
 })();
+
+// ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
+
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente'} = {}) {
+    try {
+        const url = `http://localhost:8000/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Error al obtener datos');
+        const data = await resp.json();
+        // Actualiza el seat chart
+        const seatChart = document.querySelector('seat-chart');
+        if (seatChart && data.seatChart) {
+            seatChart.setAttribute('data', JSON.stringify(data.seatChart));
+        }
+        // Actualiza los KPIs usando los <indicador-box> en el orden correcto
+        if (data.kpis) {
+            const { total_seats, gallagher, mae_votos_vs_escanos, total_votos } = data.kpis;
+            // Busca los indicador-box en el slot de dashboard-title
+            const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+            if (indicadores.length >= 4) {
+                indicadores[0].setAttribute('valor', total_seats);
+                indicadores[1].setAttribute('valor', `±${mae_votos_vs_escanos.toFixed(2)}%`);
+                indicadores[2].setAttribute('valor', gallagher.toFixed(2));
+                indicadores[3].setAttribute('valor', total_votos.toLocaleString('es-MX'));
+            }
+        }
+        console.log('Datos cargados:', data);
+    } catch (err) {
+        console.error('Error cargando simulación:', err);
+    }
+}
+
+
+
+// === Vincular controles del panel de control con debounce ===
+let debounceTimer = null;
+function actualizarDesdeControlesDebounced() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(actualizarDesdeControles, 120);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa con valores actuales
+    actualizarDesdeControles();
+
+    // Cámara (botones)
+    document.querySelectorAll('.master-toggle[data-chamber]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTimeout(actualizarDesdeControlesDebounced, 50); // Espera a que el botón se active
+        });
+    });
+    // Año
+    const yearSelect = document.getElementById('year-select');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', actualizarDesdeControlesDebounced);
+    }
+    // Modelo
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', actualizarDesdeControlesDebounced);
+    }
+});
+
+
+function actualizarDesdeControles() {
+    // Cámara
+    let camara = 'diputados';
+    const activeChamber = document.querySelector('.master-toggle.active');
+    if (activeChamber) {
+        const val = activeChamber.getAttribute('data-chamber');
+        if (val === 'senadores' || val === 'senado') camara = 'senado';
+        else camara = 'diputados';
+    }
+    // Actualiza el dropdown de año según la cámara
+    const yearSelect = document.getElementById('year-select');
+    if (yearSelect) {
+        let years = camara === 'senado' ? [2018, 2024] : [2018, 2021, 2024];
+        const currentOptions = Array.from(yearSelect.options).map(opt => parseInt(opt.value, 10));
+        if (JSON.stringify(currentOptions) !== JSON.stringify(years)) {
+            yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+        }
+    }
+    // Año
+    let anio = 2018;
+    if (yearSelect) {
+        anio = parseInt(yearSelect.value, 10);
+    }
+    // Modelos válidos
+    const modelosValidos = [
+        { value: 'vigente', label: 'Vigente' },
+        { value: 'plan-a', label: 'Plan A' },
+        { value: 'plan-c', label: 'Plan C' }
+    ];
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        // Si las opciones no coinciden, actualiza
+        const currentModelos = Array.from(modelSelect.options).map(opt => opt.value);
+        const validModelos = modelosValidos.map(m => m.value);
+        if (JSON.stringify(currentModelos) !== JSON.stringify(validModelos)) {
+            modelSelect.innerHTML = modelosValidos.map(m => `<option value="${m.value}">${m.label}</option>`).join('');
+        }
+    }
+    // Modelo
+    let modelo = 'vigente';
+    if (modelSelect) {
+        modelo = modelSelect.value;
+    }
+    // Mapear modelo a los valores esperados por el backend/parquet
+    let modeloBackend = modelo;
+    if (modelo === 'vigente') modeloBackend = 'vigente';
+    else if (modelo === 'plan-a') modeloBackend = 'plan a';
+    else if (modelo === 'plan-c') modeloBackend = 'plan c';
+    cargarSimulacion({anio, camara, modelo: modeloBackend});
+}
