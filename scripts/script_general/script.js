@@ -145,7 +145,7 @@ console.log('📜 Electoral Dashboard script loaded');
 
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente'} = {}) {
     try {
-        const url = `http://localhost:8000/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+    const url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
