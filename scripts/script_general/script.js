@@ -181,16 +181,23 @@ function actualizarDesdeControlesDebounced() {
     debounceTimer = setTimeout(actualizarDesdeControles, 120);
 }
 
+
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializa con valores actuales
     actualizarDesdeControles();
 
-    // Cámara (botones)
-    document.querySelectorAll('.master-toggle[data-chamber]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            setTimeout(actualizarDesdeControlesDebounced, 50); // Espera a que el botón se active
+    // Cámara (botones): usar MutationObserver para detectar el cambio de clase 'active'
+    const sidebar = document.getElementById('control-sidebar') || document.querySelector('control-sidebar');
+    if (sidebar) {
+        const observer = new MutationObserver(() => {
+            actualizarDesdeControlesDebounced();
         });
-    });
+        observer.observe(sidebar, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+    }
     // Año
     const yearSelect = document.getElementById('year-select');
     if (yearSelect) {

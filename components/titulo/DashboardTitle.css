@@ -1,18 +1,24 @@
+
 .dashboard-title-bar {
   width: 100%;
   display: flex;
-  flex-direction: column; /* Restores vertical layout */
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: #F8FAFC;
   border-radius: 16px;
   box-shadow: none;
-  padding: 0px 24px 14px 24px; /* Original padding */
-  margin: 32px 0 24px 0; /* Original margins */
-  gap: 24px; /* Adds spacing between title, KPIs, and seat chart */
+  padding: 0px 24px 14px 24px;
+  margin: 32px 0 24px 0;
+  gap: 24px;
+  min-width: 0;
+  min-height: 1px;
+  position: relative;
+  box-sizing: border-box;
 }
+
 .dashboard-title-text {
-  font-size: 2.2rem;
+  font-size: clamp(1.1rem, 4vw, 2.2rem);
   font-weight: 700;
   color: #0F2027;
   letter-spacing: -0.02em;
@@ -21,6 +27,28 @@
   margin-top: 0;
   margin-bottom: 8px;
   font-family: 'Inter', 'Roboto', 'Noto Sans', sans-serif;
+  word-break: break-word;
+  max-width: 700px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-line;
+  padding: 0 2vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.dashboard-title-bar > slot {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 .dashboard-title-bar .indicadores-resumen {
   display: flex;
@@ -33,19 +61,88 @@
   background: transparent;
   padding-left: 0;
   margin: 0;
+  min-width: 0;
 }
 .dashboard-title-bar .indicadores-resumen indicador-box {
   background: transparent !important;
   box-shadow: none !important;
   border: none !important;
+  min-width: 120px;
+  max-width: 180px;
+  flex: 1 1 120px;
 }
+
+seat-chart {
+  width: 100%;
+  min-width: 0;
+  display: block;
+}
+.seat-chart-container {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+.seat-chart-svg {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.seat-chart-legend {
+  min-width: 0;
+}
+
 @media (max-width: 1100px) {
   .dashboard-title-bar {
     margin: 16px 0 0 0;
     padding: 20px 8px 16px 8px;
+    gap: 16px;
   }
   .dashboard-title-text {
     font-size: 1.4rem;
     margin-bottom: 16px;
+  }
+  .dashboard-title-bar .indicadores-resumen {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .dashboard-title-bar {
+    padding: 10px 2vw 10px 2vw;
+    gap: 10px;
+  }
+  .dashboard-title-text {
+    font-size: 1.1rem;
+  }
+  .dashboard-title-bar .indicadores-resumen {
+    gap: 0.5rem;
+  }
+  seat-chart {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-title-bar {
+    padding: 4px 0 4px 0;
+    margin: 8px 0 8px 0;
+    gap: 6px;
+  }
+  .dashboard-title-text {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  .dashboard-title-bar .indicadores-resumen {
+    gap: 0.2rem;
+  }
+  seat-chart {
+    min-width: 0;
+    width: 100%;
+  }
+  .seat-chart-container {
+    padding: 0 2px;
   }
 }
