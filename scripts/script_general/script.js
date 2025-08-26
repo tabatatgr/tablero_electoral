@@ -175,7 +175,11 @@ console.log(' Electoral Dashboard script loaded');
 
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente'} = {}) {
     try {
-    const url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+        let url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+        // Solo agregar magnitud si camara es diputados o senado, modelo es personalizado y magnitud está definido
+        if ((camara === 'diputados' || camara === 'senado') && modelo === 'personalizado' && typeof magnitud !== 'undefined') {
+            url += `&magnitud=${magnitud}`;
+        }
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
