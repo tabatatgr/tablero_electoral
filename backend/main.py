@@ -211,11 +211,17 @@ def simulacion(
 
 		# KPIs (toma el primer registro, todos tienen el mismo total)
 		kpi_row = df.iloc[0] if not df.empty else None
+		# Convertir 'NA' a 0 para evitar ValueError
+		total_votos_str = kpi_row["total_votos"] if kpi_row is not None else "0"
+		try:
+			total_votos = int(total_votos_str)
+		except (ValueError, TypeError):
+			total_votos = 0
 		kpis = {
 			"total_seats": int(magnitud_camara),
 			"gallagher": float(kpi_row["indice_gallagher"]) if kpi_row is not None else 0,
 			"mae_votos_vs_escanos": float(kpi_row["mae_votos_vs_escanos"]) if kpi_row is not None else 0,
-			"total_votos": int(kpi_row["total_votos"]) if kpi_row is not None else 0,
+			"total_votos": total_votos,
 		}
 		return JSONResponse(
 			content={

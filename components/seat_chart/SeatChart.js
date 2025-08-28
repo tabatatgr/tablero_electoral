@@ -9,6 +9,8 @@ class SeatChart extends HTMLElement {
   }
 
   attributeChangedCallback() {
+    // Limpia el contenido antes de renderizar para forzar el refresco visual
+    this.innerHTML = '';
     this.render();
   }
 

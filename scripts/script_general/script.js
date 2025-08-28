@@ -3,6 +3,25 @@ console.log('Loading Electoral Dashboard...');
 
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
+    // Disparar actualización al cambiar método de reparto (cuota o divisor)
+    const quotaMethodSelect = document.getElementById('quota-method');
+    if (quotaMethodSelect) {
+        quotaMethodSelect.addEventListener('change', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
+    const divisorMethodSelect = document.getElementById('divisor-method');
+    if (divisorMethodSelect) {
+        divisorMethodSelect.addEventListener('change', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
     // Radios de regla electoral: solo dispara actualización si el modelo es personalizado
     const electoralRuleRadios = document.querySelectorAll('input[name="electoral-rule"]');
     electoralRuleRadios.forEach(radio => {
@@ -173,20 +192,52 @@ console.log(' Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente'} = {}) {
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined} = {}) {
     try {
         let url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
-        // Solo agregar magnitud si camara es diputados o senado, modelo es personalizado y magnitud está definido
-        if ((camara === 'diputados' || camara === 'senado') && modelo === 'personalizado' && typeof magnitud !== 'undefined') {
-            url += `&magnitud=${magnitud}`;
+        // Agregar sistema y mixto_mr_seats si aplica
+        if (typeof sistema !== 'undefined') {
+            url += `&sistema=${sistema}`;
         }
+        if (typeof mixto_mr_seats !== 'undefined' && sistema === 'mixto') {
+            url += `&mixto_mr_seats=${mixto_mr_seats}`;
+        }
+        // Solo agregar magnitud, umbral, sobrerrepresentacion, quota_method y divisor_method si camara es diputados o senado, modelo es personalizado y están definidos
+        if ((camara === 'diputados' || camara === 'senado') && modelo === 'personalizado') {
+            if (typeof magnitud !== 'undefined') {
+                url += `&magnitud=${magnitud}`;
+            }
+            if (typeof umbral !== 'undefined') {
+                url += `&umbral=${umbral}`;
+            }
+            if (typeof sobrerrepresentacion !== 'undefined') {
+                url += `&sobrerrepresentacion=${sobrerrepresentacion}`;
+            }
+            if (typeof quota_method !== 'undefined') {
+                url += `&quota_method=${quota_method}`;
+            }
+            if (typeof divisor_method !== 'undefined') {
+                url += `&divisor_method=${divisor_method}`;
+            }
+        }
+        console.log('[DEBUG] URL generada para petición:', url);
+        console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method});
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
+        console.log('[DEBUG] Respuesta backend:', data);
         // Actualiza el seat chart
         const seatChart = document.querySelector('seat-chart');
-        if (seatChart && data.seatChart) {
-            seatChart.setAttribute('data', JSON.stringify(data.seatChart));
+        if (seatChart) {
+            if (data.seatChart) {
+                seatChart.setAttribute('data', JSON.stringify(data.seatChart));
+                console.log('[DEBUG] seat-chart actualizado:', data.seatChart);
+            } else {
+                seatChart.setAttribute('data', '');
+                console.warn('[DEBUG] seat-chart: No hay datos para mostrar');
+            }
+        } else {
+            console.warn('[DEBUG] No se encontró el componente seat-chart');
         }
         // Actualiza los KPIs usando los <indicador-box> en el orden correcto
         if (data.kpis) {
@@ -200,9 +251,15 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
                 indicadores[1].setAttribute('valor', `±${mae_val}%`);
                 indicadores[2].setAttribute('valor', gallagher_val);
                 indicadores[3].setAttribute('valor', total_votos ? total_votos.toLocaleString('es-MX') : '0');
+                console.log('[DEBUG] indicador-box actualizados:', {
+                    total_seats, mae_votos_vs_escanos, gallagher, total_votos
+                });
+            } else {
+                console.warn('[DEBUG] No se encontraron suficientes indicador-box para actualizar KPIs');
             }
+        } else {
+            console.warn('[DEBUG] No se encontraron datos de KPIs en la respuesta');
         }
-        console.log('Datos cargados:', data);
     } catch (err) {
         console.error('Error cargando simulación:', err);
     }
@@ -368,15 +425,32 @@ function actualizarDesdeControles() {
     // Si el modelo es personalizado, obtener el valor del slider de magnitud, sobrerrepresentación, umbral y regla electoral
     if (modelo === 'personalizado') {
         const magnitudInput = document.getElementById('input-magnitud');
-        let magnitud = magnitudInput ? parseInt(magnitudInput.value, 10) : undefined;
+        let magnitud;
+        if (magnitudInput && magnitudInput.value) {
+            magnitud = parseInt(magnitudInput.value, 10);
+        } else {
+            // Valor por defecto: vigente diputados=500, senado=128
+            magnitud = (camara === 'senado') ? 128 : 500;
+        }
         const overrepInput = document.getElementById('overrep-slider');
-        let sobrerrepresentacion = overrepInput ? parseFloat(overrepInput.value) : undefined;
+        const overrepSwitch = document.getElementById('overrep-switch');
+        let sobrerrepresentacion = undefined;
+        if (overrepSwitch && overrepSwitch.classList.contains('active') && overrepInput) {
+            sobrerrepresentacion = parseFloat(overrepInput.value);
+        }
         const thresholdInput = document.getElementById('threshold-slider');
-        let umbral = thresholdInput ? parseFloat(thresholdInput.value) : undefined;
+        const thresholdSwitch = document.getElementById('threshold-switch');
+        let umbral = 0;
+        if (thresholdSwitch && thresholdSwitch.classList.contains('active')) {
+            umbral = thresholdInput ? parseFloat(thresholdInput.value) : 0;
+            if (isNaN(umbral)) umbral = 0;
+        } else {
+            umbral = 0;
+        }
         const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
-        let regla_electoral = electoralRuleRadio ? electoralRuleRadio.value : undefined;
+        let sistema = electoralRuleRadio ? electoralRuleRadio.value : undefined;
         let mixto_mr_seats = undefined;
-        if (regla_electoral === 'mixto') {
+        if (sistema === 'mixto') {
             const mrSlider = document.getElementById('input-mr');
             mixto_mr_seats = mrSlider ? parseInt(mrSlider.value, 10) : undefined;
         }
@@ -385,8 +459,10 @@ function actualizarDesdeControles() {
         const divisorMethodSelect = document.getElementById('divisor-method');
         let quota_method = quotaMethodSelect ? quotaMethodSelect.value : 'hare';
         let divisor_method = divisorMethodSelect ? divisorMethodSelect.value : 'dhondt';
-        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, regla_electoral, mixto_mr_seats, quota_method, divisor_method});
+        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, sistema, mixto_mr_seats, quota_method, divisor_method});
     } else {
-        cargarSimulacion({anio, camara, modelo: modeloBackend});
+        // Estado por defecto: vigente diputados=500, senado=128
+        let magnitud = (camara === 'senado') ? 128 : 500;
+    cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud});
     }
 }
