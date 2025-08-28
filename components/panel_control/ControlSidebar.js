@@ -45,7 +45,7 @@ class ControlSidebar extends HTMLElement {
                 <select class="control-select" id="model-select">
                   <option value="plan-a">Plan A</option>
                   <option value="plan-b">Plan B</option>
-                  <option value="custom">Personalizado</option>
+                  <option value="personalizado">Personalizado</option>
                 </select>
               </div>
             </div>
@@ -158,6 +158,14 @@ class ControlSidebar extends HTMLElement {
             </button>
             <div class="group-content expanded" id="group-overrepresentation">
               <div class="control-item">
+                <label class="control-label">¿Activar límite de sobrerrepresentación?</label>
+                <div class="toggle-switch">
+                  <div class="switch active" id="overrep-switch" data-switch="On" role="switch" aria-checked="true">
+                    <div class="switch-handle"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="control-item overrep-controls">
                 <div class="overrep-value-box" id="overrep-value-box">8.0%</div>
                 <label class="control-label">Límite sobre % voto nacional:</label>
                 <input type="range" class="control-slider overrep-slider" id="overrep-slider" min="0" max="20" step="0.1" value="8">
@@ -305,6 +313,19 @@ class ControlSidebar extends HTMLElement {
   }
 
   initializeSidebarControls() {
+    // Mostrar/ocultar controles de sobrerrepresentación según el switch
+    const overrepSwitch = this.querySelector('#overrep-switch');
+    const overrepControls = this.querySelector('.overrep-controls');
+    function updateOverrepVisibility() {
+      const isActive = overrepSwitch && overrepSwitch.classList.contains('active');
+      if (overrepControls) overrepControls.style.display = isActive ? 'block' : 'none';
+    }
+    if (overrepSwitch) {
+      overrepSwitch.addEventListener('click', function() {
+        setTimeout(updateOverrepVisibility, 0);
+      });
+      updateOverrepVisibility();
+    }
     // Collapsible groups
     const groupToggles = this.querySelectorAll('.group-toggle');
     groupToggles.forEach((toggle) => {
@@ -336,6 +357,23 @@ class ControlSidebar extends HTMLElement {
           localStorage.setItem(`group-${targetId}-expanded`, 'true');
         }
       });
+
+    // Mostrar/ocultar controles de umbral según el switch
+    const thresholdSwitch = this.querySelector('#threshold-switch');
+    const thresholdTypeRadios = this.querySelector('.radio-group');
+    const thresholdControls = this.querySelector('.threshold-controls');
+    function updateThresholdVisibility() {
+      const isActive = thresholdSwitch && thresholdSwitch.classList.contains('active');
+      if (thresholdTypeRadios) thresholdTypeRadios.style.display = isActive ? 'block' : 'none';
+      if (thresholdControls) thresholdControls.style.display = isActive ? 'block' : 'none';
+    }
+    if (thresholdSwitch) {
+      thresholdSwitch.addEventListener('click', function() {
+        setTimeout(updateThresholdVisibility, 0);
+      });
+      // Inicializar visibilidad al cargar
+      updateThresholdVisibility();
+    }
     });
 
     // Master controls (chamber, year, model)

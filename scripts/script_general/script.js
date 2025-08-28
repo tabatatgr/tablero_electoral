@@ -3,6 +3,55 @@ console.log('Loading Electoral Dashboard...');
 
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
+    // Disparar actualización al cambiar método de reparto (cuota o divisor)
+    const quotaMethodSelect = document.getElementById('quota-method');
+    if (quotaMethodSelect) {
+        quotaMethodSelect.addEventListener('change', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
+    const divisorMethodSelect = document.getElementById('divisor-method');
+    if (divisorMethodSelect) {
+        divisorMethodSelect.addEventListener('change', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
+    // Radios de regla electoral: solo dispara actualización si el modelo es personalizado
+    const electoralRuleRadios = document.querySelectorAll('input[name="electoral-rule"]');
+    electoralRuleRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    });
+    // Slider de umbral: solo dispara actualización si el modelo es personalizado
+    const thresholdInput = document.getElementById('threshold-slider');
+    if (thresholdInput) {
+        thresholdInput.addEventListener('input', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
+    // Slider de sobrerrepresentación: solo dispara actualización si el modelo es personalizado
+    const overrepInput = document.getElementById('overrep-slider');
+    if (overrepInput) {
+        overrepInput.addEventListener('input', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
     console.log('DOM loaded, initializing dashboard...');
     
     // Small delay to ensure all elements are ready
@@ -25,7 +74,7 @@ function initializeAllFunctionality() {
 
 // ===== SIDEBAR FUNCTIONALITY =====
 function initializeEnhancedSidebar() {
-    console.log('🔧 Initializing enhanced sidebar...');
+    console.log(' Initializing enhanced sidebar...');
     
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const sidebar = document.getElementById('control-sidebar');
@@ -60,7 +109,7 @@ function initializeEnhancedSidebar() {
                 sidebar.classList.toggle('collapsed');
                 const isCollapsed = sidebar.classList.contains('collapsed');
                 localStorage.setItem('sidebarCollapsed', isCollapsed);
-                console.log(`📱 Sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`);
+                console.log(` Sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`);
             }
         });
     }
@@ -80,7 +129,7 @@ function initializeEnhancedSidebar() {
     });
     
     function closeMobileSidebar() {
-        console.log('📱 Mobile sidebar closed');
+        console.log(' Mobile sidebar closed');
         sidebar.classList.remove('open');
         overlay.classList.remove('active');
         document.body.style.overflow = '';
@@ -113,7 +162,7 @@ function handleRadioSelection(radioGroup, selectedOption) {
     }
 }
 
-console.log('📜 Electoral Dashboard script loaded');
+console.log(' Electoral Dashboard script loaded');
 
 (function(){
   function setFill(input){
@@ -143,16 +192,52 @@ console.log('📜 Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente'} = {}) {
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined} = {}) {
     try {
-    const url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+        let url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
+        // Agregar sistema y mixto_mr_seats si aplica
+        if (typeof sistema !== 'undefined') {
+            url += `&sistema=${sistema}`;
+        }
+        if (typeof mixto_mr_seats !== 'undefined' && sistema === 'mixto') {
+            url += `&mixto_mr_seats=${mixto_mr_seats}`;
+        }
+        // Solo agregar magnitud, umbral, sobrerrepresentacion, quota_method y divisor_method si camara es diputados o senado, modelo es personalizado y están definidos
+        if ((camara === 'diputados' || camara === 'senado') && modelo === 'personalizado') {
+            if (typeof magnitud !== 'undefined') {
+                url += `&magnitud=${magnitud}`;
+            }
+            if (typeof umbral !== 'undefined') {
+                url += `&umbral=${umbral}`;
+            }
+            if (typeof sobrerrepresentacion !== 'undefined') {
+                url += `&sobrerrepresentacion=${sobrerrepresentacion}`;
+            }
+            if (typeof quota_method !== 'undefined') {
+                url += `&quota_method=${quota_method}`;
+            }
+            if (typeof divisor_method !== 'undefined') {
+                url += `&divisor_method=${divisor_method}`;
+            }
+        }
+        console.log('[DEBUG] URL generada para petición:', url);
+        console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method});
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
+        console.log('[DEBUG] Respuesta backend:', data);
         // Actualiza el seat chart
         const seatChart = document.querySelector('seat-chart');
-        if (seatChart && data.seatChart) {
-            seatChart.setAttribute('data', JSON.stringify(data.seatChart));
+        if (seatChart) {
+            if (data.seatChart) {
+                seatChart.setAttribute('data', JSON.stringify(data.seatChart));
+                console.log('[DEBUG] seat-chart actualizado:', data.seatChart);
+            } else {
+                seatChart.setAttribute('data', '');
+                console.warn('[DEBUG] seat-chart: No hay datos para mostrar');
+            }
+        } else {
+            console.warn('[DEBUG] No se encontró el componente seat-chart');
         }
         // Actualiza los KPIs usando los <indicador-box> en el orden correcto
         if (data.kpis) {
@@ -161,12 +246,20 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
             if (indicadores.length >= 4) {
                 indicadores[0].setAttribute('valor', total_seats);
-                indicadores[1].setAttribute('valor', `±${mae_votos_vs_escanos.toFixed(2)}%`);
-                indicadores[2].setAttribute('valor', gallagher.toFixed(2));
-                indicadores[3].setAttribute('valor', total_votos.toLocaleString('es-MX'));
+                let mae_val = (typeof mae_votos_vs_escanos === 'number' && isFinite(mae_votos_vs_escanos)) ? mae_votos_vs_escanos.toFixed(2) : '0.00';
+                let gallagher_val = (typeof gallagher === 'number' && isFinite(gallagher)) ? gallagher.toFixed(2) : '0.00';
+                indicadores[1].setAttribute('valor', `±${mae_val}%`);
+                indicadores[2].setAttribute('valor', gallagher_val);
+                indicadores[3].setAttribute('valor', total_votos ? total_votos.toLocaleString('es-MX') : '0');
+                console.log('[DEBUG] indicador-box actualizados:', {
+                    total_seats, mae_votos_vs_escanos, gallagher, total_votos
+                });
+            } else {
+                console.warn('[DEBUG] No se encontraron suficientes indicador-box para actualizar KPIs');
             }
+        } else {
+            console.warn('[DEBUG] No se encontraron datos de KPIs en la respuesta');
         }
-        console.log('Datos cargados:', data);
     } catch (err) {
         console.error('Error cargando simulación:', err);
     }
@@ -200,13 +293,81 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Año
     const yearSelect = document.getElementById('year-select');
-    if (yearSelect) {
-        yearSelect.addEventListener('change', actualizarDesdeControlesDebounced);
-    }
-    // Modelo
     const modelSelect = document.getElementById('model-select');
+    // Mapas de modelos válidos por año y cámara
+    const modelosPorCamaraAnio = {
+        'diputados': {
+            2018: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
+            2021: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
+            2024: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ]
+        },
+        'senado': {
+            2018: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
+            2024: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ]
+        }
+    };
+    function updateModelosDisponibles() {
+        // Detecta cámara y año
+        let camara = 'diputados';
+        const activeChamber = document.querySelector('.master-toggle.active');
+        if (activeChamber) {
+            const val = activeChamber.getAttribute('data-chamber');
+            if (val === 'senadores' || val === 'senado') camara = 'senado';
+        }
+        let anio = 2018;
+        if (yearSelect) {
+            anio = parseInt(yearSelect.value, 10);
+        }
+        const modelosValidos = (modelosPorCamaraAnio[camara] && modelosPorCamaraAnio[camara][anio])
+            ? modelosPorCamaraAnio[camara][anio]
+            : [ 'vigente' ];
+        // Opciones legibles
+        const modelosLabels = {
+            'vigente': 'Vigente',
+            'plan-a': 'Plan A',
+            'plan-c': 'Plan C',
+            'personalizado': 'Personalizado'
+        };
+        // Actualiza el select de modelos
+        if (modelSelect) {
+            modelSelect.innerHTML = modelosValidos.map(m => `<option value="${m}">${modelosLabels[m] || m}</option>`).join('');
+            // Si el modelo actual no es válido, resetea
+            if (!modelosValidos.includes(modelSelect.value)) {
+                modelSelect.value = modelosValidos[0];
+            }
+        }
+    }
+    if (yearSelect) {
+        yearSelect.addEventListener('change', function() {
+            updateModelosDisponibles();
+            actualizarDesdeControlesDebounced();
+        });
+    }
     if (modelSelect) {
         modelSelect.addEventListener('change', actualizarDesdeControlesDebounced);
+    }
+    // También actualizar modelos si cambia la cámara
+    const chamberToggles = document.querySelectorAll('.master-toggle');
+    chamberToggles.forEach(btn => {
+        btn.addEventListener('click', function() {
+            setTimeout(() => {
+                updateModelosDisponibles();
+                actualizarDesdeControlesDebounced();
+            }, 50);
+        });
+    });
+    // Inicializa modelos disponibles al cargar
+    updateModelosDisponibles();
+
+    // Slider de magnitud: solo dispara actualización si el modelo es personalizado
+    const magnitudInput = document.getElementById('input-magnitud');
+    if (magnitudInput) {
+        magnitudInput.addEventListener('input', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
     }
 });
 
@@ -238,7 +399,8 @@ function actualizarDesdeControles() {
     const modelosValidos = [
         { value: 'vigente', label: 'Vigente' },
         { value: 'plan-a', label: 'Plan A' },
-        { value: 'plan-c', label: 'Plan C' }
+        { value: 'plan-c', label: 'Plan C' },
+        { value: 'personalizado', label: 'Personalizado' }
     ];
     const modelSelect = document.getElementById('model-select');
     if (modelSelect) {
@@ -259,5 +421,48 @@ function actualizarDesdeControles() {
     if (modelo === 'vigente') modeloBackend = 'vigente';
     else if (modelo === 'plan-a') modeloBackend = 'plan a';
     else if (modelo === 'plan-c') modeloBackend = 'plan c';
-    cargarSimulacion({anio, camara, modelo: modeloBackend});
+
+    // Si el modelo es personalizado, obtener el valor del slider de magnitud, sobrerrepresentación, umbral y regla electoral
+    if (modelo === 'personalizado') {
+        const magnitudInput = document.getElementById('input-magnitud');
+        let magnitud;
+        if (magnitudInput && magnitudInput.value) {
+            magnitud = parseInt(magnitudInput.value, 10);
+        } else {
+            // Valor por defecto: vigente diputados=500, senado=128
+            magnitud = (camara === 'senado') ? 128 : 500;
+        }
+        const overrepInput = document.getElementById('overrep-slider');
+        const overrepSwitch = document.getElementById('overrep-switch');
+        let sobrerrepresentacion = undefined;
+        if (overrepSwitch && overrepSwitch.classList.contains('active') && overrepInput) {
+            sobrerrepresentacion = parseFloat(overrepInput.value);
+        }
+        const thresholdInput = document.getElementById('threshold-slider');
+        const thresholdSwitch = document.getElementById('threshold-switch');
+        let umbral = 0;
+        if (thresholdSwitch && thresholdSwitch.classList.contains('active')) {
+            umbral = thresholdInput ? parseFloat(thresholdInput.value) : 0;
+            if (isNaN(umbral)) umbral = 0;
+        } else {
+            umbral = 0;
+        }
+        const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
+        let sistema = electoralRuleRadio ? electoralRuleRadio.value : undefined;
+        let mixto_mr_seats = undefined;
+        if (sistema === 'mixto') {
+            const mrSlider = document.getElementById('input-mr');
+            mixto_mr_seats = mrSlider ? parseInt(mrSlider.value, 10) : undefined;
+        }
+        // Leer métodos de reparto
+        const quotaMethodSelect = document.getElementById('quota-method');
+        const divisorMethodSelect = document.getElementById('divisor-method');
+        let quota_method = quotaMethodSelect ? quotaMethodSelect.value : 'hare';
+        let divisor_method = divisorMethodSelect ? divisorMethodSelect.value : 'dhondt';
+        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, sistema, mixto_mr_seats, quota_method, divisor_method});
+    } else {
+        // Estado por defecto: vigente diputados=500, senado=128
+        let magnitud = (camara === 'senado') ? 128 : 500;
+    cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud});
+    }
 }
