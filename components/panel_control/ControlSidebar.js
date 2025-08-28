@@ -43,8 +43,7 @@ class ControlSidebar extends HTMLElement {
               <div class="control-item">
                 <label class="control-label">Modelo</label>
                 <select class="control-select" id="model-select">
-                  <option value="plan-a">Plan A</option>
-                  <option value="plan-b">Plan B</option>
+                  <option value="vigente">Vigente</option>
                   <option value="personalizado">Personalizado</option>
                 </select>
               </div>
