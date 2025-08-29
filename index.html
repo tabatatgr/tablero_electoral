@@ -28,10 +28,21 @@
             <dashboard-title>
                 <div class="indicadores-resumen">
                     <indicador-box etiqueta="Total de escaños" valor="128"></indicador-box>
-                    <indicador-box etiqueta="% votos vs % escaños" valor="±2.1%"></indicador-box>
-                    <indicador-box etiqueta="Índice de Gallagher" valor="5.2"></indicador-box>
-                    <indicador-box etiqueta="Totales del Sistema" valor="60.1M"></indicador-box>
-                    <indicador-box etiqueta="Umbral de representación" valor="8pp"></indicador-box>
+                    <indicador-box 
+                        etiqueta="Proporcionalidad" 
+                        valor="±2.1%" 
+                        tooltip="Diferencia promedio entre el porcentaje de votos obtenidos por cada partido y el porcentaje de escaños asignados. Un valor bajo indica mayor proporcionalidad electoral.">
+                    </indicador-box>
+                    <indicador-box 
+                        etiqueta="Índice de Gallagher" 
+                        valor="5.2"
+                        tooltip="Mide la desproporcionalidad del sistema electoral. Valores entre 0-5 indican alta proporcionalidad, 5-15 moderada, y >15 baja proporcionalidad.">
+                    </indicador-box>
+                    <indicador-box 
+                        etiqueta="Votos válidos" 
+                        valor="60.1M"
+                        tooltip="Total de votos válidos contabilizados en la elección (excluye votos nulos y en blanco).">
+                    </indicador-box>
                 </div>
                 <seat-chart></seat-chart>
             </dashboard-title>
