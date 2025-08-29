@@ -41,6 +41,7 @@
   backdrop-filter: blur(10px);
   z-index: 10;
   border-radius: 8px;
+  align-self: center;
 }
 
 .dashboard-title-bar > slot {
