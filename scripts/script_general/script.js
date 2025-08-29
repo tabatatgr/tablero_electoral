@@ -52,6 +52,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    // Slider de tope de escaños por partido: solo dispara actualización si el modelo es personalizado
+    const seatCapInput = document.getElementById('seat-cap-input');
+    if (seatCapInput) {
+        seatCapInput.addEventListener('input', function() {
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect && modelSelect.value === 'personalizado') {
+                actualizarDesdeControlesDebounced();
+            }
+        });
+    }
     console.log('DOM loaded, initializing dashboard...');
     
     // Small delay to ensure all elements are ready
@@ -192,7 +202,7 @@ console.log(' Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined} = {}) {
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
     try {
         let url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
         // Agregar sistema y mixto_mr_seats si aplica
@@ -219,9 +229,12 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             if (typeof divisor_method !== 'undefined') {
                 url += `&divisor_method=${divisor_method}`;
             }
+            if (typeof max_seats_per_party !== 'undefined') {
+                url += `&max_seats_per_party=${max_seats_per_party}`;
+            }
         }
         console.log('[DEBUG] URL generada para petición:', url);
-        console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method});
+        console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method, max_seats_per_party});
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
@@ -459,7 +472,16 @@ function actualizarDesdeControles() {
         const divisorMethodSelect = document.getElementById('divisor-method');
         let quota_method = quotaMethodSelect ? quotaMethodSelect.value : 'hare';
         let divisor_method = divisorMethodSelect ? divisorMethodSelect.value : 'dhondt';
-        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, sistema, mixto_mr_seats, quota_method, divisor_method});
+        
+        // Leer tope de escaños por partido
+        const seatCapSwitch = document.getElementById('seat-cap-switch');
+        const seatCapInput = document.getElementById('seat-cap-input');
+        let max_seats_per_party = undefined;
+        if (seatCapSwitch && seatCapSwitch.classList.contains('active') && seatCapInput) {
+            max_seats_per_party = parseInt(seatCapInput.value, 10);
+        }
+        
+        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, sistema, mixto_mr_seats, quota_method, divisor_method, max_seats_per_party});
     } else {
         // Estado por defecto: vigente diputados=500, senado=128
         let magnitud = (camara === 'senado') ? 128 : 500;

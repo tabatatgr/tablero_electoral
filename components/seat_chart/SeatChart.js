@@ -19,7 +19,7 @@ class SeatChart extends HTMLElement {
     let data = [
       { party: 'Partido Azul', seats: 50, color: '#1976d2', percent: 39.1 },
       { party: 'Partido Rojo', seats: 40, color: '#d32f2f', percent: 31.3 },
-      { party: 'Partido Verde', seats: 25, color: '#388e3c', percent: 19.5 },
+      { party: 'Partido Verde', seats: 25, color: '#1E9F00', percent: 19.5 },
       { party: 'Partido Amarillo', seats: 13, color: '#fbc02d', percent: 10.1 },
     ];
     if (this.getAttribute('data')) {
@@ -28,11 +28,43 @@ class SeatChart extends HTMLElement {
       } catch (e) {}
     }
     const total = data.reduce((sum, p) => sum + p.seats, 0);
+    
+    // Calcular distribución dinámica de escaños por fila según el total
+    function calculateSeatsPerRow(totalSeats) {
+      if (totalSeats <= 50) {
+        // Para pocos escaños: 2 filas
+        const row1 = Math.ceil(totalSeats * 0.4);
+        const row2 = totalSeats - row1;
+        return [row1, row2];
+      } else if (totalSeats <= 150) {
+        // Para escaños medianos: 3 filas
+        const row1 = Math.ceil(totalSeats * 0.25);
+        const row2 = Math.ceil(totalSeats * 0.35);
+        const row3 = totalSeats - row1 - row2;
+        return [row1, row2, row3];
+      } else if (totalSeats <= 300) {
+        // Para muchos escaños: 4 filas
+        const row1 = Math.ceil(totalSeats * 0.15);
+        const row2 = Math.ceil(totalSeats * 0.20);
+        const row3 = Math.ceil(totalSeats * 0.25);
+        const row4 = totalSeats - row1 - row2 - row3;
+        return [row1, row2, row3, row4];
+      } else {
+        // Para muchísimos escaños: 5 filas
+        const row1 = Math.ceil(totalSeats * 0.12);
+        const row2 = Math.ceil(totalSeats * 0.16);
+        const row3 = Math.ceil(totalSeats * 0.20);
+        const row4 = Math.ceil(totalSeats * 0.24);
+        const row5 = totalSeats - row1 - row2 - row3 - row4;
+        return [row1, row2, row3, row4, row5];
+      }
+    }
+    
     // Hemicycle SVG generation
-    const seatRadius = 12;
-    const seatGap = 6;
-    const rows = 4;
-    const seatsPerRow = [18, 22, 30, 58];
+    const seatRadius = 8; // Reducido de 10 para dar más espacio visual
+    const seatGap = 8; // Aumentado de 5 para más separación
+    const seatsPerRow = calculateSeatsPerRow(total);
+    const rows = seatsPerRow.length;
     let seatIndex = 0;
     let seatElements = [];
     let partySeatMap = [];
@@ -43,29 +75,32 @@ class SeatChart extends HTMLElement {
     });
     for (let row = 0; row < rows; row++) {
       const seats = seatsPerRow[row];
-      const radius = 90 + row * (seatRadius * 2 + seatGap);
+      const radius = 130 + row * (seatRadius * 2 + seatGap + 6); // Aumentado radio base de 110 a 130
       for (let i = 0; i < seats; i++) {
-        const angle = Math.PI * (1 - i / (seats - 1));
-        const x = 240 + radius * Math.cos(angle); // Centered in wider SVG (480/2 = 240)
-        const y = 150 + radius * Math.sin(angle); // Moved up more (from 170 to 150)
+        const angle = Math.PI * (i / (seats - 1)); // Cambiar para que vaya de 0 a π (boca hacia abajo)
+        const x = 260 + radius * Math.cos(angle); // Centrado en viewBox más ancho (520/2 = 260)
+        const y = 200 - radius * Math.sin(angle); // Ajustar posición vertical para mejor centrado
         const color = partySeatMap[seatIndex] || '#eee';
         seatElements.push(`<circle cx="${x}" cy="${y}" r="${seatRadius}" fill="${color}" stroke="#fff" stroke-width="2" />`);
         seatIndex++;
       }
     }
     // Legend
-    let legend = `<div class="legend-title">Simbología de partidos</div>` + data.map(p => `
+    let legend = `<div class="legend-title">Simbología</div>` + data.map(p => `
       <div class="legend-item">
-        <span class="legend-color" style="background:${p.color}"></span>
-        <span class="legend-label">${p.party}</span>
-        <span class="legend-seats">${p.seats} escaños</span>
-        <span class="legend-percent">(${p.percent}%)</span>
+        <div class="legend-left">
+          <span class="legend-dot" style="background:${p.color}"></span>
+          <span class="legend-name">${p.party}</span>
+        </div>
+        <div class="legend-right">
+          ${p.seats} escaños (${p.percent}%)
+        </div>
       </div>
     `).join('');
     this.innerHTML = `
-      <div class="seat-chart-container" style="transform: translateY(-4px);">
-        <div class="seat-chart-svg">
-          <svg width="480" height="340" viewBox="0 0 480 340" aria-label="Distribución de escaños">
+      <div class="seat-chart-container">
+        <div class="seat-chart-svg" style="display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 520 450" aria-label="Distribución de escaños" style="width: 100%; height: auto; display: block; transform: translateY(70px);">
             ${seatElements.join('')}
           </svg>
         </div>

@@ -19,7 +19,7 @@ PARTY_COLORS = {
 	"PAN": "#0055A5",
 	"PRI": "#0D7137",
 	"PT": "#D52B1E",
-	"PVEM": "#5CE23D",
+	"PVEM": "#1E9F00",
 	"MC": "#F58025",
 	"PRD": "#FFCC00",
 	"PES": "#6A1B9A",
@@ -49,7 +49,8 @@ def simulacion(
 	regla_electoral: str = Query(None),
 	mixto_mr_seats: int = Query(None),
 	quota_method: str = Query('hare'),
-	divisor_method: str = Query('dhondt')
+	divisor_method: str = Query('dhondt'),
+	max_seats_per_party: int = Query(None)
 ):
 	# Si modelo personalizado, procesar datos reales
 	if modelo.lower() == "personalizado":
@@ -208,6 +209,17 @@ def simulacion(
 				quota_method=quota_method,
 				divisor_method=divisor_method
 			)
+
+		# Aplicar límite máximo de escaños por partido si se especifica
+		if modelo.lower() == "personalizado" and max_seats_per_party is not None:
+			print(f"🔥 Aplicando límite máximo de {max_seats_per_party} escaños por partido")
+			for party in seat_chart:
+				if party["seats"] > max_seats_per_party:
+					print(f"🚫 Limitando {party['party']} de {party['seats']} a {max_seats_per_party} escaños")
+					party["seats"] = max_seats_per_party
+					# Recalcular porcentaje basado en el total
+					total_seats = sum(p["seats"] for p in seat_chart)
+					party["percent"] = round((party["seats"] / total_seats) * 100, 2) if total_seats > 0 else 0
 
 		# KPIs (toma el primer registro, todos tienen el mismo total)
 		kpi_row = df.iloc[0] if not df.empty else None
