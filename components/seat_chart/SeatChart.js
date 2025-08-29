@@ -99,8 +99,8 @@ class SeatChart extends HTMLElement {
     `).join('');
     this.innerHTML = `
       <div class="seat-chart-container">
-        <div class="seat-chart-svg" style="display: flex; align-items: center; justify-content: center;">
-          <svg viewBox="0 0 520 450" aria-label="Distribución de escaños" style="width: 100%; height: auto; display: block; transform: translateY(70px);">
+        <div class="seat-chart-svg" style="display: flex; align-items: flex-start;">
+          <svg viewBox="0 0 520 300" aria-label="Distribución de escaños" style="width: 100%; height: 100%; display: block; transform: translateY(70px);">
             ${seatElements.join('')}
           </svg>
         </div>

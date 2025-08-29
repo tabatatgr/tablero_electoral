@@ -19,12 +19,6 @@
   --focus-ring: rgba(30, 91, 79, 0.3);
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
   font-family: 'Noto Sans', sans-serif;
   background-color: #F8FAFC;
@@ -32,23 +26,17 @@ body {
   font-size: 16px;
   line-height: 1.5;
   min-height: 100vh;
-  width: 100vw;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  margin: 0;
 }
 
 .root {
-  width: 100vw;
-  max-width: 100vw;
-  margin: 0 auto;
-  position: relative;
   background: #F8FAFC;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  height: 100vh;
-  overflow: hidden; /* Restaurar para mantener layout fijo */
+  flex: 1 0 auto;
 }
 
 /* Layout Container */
@@ -58,7 +46,6 @@ body {
   width: 100%;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: hidden; /* Restaurar para mantener panel fijo */
   align-items: flex-start;
   box-sizing: border-box;
 }

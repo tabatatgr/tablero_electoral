@@ -25,7 +25,8 @@
         <dashboard-header></dashboard-header>
         <div class="layout-container">
             <control-sidebar id="control-sidebar"></control-sidebar>
-            <dashboard-title>
+            <div class="main-content" style="width: 100%; display: flex; align-self: stretch;">
+            <dashboard-title style="display: flex; flex: 1 0 auto; align-self: stretch;">
                 <div class="indicadores-resumen">
                     <indicador-box etiqueta="Total de escaños" valor="128"></indicador-box>
                     <indicador-box 
@@ -44,12 +45,11 @@
                         tooltip="Total de votos válidos contabilizados en la elección (excluye votos nulos y en blanco).">
                     </indicador-box>
                 </div>
-                <seat-chart></seat-chart>
+                <seat-chart style="display: flex; align-self: stretch;"></seat-chart>
             </dashboard-title>
             <!-- Main Content Area -->
-            <div class="main-content">
             </div>
-        </div> <!-- End layout-container -->
+        </div>
     </div>
 </body>
 </html>

@@ -1,7 +1,5 @@
 
 .dashboard-title-bar {
-  width: 100%;
-  max-width: none;
   margin-left: 0;
   margin-right: 0;
   display: flex;
@@ -20,9 +18,6 @@
   position: relative;
   box-sizing: border-box;
   height: calc(100vh - 80px); /* Restaurar altura fija */
-  overflow-y: auto; /* Restaurar scroll pero solo en Y */
-  overflow-x: visible; /* Permitir que el hemiciclo se extienda horizontalmente */
-  flex: 1 1 auto;
 }
 
 .dashboard-title-text {
@@ -36,9 +31,7 @@
   padding: 12px 0;
   font-family: 'Noto Sans', sans-serif;
   word-break: break-word;
-  max-width: 100%;
-  width: 100%;
-  display: block;
+  display: flex;
   box-sizing: border-box;
   visibility: visible;
   opacity: 1;
@@ -48,14 +41,16 @@
   backdrop-filter: blur(10px);
   z-index: 10;
   border-radius: 8px;
+  align-self: center;
 }
 
 .dashboard-title-bar > slot {
-  display: flex !important;
+  display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
   width: 100%;
+  height: 100%;
   box-sizing: border-box;
 }
 .dashboard-title-bar .indicadores-resumen {
@@ -163,7 +158,6 @@ seat-chart {
   .dashboard-title-bar {
     padding: 12px 20px 20px 20px;
     height: auto;
-    overflow-y: visible;
     margin-top: 12px;
     gap: 6px;
   }

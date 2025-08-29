@@ -3,17 +3,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  background: transparent;
   border-radius: 8px;
   padding: 16px;
   margin: 12px 0 24px 0;
   width: 100%;
-  min-height: 620px; /* Aumentado significativamente */
-  height: auto;
   gap: 24px;
   box-sizing: border-box;
-  position: relative;
-  z-index: 1;
   flex-grow: 1;
 }
 
@@ -23,11 +18,8 @@
   align-items: center; /* Centrado vertical del SVG */
   justify-content: center; /* Centrado horizontal del SVG */
   min-width: 280px;
-  height: auto; /* Cambiar de 100% a auto */
-  min-height: 600px; /* Aumentado significativamente */
-  background: transparent;
   border-radius: 8px;
-  overflow: visible; /* Asegurar que no se corte nada */
+  overflow: hidden;
 }
 
 .seat-chart-svg svg {
