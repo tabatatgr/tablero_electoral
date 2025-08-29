@@ -8,12 +8,8 @@ control-sidebar,
   width: 360px;
   min-width: 320px;
   max-width: 400px;
-  height: 100vh;
-  flex: 0 0 auto;
-  min-height: 0;
-  position: relative;
-  z-index: 100;
-
+  flex: 1 0 auto;
+  
   display: flex;
   flex-direction: column;
 
@@ -23,7 +19,7 @@ control-sidebar,
 
   font-family: 'Noto Sans', sans-serif;
   transition: box-shadow 0.2s ease;
-  overflow: hidden;
+  align-self: stretch;
 }
 
 /* Header */
@@ -56,12 +52,6 @@ control-sidebar .sidebar-content,
 .control-sidebar .sidebar-content {
   flex: 1;
   padding: 16px 20px 32px 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: 0;
-
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
 }
 control-sidebar .sidebar-content::-webkit-scrollbar {
   width: 4px;
