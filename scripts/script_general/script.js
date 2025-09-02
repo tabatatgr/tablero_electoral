@@ -231,7 +231,18 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             }
         });
         
-        if (!resp.ok) throw new Error('Error al obtener datos');
+        console.log('[DEBUG] Status de respuesta:', resp.status, resp.statusText);
+        
+        if (!resp.ok) {
+            // Intentar leer el error del backend
+            try {
+                const errorData = await resp.text();
+                console.error('[DEBUG] Error del backend:', errorData);
+                throw new Error(`Backend error ${resp.status}: ${errorData}`);
+            } catch (parseError) {
+                throw new Error(`Error ${resp.status}: ${resp.statusText}`);
+            }
+        }
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
         
@@ -282,7 +293,13 @@ async function cargarSeatChart(anio, camara, modelo) {
         console.log('[DEBUG] Cargando seat-chart desde:', url);
         
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error('Error al obtener seat-chart');
+        console.log('[DEBUG] Status seat-chart:', resp.status, resp.statusText);
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error('[DEBUG] Error seat-chart:', errorText);
+            throw new Error(`Seat-chart error ${resp.status}: ${errorText}`);
+        }
         
         const seatChartData = await resp.json();
         console.log('[DEBUG] Datos seat-chart recibidos:', seatChartData);
@@ -309,7 +326,13 @@ async function cargarKPIs(anio, camara, modelo) {
         console.log('[DEBUG] Cargando KPIs desde:', url);
         
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error('Error al obtener KPIs');
+        console.log('[DEBUG] Status KPIs:', resp.status, resp.statusText);
+        
+        if (!resp.ok) {
+            const errorText = await resp.text();
+            console.error('[DEBUG] Error KPIs:', errorText);
+            throw new Error(`KPIs error ${resp.status}: ${errorText}`);
+        }
         
         const kpisData = await resp.json();
         console.log('[DEBUG] Datos KPIs recibidos:', kpisData);
