@@ -202,6 +202,29 @@ console.log(' Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
+// ✨ FUNCIÓN CENTRALIZADA: Mapeo modelo → plan
+function mapearModeloAPlan(modelo) {
+    const mapeo = {
+        'vigente': 'vigente',
+        'plan a': 'A', 
+        'plan b': 'B',
+        'plan c': 'C',
+        'plan_c': 'C',
+        'personalizado': 'C'  // personalizado usa plan C
+    };
+    
+    // Si el modelo está en el mapeo, usarlo; sino usar el modelo tal como viene
+    const resultado = mapeo[modelo.toLowerCase()] || modelo;
+    
+    console.log('[DEBUG] 🎯 MAPEO CENTRALIZADO:', {
+        entrada: modelo,
+        salida: resultado,
+        encontradoEnMapeo: modelo.toLowerCase() in mapeo
+    });
+    
+    return resultado;
+}
+
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
     try {
         // ✨ ANTI-CACHÉ: Generar timestamp único
@@ -212,11 +235,8 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         const endpoint = camara === 'senado' ? 'procesar/senado' : 'procesar/diputados';
         let url = `https://back-electoral.onrender.com/${endpoint}?anio=${anio}`;
         
-        // Agregar plan (equivalente al modelo)
-        let plan = 'A'; // Por defecto plan A
-        if (modelo === 'personalizado') {
-            plan = 'C'; // Plan personalizado
-        }
+        // ✨ USAR FUNCIÓN CENTRALIZADA
+        const plan = mapearModeloAPlan(modelo);
         url += `&plan=${plan}`;
         
         // Solo agregar magnitud si está definida (esto podría ser escanos_totales en la nueva API)
@@ -336,7 +356,8 @@ async function cargarSeatChart(anio, camara, modelo) {
         const timestamp = Date.now();
         const requestId = `${timestamp}_seatChart_${Math.random().toString(36).substr(2, 9)}`;
         
-        const plan = modelo === 'personalizado' ? 'C' : 'A';
+        // ✨ USAR FUNCIÓN CENTRALIZADA
+        const plan = mapearModeloAPlan(modelo);
         let url = `https://back-electoral.onrender.com/seat-chart/${camara}/${anio}?plan=${plan}`;
         
         // ✨ ANTI-CACHÉ: Añadir timestamp
@@ -400,7 +421,8 @@ async function cargarKPIs(anio, camara, modelo) {
         const timestamp = Date.now();
         const requestId = `${timestamp}_kpis_${Math.random().toString(36).substr(2, 9)}`;
         
-        const plan = modelo === 'personalizado' ? 'C' : 'A';
+        // ✨ USAR FUNCIÓN CENTRALIZADA
+        const plan = mapearModeloAPlan(modelo);
         let url = `https://back-electoral.onrender.com/kpis/${camara}/${anio}?plan=${plan}`;
         
         // ✨ ANTI-CACHÉ: Añadir timestamp
