@@ -204,81 +204,113 @@ console.log(' Electoral Dashboard script loaded');
 
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
     try {
-        let url = `https://backend-electoral-fw8f.onrender.com/simulacion?anio=${anio}&camara=${camara}&modelo=${modelo}`;
-        // Agregar sistema y mixto_mr_seats si aplica
-        if (typeof sistema !== 'undefined') {
-            url += `&sistema=${sistema}`;
+        // Determinar endpoint basado en la cámara
+        const endpoint = camara === 'senado' ? 'procesar/senado' : 'procesar/diputados';
+        let url = `https://back-electoral.onrender.com/${endpoint}?anio=${anio}`;
+        
+        // Agregar plan (equivalente al modelo)
+        let plan = 'A'; // Por defecto plan A
+        if (modelo === 'personalizado') {
+            plan = 'C'; // Plan personalizado
         }
-        if (typeof mixto_mr_seats !== 'undefined' && sistema === 'mixto') {
-            url += `&mixto_mr_seats=${mixto_mr_seats}`;
+        url += `&plan=${plan}`;
+        
+        // Solo agregar magnitud si está definida (esto podría ser escanos_totales en la nueva API)
+        if (typeof magnitud !== 'undefined' && camara === 'senado') {
+            url += `&escanos_totales=${magnitud}`;
         }
-        // Solo agregar magnitud, umbral, sobrerrepresentacion, quota_method y divisor_method si camara es diputados o senado, modelo es personalizado y están definidos
-        if ((camara === 'diputados' || camara === 'senado') && modelo === 'personalizado') {
-            if (typeof magnitud !== 'undefined') {
-                url += `&magnitud=${magnitud}`;
-            }
-            if (typeof umbral !== 'undefined') {
-                url += `&umbral=${umbral}`;
-            }
-            if (typeof sobrerrepresentacion !== 'undefined') {
-                url += `&sobrerrepresentacion=${sobrerrepresentacion}`;
-            }
-            if (typeof quota_method !== 'undefined') {
-                url += `&quota_method=${quota_method}`;
-            }
-            if (typeof divisor_method !== 'undefined') {
-                url += `&divisor_method=${divisor_method}`;
-            }
-            if (typeof max_seats_per_party !== 'undefined') {
-                url += `&max_seats_per_party=${max_seats_per_party}`;
-            }
-        }
+        
         console.log('[DEBUG] URL generada para petición:', url);
         console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method, max_seats_per_party});
-        const resp = await fetch(url);
+        
+        // Cambiar a POST en lugar de GET
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
         if (!resp.ok) throw new Error('Error al obtener datos');
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
-        // Actualiza el seat chart
-        const seatChart = document.querySelector('seat-chart');
-        if (seatChart) {
-            if (data.seatChart) {
-                seatChart.setAttribute('data', JSON.stringify(data.seatChart));
-                console.log('[DEBUG] seat-chart actualizado:', data.seatChart);
-            } else {
-                seatChart.setAttribute('data', '');
-                console.warn('[DEBUG] seat-chart: No hay datos para mostrar');
-            }
-        } else {
-            console.warn('[DEBUG] No se encontró el componente seat-chart');
-        }
-        // Actualiza los KPIs usando los <indicador-box> en el orden correcto
-        if (data.kpis) {
-            const { total_seats, gallagher, mae_votos_vs_escanos, total_votos } = data.kpis;
-            // Busca los indicador-box en el slot de dashboard-title
-            const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
-            if (indicadores.length >= 4) {
-                indicadores[0].setAttribute('valor', total_seats);
-                let mae_val = (typeof mae_votos_vs_escanos === 'number' && isFinite(mae_votos_vs_escanos)) ? mae_votos_vs_escanos.toFixed(2) : '0.00';
-                let gallagher_val = (typeof gallagher === 'number' && isFinite(gallagher)) ? gallagher.toFixed(2) : '0.00';
-                indicadores[1].setAttribute('valor', `±${mae_val}%`);
-                indicadores[2].setAttribute('valor', gallagher_val);
-                indicadores[3].setAttribute('valor', total_votos ? total_votos.toLocaleString('es-MX') : '0');
-                console.log('[DEBUG] indicador-box actualizados:', {
-                    total_seats, mae_votos_vs_escanos, gallagher, total_votos
-                });
-            } else {
-                console.warn('[DEBUG] No se encontraron suficientes indicador-box para actualizar KPIs');
-            }
-        } else {
-            console.warn('[DEBUG] No se encontraron datos de KPIs en la respuesta');
-        }
+        
+        // Obtener datos del seat-chart y KPIs por separado
+        await Promise.all([
+            cargarSeatChart(anio, camara, modelo),
+            cargarKPIs(anio, camara, modelo)
+        ]);
+        
+        console.log('[DEBUG] Datos principales cargados, seat-chart y KPIs solicitados por separado');
+        
     } catch (err) {
         console.error('Error cargando simulación:', err);
     }
 }
 
+// Función para cargar datos del seat-chart
+async function cargarSeatChart(anio, camara, modelo) {
+    try {
+        const plan = modelo === 'personalizado' ? 'C' : 'A';
+        const url = `https://back-electoral.onrender.com/seat-chart/${camara}/${anio}?plan=${plan}`;
+        
+        console.log('[DEBUG] Cargando seat-chart desde:', url);
+        
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Error al obtener seat-chart');
+        
+        const seatChartData = await resp.json();
+        console.log('[DEBUG] Datos seat-chart recibidos:', seatChartData);
+        
+        // Actualizar el componente seat-chart
+        const seatChart = document.querySelector('seat-chart');
+        if (seatChart && seatChartData && !seatChartData.error) {
+            seatChart.setAttribute('data', JSON.stringify(seatChartData));
+            console.log('[DEBUG] seat-chart actualizado correctamente');
+        } else {
+            console.warn('[DEBUG] seat-chart: No hay datos válidos para mostrar');
+        }
+    } catch (err) {
+        console.error('[ERROR] Error cargando seat-chart:', err);
+    }
+}
 
+// Función para cargar KPIs
+async function cargarKPIs(anio, camara, modelo) {
+    try {
+        const plan = modelo === 'personalizado' ? 'C' : 'A';
+        const url = `https://back-electoral.onrender.com/kpis/${camara}/${anio}?plan=${plan}`;
+        
+        console.log('[DEBUG] Cargando KPIs desde:', url);
+        
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Error al obtener KPIs');
+        
+        const kpisData = await resp.json();
+        console.log('[DEBUG] Datos KPIs recibidos:', kpisData);
+        
+        if (kpisData && !kpisData.error) {
+            // Actualizar indicadores con el formato correcto
+            const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+            if (indicadores.length >= 4) {
+                indicadores[0].setAttribute('valor', kpisData.total_escanos || 0);
+                
+                const mae = kpisData.proporcionalidad?.mae_votos_escanos || 0;
+                const gallagher = kpisData.proporcionalidad?.indice_gallagher || 0;
+                
+                indicadores[1].setAttribute('valor', `±${mae.toFixed(2)}%`);
+                indicadores[2].setAttribute('valor', gallagher.toFixed(2));
+                indicadores[3].setAttribute('valor', (kpisData.total_votos || 0).toLocaleString('es-MX'));
+                
+                console.log('[DEBUG] KPIs actualizados correctamente');
+            }
+        } else {
+            console.warn('[DEBUG] No se encontraron datos válidos de KPIs');
+        }
+    } catch (err) {
+        console.error('[ERROR] Error cargando KPIs:', err);
+    }
+}
 
 // === Vincular controles del panel de control con debounce ===
 let debounceTimer = null;
