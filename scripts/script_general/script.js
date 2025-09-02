@@ -246,36 +246,36 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
         
-        // Verificar si hay resultados válidos
-        if (!data.resultados || data.resultados.length === 0) {
-            console.warn('[DEBUG] Backend devolvió resultados vacíos, intentando con configuración alternativa...');
-            
-            // Intentar con año 2024 si 2018 falla
-            if (anio === 2018) {
-                console.log('[DEBUG] Intentando con año 2024 como fallback...');
-                await Promise.all([
-                    cargarSeatChart(2024, camara, modelo),
-                    cargarKPIs(2024, camara, modelo)
-                ]);
-                return;
-            }
-            
-            // Si ya intentó con 2024, intentar con diputados
-            if (camara === 'senado') {
-                console.log('[DEBUG] Intentando con cámara de diputados como fallback...');
-                await Promise.all([
-                    cargarSeatChart(anio, 'diputados', modelo),
-                    cargarKPIs(anio, 'diputados', modelo)
-                ]);
-                return;
+        // Usar los datos que ya vienen en la respuesta principal
+        if (data.seat_chart) {
+            const seatChart = document.querySelector('seat-chart');
+            if (seatChart) {
+                // El componente espera un array
+                const seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : data.seat_chart.seats || [];
+                seatChart.setAttribute('data', JSON.stringify(seatArray));
+                console.log('[DEBUG] seat-chart actualizado desde respuesta principal');
             }
         }
         
-        // Obtener datos del seat-chart y KPIs por separado
-        await Promise.all([
-            cargarSeatChart(anio, camara, modelo),
-            cargarKPIs(anio, camara, modelo)
-        ]);
+        if (data.kpis) {
+            const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+            if (indicadores.length >= 4) {
+                indicadores[0].setAttribute('valor', data.kpis.total_escanos || 0);
+                indicadores[1].setAttribute('valor', `±${(data.kpis.mae_votos_escanos || 0).toFixed(2)}%`);
+                indicadores[2].setAttribute('valor', (data.kpis.indice_gallagher || 0).toFixed(2));
+                indicadores[3].setAttribute('valor', (data.kpis.total_votos || 0).toLocaleString('es-MX'));
+                console.log('[DEBUG] KPIs actualizados desde respuesta principal');
+            }
+        }
+        
+        // Si no hay datos en la respuesta principal, intentar endpoints separados como fallback
+        if (!data.seat_chart || !data.kpis) {
+            console.log('[DEBUG] Algunos datos faltantes, cargando endpoints separados como fallback...');
+            await Promise.all([
+                !data.seat_chart ? cargarSeatChart(anio, camara, modelo) : Promise.resolve(),
+                !data.kpis ? cargarKPIs(anio, camara, modelo) : Promise.resolve()
+            ]);
+        }
         
         console.log('[DEBUG] Datos principales cargados, seat-chart y KPIs solicitados por separado');
         
@@ -307,8 +307,10 @@ async function cargarSeatChart(anio, camara, modelo) {
         // Actualizar el componente seat-chart
         const seatChart = document.querySelector('seat-chart');
         if (seatChart && seatChartData && !seatChartData.error) {
-            seatChart.setAttribute('data', JSON.stringify(seatChartData));
-            console.log('[DEBUG] seat-chart actualizado correctamente');
+            // El componente espera un array, no un objeto
+            const seatArray = seatChartData.seats || seatChartData;
+            seatChart.setAttribute('data', JSON.stringify(seatArray));
+            console.log('[DEBUG] seat-chart actualizado correctamente con array:', seatArray);
         } else {
             console.warn('[DEBUG] seat-chart: No hay datos válidos para mostrar');
         }
