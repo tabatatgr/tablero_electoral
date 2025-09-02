@@ -235,6 +235,31 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
         
+        // Verificar si hay resultados válidos
+        if (!data.resultados || data.resultados.length === 0) {
+            console.warn('[DEBUG] Backend devolvió resultados vacíos, intentando con configuración alternativa...');
+            
+            // Intentar con año 2024 si 2018 falla
+            if (anio === 2018) {
+                console.log('[DEBUG] Intentando con año 2024 como fallback...');
+                await Promise.all([
+                    cargarSeatChart(2024, camara, modelo),
+                    cargarKPIs(2024, camara, modelo)
+                ]);
+                return;
+            }
+            
+            // Si ya intentó con 2024, intentar con diputados
+            if (camara === 'senado') {
+                console.log('[DEBUG] Intentando con cámara de diputados como fallback...');
+                await Promise.all([
+                    cargarSeatChart(anio, 'diputados', modelo),
+                    cargarKPIs(anio, 'diputados', modelo)
+                ]);
+                return;
+            }
+        }
+        
         // Obtener datos del seat-chart y KPIs por separado
         await Promise.all([
             cargarSeatChart(anio, camara, modelo),
