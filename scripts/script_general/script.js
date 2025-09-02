@@ -204,6 +204,10 @@ console.log(' Electoral Dashboard script loaded');
 
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
     try {
+        // ✨ ANTI-CACHÉ: Generar timestamp único
+        const timestamp = Date.now();
+        const requestId = `${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
+        
         // Determinar endpoint basado en la cámara
         const endpoint = camara === 'senado' ? 'procesar/senado' : 'procesar/diputados';
         let url = `https://back-electoral.onrender.com/${endpoint}?anio=${anio}`;
@@ -220,7 +224,11 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             url += `&escanos_totales=${magnitud}`;
         }
         
+        // ✨ ANTI-CACHÉ: Añadir timestamp a la URL
+        url += `&_t=${timestamp}&_r=${requestId}`;
+        
         console.log('[DEBUG] URL generada para petición:', url);
+        console.log('[DEBUG] Request ID:', requestId);
         console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method, max_seats_per_party});
         
         // Cambiar a POST en lugar de GET
@@ -228,6 +236,11 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                // ✨ ANTI-CACHÉ: Headers que fuerzan no-cache
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'X-Request-ID': requestId
             }
         });
         
@@ -252,19 +265,51 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             if (seatChart) {
                 // El componente espera un array
                 const seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : data.seat_chart.seats || [];
+                
+                // ✨ ANTI-CACHÉ: Forzar re-render con key única
+                const renderKey = `${requestId}_seats`;
+                seatChart.setAttribute('data-key', renderKey);
                 seatChart.setAttribute('data', JSON.stringify(seatArray));
+                
+                // ✨ VERIFICAR CAMBIOS REALES: Hash de contenido
+                const contentHash = btoa(JSON.stringify(seatArray)).slice(0, 16);
                 console.log('[DEBUG] seat-chart actualizado desde respuesta principal');
+                console.log('[DEBUG] Content Hash:', contentHash, 'Render Key:', renderKey);
+                
+                // ✨ FORZAR ACTUALIZACIÓN: Trigger custom event
+                seatChart.dispatchEvent(new CustomEvent('force-update', { 
+                    detail: { requestId, contentHash, timestamp } 
+                }));
             }
         }
         
         if (data.kpis) {
             const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
             if (indicadores.length >= 4) {
+                // ✨ FORZAR RE-RENDER: Key única para cada indicador
+                const kpiKey = `${requestId}_kpis`;
+                
+                indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
                 indicadores[0].setAttribute('valor', data.kpis.total_escanos || 0);
+                
+                indicadores[1].setAttribute('data-key', `${kpiKey}_2`);
                 indicadores[1].setAttribute('valor', `±${(data.kpis.mae_votos_escanos || 0).toFixed(2)}%`);
+                
+                indicadores[2].setAttribute('data-key', `${kpiKey}_3`);
                 indicadores[2].setAttribute('valor', (data.kpis.indice_gallagher || 0).toFixed(2));
+                
+                indicadores[3].setAttribute('data-key', `${kpiKey}_4`);
                 indicadores[3].setAttribute('valor', (data.kpis.total_votos || 0).toLocaleString('es-MX'));
+                
                 console.log('[DEBUG] KPIs actualizados desde respuesta principal');
+                console.log('[DEBUG] KPI Keys:', kpiKey);
+                
+                // ✨ TRIGGER CUSTOM EVENTS para forzar actualización
+                indicadores.forEach((ind, idx) => {
+                    ind.dispatchEvent(new CustomEvent('force-update', { 
+                        detail: { requestId, index: idx, timestamp } 
+                    }));
+                });
             }
         }
         
@@ -287,12 +332,28 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
 // Función para cargar datos del seat-chart
 async function cargarSeatChart(anio, camara, modelo) {
     try {
+        // ✨ ANTI-CACHÉ: Timestamp único
+        const timestamp = Date.now();
+        const requestId = `${timestamp}_seatChart_${Math.random().toString(36).substr(2, 9)}`;
+        
         const plan = modelo === 'personalizado' ? 'C' : 'A';
-        const url = `https://back-electoral.onrender.com/seat-chart/${camara}/${anio}?plan=${plan}`;
+        let url = `https://back-electoral.onrender.com/seat-chart/${camara}/${anio}?plan=${plan}`;
+        
+        // ✨ ANTI-CACHÉ: Añadir timestamp
+        url += `&_t=${timestamp}&_r=${requestId}`;
         
         console.log('[DEBUG] Cargando seat-chart desde:', url);
+        console.log('[DEBUG] Seat-Chart Request ID:', requestId);
         
-        const resp = await fetch(url);
+        const resp = await fetch(url, {
+            // ✨ ANTI-CACHÉ: Headers no-cache
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'X-Request-ID': requestId
+            }
+        });
         console.log('[DEBUG] Status seat-chart:', resp.status, resp.statusText);
         
         if (!resp.ok) {
@@ -309,8 +370,21 @@ async function cargarSeatChart(anio, camara, modelo) {
         if (seatChart && seatChartData && !seatChartData.error) {
             // El componente espera un array, no un objeto
             const seatArray = seatChartData.seats || seatChartData;
+            
+            // ✨ FORZAR RE-RENDER: Key única
+            const renderKey = `${requestId}_fallback_seats`;
+            seatChart.setAttribute('data-key', renderKey);
             seatChart.setAttribute('data', JSON.stringify(seatArray));
+            
+            // ✨ VERIFICAR CAMBIOS: Content hash
+            const contentHash = btoa(JSON.stringify(seatArray)).slice(0, 16);
             console.log('[DEBUG] seat-chart actualizado correctamente con array:', seatArray);
+            console.log('[DEBUG] Fallback Content Hash:', contentHash, 'Render Key:', renderKey);
+            
+            // ✨ FORZAR ACTUALIZACIÓN
+            seatChart.dispatchEvent(new CustomEvent('force-update', { 
+                detail: { requestId, contentHash, timestamp, source: 'fallback' } 
+            }));
         } else {
             console.warn('[DEBUG] seat-chart: No hay datos válidos para mostrar');
         }
@@ -322,12 +396,28 @@ async function cargarSeatChart(anio, camara, modelo) {
 // Función para cargar KPIs
 async function cargarKPIs(anio, camara, modelo) {
     try {
+        // ✨ ANTI-CACHÉ: Timestamp único
+        const timestamp = Date.now();
+        const requestId = `${timestamp}_kpis_${Math.random().toString(36).substr(2, 9)}`;
+        
         const plan = modelo === 'personalizado' ? 'C' : 'A';
-        const url = `https://back-electoral.onrender.com/kpis/${camara}/${anio}?plan=${plan}`;
+        let url = `https://back-electoral.onrender.com/kpis/${camara}/${anio}?plan=${plan}`;
+        
+        // ✨ ANTI-CACHÉ: Añadir timestamp
+        url += `&_t=${timestamp}&_r=${requestId}`;
         
         console.log('[DEBUG] Cargando KPIs desde:', url);
+        console.log('[DEBUG] KPIs Request ID:', requestId);
         
-        const resp = await fetch(url);
+        const resp = await fetch(url, {
+            // ✨ ANTI-CACHÉ: Headers no-cache
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+                'X-Request-ID': requestId
+            }
+        });
         console.log('[DEBUG] Status KPIs:', resp.status, resp.statusText);
         
         if (!resp.ok) {
@@ -343,19 +433,36 @@ async function cargarKPIs(anio, camara, modelo) {
             // Actualizar indicadores con el formato correcto
             const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
             if (indicadores.length >= 4) {
+                // ✨ FORZAR RE-RENDER: Key única para cada indicador
+                const kpiKey = `${requestId}_fallback_kpis`;
+                
+                indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
                 indicadores[0].setAttribute('valor', kpisData.total_escanos || 0);
                 
                 const mae = kpisData.proporcionalidad?.mae_votos_escanos || 0;
                 const gallagher = kpisData.proporcionalidad?.indice_gallagher || 0;
                 
+                indicadores[1].setAttribute('data-key', `${kpiKey}_2`);
                 indicadores[1].setAttribute('valor', `±${mae.toFixed(2)}%`);
+                
+                indicadores[2].setAttribute('data-key', `${kpiKey}_3`);
                 indicadores[2].setAttribute('valor', gallagher.toFixed(2));
+                
+                indicadores[3].setAttribute('data-key', `${kpiKey}_4`);
                 indicadores[3].setAttribute('valor', (kpisData.total_votos || 0).toLocaleString('es-MX'));
                 
                 console.log('[DEBUG] KPIs actualizados correctamente');
+                console.log('[DEBUG] Fallback KPI Keys:', kpiKey);
+                
+                // ✨ TRIGGER CUSTOM EVENTS para forzar actualización
+                indicadores.forEach((ind, idx) => {
+                    ind.dispatchEvent(new CustomEvent('force-update', { 
+                        detail: { requestId, index: idx, timestamp, source: 'fallback' } 
+                    }));
+                });
             }
         } else {
-            console.warn('[DEBUG] No se encontraron datos válidos de KPIs');
+            console.warn('[DEBUG] No se encontraron datos de KPIs en la respuesta');
         }
     } catch (err) {
         console.error('[ERROR] Error cargando KPIs:', err);
@@ -570,3 +677,173 @@ function actualizarDesdeControles() {
     cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud});
     }
 }
+
+// ===== 🛠️ DEBUG HELPER - ANTI-CACHÉ =====
+window.electoralDebugger = {
+    // 🔍 Ver estado actual de componentes
+    getComponentState() {
+        console.log('🔍 ESTADO ACTUAL DE COMPONENTES:');
+        
+        const seatChart = document.querySelector('seat-chart');
+        const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+        
+        if (seatChart) {
+            console.log('📊 SeatChart:', {
+                hasData: !!seatChart.getAttribute('data'),
+                dataKey: seatChart.getAttribute('data-key'),
+                dataLength: seatChart.getAttribute('data') ? JSON.parse(seatChart.getAttribute('data')).length : 0
+            });
+        }
+        
+        console.log('📈 KPIs:', Array.from(indicadores).map((ind, idx) => ({
+            index: idx,
+            valor: ind.getAttribute('valor'),
+            dataKey: ind.getAttribute('data-key')
+        })));
+        
+        return { seatChart, indicadores };
+    },
+    
+    // 🔄 Forzar refresh manual (Solución Nuclear)
+    forceRefresh() {
+        console.log('🚨 FORZANDO REFRESH NUCLEAR...');
+        
+        // Limpiar completamente los componentes
+        const seatChart = document.querySelector('seat-chart');
+        const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+        
+        if (seatChart) {
+            seatChart.removeAttribute('data');
+            seatChart.removeAttribute('data-key');
+            // Forzar re-render removiendo y volviendo a añadir
+            const parent = seatChart.parentNode;
+            const nextSibling = seatChart.nextSibling;
+            parent.removeChild(seatChart);
+            setTimeout(() => {
+                parent.insertBefore(seatChart, nextSibling);
+                console.log('✅ SeatChart recreado');
+            }, 100);
+        }
+        
+        indicadores.forEach((ind, idx) => {
+            ind.removeAttribute('data-key');
+            ind.setAttribute('valor', '🔄');
+            setTimeout(() => {
+                console.log(`✅ KPI ${idx} limpiado`);
+            }, 50);
+        });
+        
+        // Triggear una nueva carga después de limpiar
+        setTimeout(() => {
+            console.log('🔄 Ejecutando actualizarDesdeControles después del refresh...');
+            actualizarDesdeControles();
+        }, 200);
+    },
+    
+    // 📊 Monitorear cambios en tiempo real
+    startMonitoring() {
+        console.log('👀 INICIANDO MONITOREO EN TIEMPO REAL...');
+        
+        // Observer para cambios en seat-chart
+        const seatChart = document.querySelector('seat-chart');
+        if (seatChart) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && 
+                        (mutation.attributeName === 'data' || mutation.attributeName === 'data-key')) {
+                        console.log('🔔 SeatChart actualizado:', {
+                            timestamp: new Date().toISOString(),
+                            attribute: mutation.attributeName,
+                            newValue: mutation.target.getAttribute(mutation.attributeName)?.slice(0, 50) + '...'
+                        });
+                    }
+                });
+            });
+            
+            observer.observe(seatChart, { 
+                attributes: true, 
+                attributeFilter: ['data', 'data-key'] 
+            });
+        }
+        
+        // Observer para KPIs
+        const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+        indicadores.forEach((ind, idx) => {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && 
+                        (mutation.attributeName === 'valor' || mutation.attributeName === 'data-key')) {
+                        console.log(`🔔 KPI ${idx} actualizado:`, {
+                            timestamp: new Date().toISOString(),
+                            attribute: mutation.attributeName,
+                            newValue: mutation.target.getAttribute(mutation.attributeName)
+                        });
+                    }
+                });
+            });
+            
+            observer.observe(ind, { 
+                attributes: true, 
+                attributeFilter: ['valor', 'data-key'] 
+            });
+        });
+        
+        console.log('✅ Monitoreo activo. Los cambios aparecerán en la consola.');
+    },
+    
+    // 🧪 Test de conectividad
+    async testConnectivity() {
+        console.log('🧪 TESTING CONECTIVIDAD...');
+        
+        const testUrls = [
+            'https://back-electoral.onrender.com/procesar/diputados?anio=2018&plan=A',
+            'https://back-electoral.onrender.com/procesar/senado?anio=2018&plan=A',
+            'https://back-electoral.onrender.com/seat-chart/diputados/2018?plan=A',
+            'https://back-electoral.onrender.com/kpis/diputados/2018?plan=A'
+        ];
+        
+        for (const url of testUrls) {
+            try {
+                const timestamp = Date.now();
+                const testUrl = `${url}&_t=${timestamp}`;
+                const response = await fetch(testUrl, {
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
+                
+                console.log(`✅ ${url}: ${response.status} ${response.statusText}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`   📦 Datos recibidos: ${JSON.stringify(data).length} caracteres`);
+                }
+            } catch (error) {
+                console.error(`❌ ${url}: ${error.message}`);
+            }
+        }
+    }
+};
+
+// 🎯 Comandos rápidos para la consola
+console.log(`
+🚀 ANTI-CACHÉ CONFIGURADO! 
+
+Comandos disponibles en la consola:
+• electoralDebugger.getComponentState() - Ver estado actual
+• electoralDebugger.forceRefresh() - Refresh nuclear (last resort)  
+• electoralDebugger.startMonitoring() - Monitorear cambios en tiempo real
+• electoralDebugger.testConnectivity() - Test de conectividad
+
+Mejoras implementadas:
+✅ Timestamp único en cada request
+✅ Headers no-cache forzados  
+✅ Keys únicas para re-render
+✅ Content hashing para verificar cambios
+✅ Custom events para forzar actualización
+✅ Debug helper completo
+
+¡El problema de caché debería estar resuelto! 🎉
+`);
