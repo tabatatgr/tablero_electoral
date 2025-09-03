@@ -210,7 +210,7 @@ function mapearModeloAPlan(modelo) {
         'plan b': 'B',
         'plan c': 'C',
         'plan_c': 'C',
-        'personalizado': 'C'  // personalizado usa plan C
+        'personalizado': 'personalizado'  // ✅ CORRECTO: mantener como personalizado
     };
     
     // Si el modelo está en el mapeo, usarlo; sino usar el modelo tal como viene
@@ -225,7 +225,7 @@ function mapearModeloAPlan(modelo) {
     return resultado;
 }
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mixto_mr_seats = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, escanos_totales = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
     try {
         // ✨ ANTI-CACHÉ: Generar timestamp único
         const timestamp = Date.now();
@@ -239,9 +239,73 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         const plan = mapearModeloAPlan(modelo);
         url += `&plan=${plan}`;
         
-        // Solo agregar magnitud si está definida (esto podría ser escanos_totales en la nueva API)
-        if (typeof magnitud !== 'undefined' && camara === 'senado') {
+        // ✅ ENVIAR MAGNITUD PARA AMBAS CÁMARAS (solo si NO es personalizado)
+        if (typeof magnitud !== 'undefined' && modelo !== 'personalizado') {
             url += `&escanos_totales=${magnitud}`;
+            console.log('[DEBUG] 🏛️ Enviando magnitud estándar:', magnitud, 'para', camara);
+        }
+        
+        // 🎯 ENVIAR PARÁMETROS PERSONALIZADOS AL BACKEND
+        // Solo cuando el modelo es personalizado, agregar parámetros adicionales
+        if (modelo === 'personalizado') {
+            console.log('[DEBUG] 🔧 MODO PERSONALIZADO: Enviando parámetros adicionales...');
+            
+            // ✅ NOMBRES CORRECTOS SEGÚN EL BACKEND:
+            
+            // Umbral
+            if (typeof umbral !== 'undefined' && umbral !== null) {
+                url += `&umbral=${umbral}`;
+            }
+            
+            // ✅ CORRECCIÓN: sobrerrepresentacion → max_seats_per_party (REDONDEADO A ENTERO)
+            if (typeof sobrerrepresentacion !== 'undefined' && sobrerrepresentacion !== null) {
+                const maxSeatsRounded = Math.round(sobrerrepresentacion);
+                url += `&max_seats_per_party=${maxSeatsRounded}`;
+                console.log('[DEBUG] 🔧 Mapeando sobrerrepresentacion →', sobrerrepresentacion, '→ max_seats_per_party →', maxSeatsRounded, '(redondeado)');
+            }
+            
+            // Sistema electoral
+            if (typeof sistema !== 'undefined' && sistema !== null) {
+                url += `&sistema=${sistema}`;
+            }
+            
+            // ✅ MR_SEATS: Enviando escaños mayoría relativa (REDONDEADO A ENTERO)
+            if (typeof mr_seats !== 'undefined' && mr_seats !== null) {
+                const mrSeatsRounded = Math.round(mr_seats);
+                url += `&mr_seats=${mrSeatsRounded}`;
+                console.log('[DEBUG] 🔧 Enviando mr_seats:', mr_seats, '→', mrSeatsRounded, '(redondeado)');
+            }
+            
+            // ✅ RP_SEATS: Enviando escaños representación proporcional (REDONDEADO A ENTERO)
+            if (typeof rp_seats !== 'undefined' && rp_seats !== null) {
+                const rpSeatsRounded = Math.round(rp_seats);
+                url += `&rp_seats=${rpSeatsRounded}`;
+                console.log('[DEBUG] 🔧 Enviando rp_seats:', rp_seats, '→', rpSeatsRounded, '(redondeado)');
+            }
+            
+            // ✅ ESCANOS_TOTALES: Total de escaños (REDONDEADO A ENTERO)
+            if (typeof escanos_totales !== 'undefined' && escanos_totales !== null) {
+                const escanosTotalesRounded = Math.round(escanos_totales);
+                url += `&escanos_totales=${escanosTotalesRounded}`;
+                console.log('[DEBUG] 🔧 Enviando escanos_totales:', escanos_totales, '→', escanosTotalesRounded, '(redondeado)');
+            }
+            
+            // Método de cuota
+            if (typeof quota_method !== 'undefined' && quota_method !== null) {
+                url += `&quota_method=${quota_method}`;
+            }
+            
+            // Método divisor
+            if (typeof divisor_method !== 'undefined' && divisor_method !== null) {
+                url += `&divisor_method=${divisor_method}`;
+            }
+            
+            // ✅ ELIMINAR max_seats_per_party duplicado (ya se envía como sobrerrepresentacion)
+            // if (typeof max_seats_per_party !== 'undefined' && max_seats_per_party !== null) {
+            //     url += `&max_seats_per_party=${max_seats_per_party}`;
+            // }
+            
+            console.log('[DEBUG] 🎯 PARÁMETROS PERSONALIZADOS AÑADIDOS CON NOMBRES CORRECTOS');
         }
         
         // ✨ ANTI-CACHÉ: Añadir timestamp a la URL
@@ -249,7 +313,27 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         
         console.log('[DEBUG] URL generada para petición:', url);
         console.log('[DEBUG] Request ID:', requestId);
-        console.log('[DEBUG] Parámetros:', {anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, quota_method, divisor_method, max_seats_per_party});
+        console.log('[DEBUG] Parámetros recibidos:', {
+            anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, 
+            sistema, mr_seats, rp_seats, escanos_totales,
+            quota_method, divisor_method, max_seats_per_party
+        });
+        
+        // 🔍 DEBUG: Mostrar si es personalizado
+        if (modelo === 'personalizado') {
+            console.log('[DEBUG] 🔧 PERSONALIZADO ACTIVO - URL incluye parámetros customizados');
+        } else {
+            console.log('[DEBUG] 📋 PLAN ESTÁNDAR - Solo parámetros básicos');
+        }
+        
+        // 🔍 DEBUG ESPECÍFICO POR CÁMARA: Verificar diferencias Senado vs Diputados
+        console.log('[DEBUG] 🏛️ CÁMARA:', camara.toUpperCase());
+        console.log('[DEBUG] 🔢 MAGNITUD/ESCAÑOS:', {
+            magnitudRecibida: magnitud,
+            escanosTotalesRecibidos: escanos_totales,
+            seEnviaEnURL: url.includes('escanos_totales'),
+            urlCompleta: url
+        });
         
         // Cambiar a POST en lugar de GET
         const resp = await fetch(url, {
@@ -673,11 +757,36 @@ function actualizarDesdeControles() {
         }
         const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
         let sistema = electoralRuleRadio ? electoralRuleRadio.value : undefined;
-        let mixto_mr_seats = undefined;
-        if (sistema === 'mixto') {
-            const mrSlider = document.getElementById('input-mr');
-            mixto_mr_seats = mrSlider ? parseInt(mrSlider.value, 10) : undefined;
+        
+        // 🔧 LEER TODOS LOS SLIDERS SIEMPRE (sin condicionar por sistema)
+        let mr_seats = undefined;
+        let rp_seats = undefined; 
+        let escanos_totales = undefined;
+        
+        // Leer slider MR (mayoría relativa)
+        const mrSlider = document.getElementById('input-mr');
+        if (mrSlider) {
+            mr_seats = Math.round(parseFloat(mrSlider.value));
+            console.log('[DEBUG] 🎛️ MR Slider leído:', mr_seats);
         }
+        
+        // Leer slider RP (representación proporcional) 
+        const rpSlider = document.getElementById('input-rp');
+        if (rpSlider) {
+            rp_seats = Math.round(parseFloat(rpSlider.value));
+            console.log('[DEBUG] 🎛️ RP Slider leído:', rp_seats);
+        }
+        
+        // Leer slider de escaños totales
+        const totalSeatsSlider = document.getElementById('magnitude-slider');
+        if (totalSeatsSlider) {
+            escanos_totales = Math.round(parseFloat(totalSeatsSlider.value));
+            console.log('[DEBUG] 🎛️ Escaños Totales leído:', escanos_totales);
+        }
+        
+        console.log('[DEBUG] 🎯 SISTEMA ELECTORAL:', sistema);
+        console.log('[DEBUG] 🎛️ VALORES SLIDERS:', { mr_seats, rp_seats, escanos_totales });
+        
         // Leer métodos de reparto
         const quotaMethodSelect = document.getElementById('quota-method');
         const divisorMethodSelect = document.getElementById('divisor-method');
@@ -692,7 +801,12 @@ function actualizarDesdeControles() {
             max_seats_per_party = parseInt(seatCapInput.value, 10);
         }
         
-        cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud, sobrerrepresentacion, umbral, sistema, mixto_mr_seats, quota_method, divisor_method, max_seats_per_party});
+        cargarSimulacion({
+            anio, camara, modelo: modeloBackend, magnitud, 
+            sobrerrepresentacion, umbral, sistema, 
+            mr_seats, rp_seats, escanos_totales,  // ✅ Nuevos parámetros
+            quota_method, divisor_method, max_seats_per_party
+        });
     } else {
         // Estado por defecto: vigente diputados=500, senado=128
         let magnitud = (camara === 'senado') ? 128 : 500;
