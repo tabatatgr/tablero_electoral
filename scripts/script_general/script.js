@@ -763,6 +763,16 @@ function actualizarDesdeControles() {
         let rp_seats = undefined; 
         let escanos_totales = undefined;
         
+        // 🔍 DEBUG: Verificar qué sliders están disponibles
+        console.log('[DEBUG] 🔍 SLIDERS DISPONIBLES:', {
+            'input-mr': !!document.getElementById('input-mr'),
+            'input-rp': !!document.getElementById('input-rp'), 
+            'magnitude-slider': !!document.getElementById('magnitude-slider'),
+            'total-seats-slider': !!document.getElementById('total-seats-slider'),
+            'seats-slider': !!document.getElementById('seats-slider'),
+            'chamber-size-slider': !!document.getElementById('chamber-size-slider')
+        });
+        
         // Leer slider MR (mayoría relativa)
         const mrSlider = document.getElementById('input-mr');
         if (mrSlider) {
@@ -777,11 +787,39 @@ function actualizarDesdeControles() {
             console.log('[DEBUG] 🎛️ RP Slider leído:', rp_seats);
         }
         
-        // Leer slider de escaños totales
-        const totalSeatsSlider = document.getElementById('magnitude-slider');
+        // 🔍 BUSCAR SLIDER DE ESCAÑOS TOTALES (múltiples IDs posibles)
+        const possibleTotalSliders = [
+            'magnitude-slider',
+            'total-seats-slider', 
+            'seats-slider',
+            'chamber-size-slider',
+            'escanos-slider',
+            'size-slider'
+        ];
+        
+        let totalSeatsSlider = null;
+        let sliderFound = null;
+        
+        for (const sliderId of possibleTotalSliders) {
+            const slider = document.getElementById(sliderId);
+            if (slider) {
+                totalSeatsSlider = slider;
+                sliderFound = sliderId;
+                break;
+            }
+        }
+        
         if (totalSeatsSlider) {
             escanos_totales = Math.round(parseFloat(totalSeatsSlider.value));
-            console.log('[DEBUG] 🎛️ Escaños Totales leído:', escanos_totales);
+            console.log('[DEBUG] 🎛️ Escaños Totales leído desde', sliderFound + ':', escanos_totales);
+        } else {
+            console.log('[DEBUG] ⚠️ NO SE ENCONTRÓ slider de escaños totales');
+            
+            // 🔄 FALLBACK: Usar la magnitud que viene como parámetro
+            if (typeof magnitud !== 'undefined' && magnitud !== null) {
+                escanos_totales = Math.round(magnitud);
+                console.log('[DEBUG] 🔄 FALLBACK: Usando magnitud como escanos_totales:', escanos_totales);
+            }
         }
         
         console.log('[DEBUG] 🎯 SISTEMA ELECTORAL:', sistema);
@@ -801,8 +839,25 @@ function actualizarDesdeControles() {
             max_seats_per_party = parseInt(seatCapInput.value, 10);
         }
         
+        // 🎯 CORRECCIÓN CRÍTICA: Usar escanos_totales como magnitud si está definido
+        let magnitudFinal = magnitud;
+        if (typeof escanos_totales !== 'undefined' && escanos_totales !== null) {
+            magnitudFinal = escanos_totales;
+            console.log('[DEBUG] 🎯 USANDO escanos_totales como magnitud:', escanos_totales, '(en lugar de', magnitud, ')');
+        }
+        
+        console.log('[DEBUG] 🎯 PARÁMETROS FINALES ANTES DE ENVIAR:', {
+            anio, camara, modelo: modeloBackend, 
+            magnitudOriginal: magnitud,
+            magnitudFinal: magnitudFinal,
+            escanos_totales,
+            mr_seats, rp_seats,
+            sobrerrepresentacion, umbral, sistema,
+            quota_method, divisor_method, max_seats_per_party
+        });
+        
         cargarSimulacion({
-            anio, camara, modelo: modeloBackend, magnitud, 
+            anio, camara, modelo: modeloBackend, magnitud: magnitudFinal, 
             sobrerrepresentacion, umbral, sistema, 
             mr_seats, rp_seats, escanos_totales,  // ✅ Nuevos parámetros
             quota_method, divisor_method, max_seats_per_party
