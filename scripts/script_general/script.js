@@ -1,24 +1,94 @@
 // Electoral Dashboard JavaScript - Clean Version
 console.log('Loading Electoral Dashboard...');
 
+//  Helper para notificaciones seguras
+function safeNotification(method, ...args) {
+    if (window.notifications && window.notifications.isReady && typeof window.notifications[method] === 'function') {
+        return window.notifications[method](...args);
+    }
+    return null;
+}
+
+//  Variables para control de notificaciones - SIMPLIFICADO
+let isInitializing = true; // Solo para controlar la primera carga
+let showReadyNotification = false; // Para mostrar "Tablero Listo"
+
+// Función para obtener la cámara actual
+function getCurrentChamber() {
+    const senadoresBtn = document.querySelector('.chamber-btn[data-chamber="senadores"]');
+    const diputadosBtn = document.querySelector('.chamber-btn[data-chamber="diputados"]');
+    
+    if (senadoresBtn && senadoresBtn.classList.contains('active')) {
+        return 'senado';
+    } else if (diputadosBtn && diputadosBtn.classList.contains('active')) {
+        return 'diputados';
+    }
+    
+    // Fallback: revisar sidebar si existe
+    const sidebar = document.querySelector('control-sidebar');
+    if (sidebar && sidebar.selectedChamber) {
+        return sidebar.selectedChamber === 'senadores' ? 'senado' : 'diputados';
+    }
+    
+    return 'senado'; // Default
+}
+
+// ===== REQUEST CONTROLLER PARA EVITAR SOLAPAMIENTO =====
+let currentController = null;
+let pendingRequestId = null;
+
+function createNewRequestController() {
+    // Cancelar request anterior si existe
+    if (currentController) {
+        currentController.abort();
+        console.log('[DEBUG] Request anterior cancelado');
+    }
+    
+    // Crear nuevo controller
+    currentController = new AbortController();
+    return currentController;
+}
+
 // ===== MAIN INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
-    // Disparar actualización al cambiar método de reparto (cuota o divisor)
-    const quotaMethodSelect = document.getElementById('quota-method');
-    if (quotaMethodSelect) {
-        quotaMethodSelect.addEventListener('change', function() {
+    // ❌ NOTIFICACIÓN INICIAL ELIMINADA - Solo mostrar notificaciones en interacciones del usuario
+    /*
+    //  Esperar a que el sistema de notificaciones esté listo
+    function showInitialNotification() {
+        const result = safeNotification('loading',
+            'Inicializando Tablero Electoral',
+            'Cargando componentes y datos iniciales...',
+            'init-loading'
+        );
+        
+        if (!result) {
+            // Reintentar después de un momento
+            setTimeout(showInitialNotification, 100);
+        }
+    }
+    
+    showInitialNotification();
+    */
+    
+    // 🔄 NUEVO SISTEMA DE REPARTO EXCLUSIVO - Event listeners
+    const repartoModeRadios = document.querySelectorAll('input[name="reparto-mode"]');
+    repartoModeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); // 🔔 Marcar como acción del usuario
+                console.log('[DEBUG] Modo de reparto cambiado:', this.value);
             }
         });
-    }
-    const divisorMethodSelect = document.getElementById('divisor-method');
-    if (divisorMethodSelect) {
-        divisorMethodSelect.addEventListener('change', function() {
+    });
+    
+    const repartoMethodSelect = document.getElementById('reparto-method');
+    if (repartoMethodSelect) {
+        repartoMethodSelect.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); // 🔔 Marcar como acción del usuario
+                console.log('[DEBUG] Método de reparto cambiado:', this.value);
             }
         });
     }
@@ -28,17 +98,50 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
             }
         });
     });
-    // Slider de umbral: solo dispara actualización si el modelo es personalizado
+    // Slider de umbral: dispara actualización para cualquier modelo en senado
     const thresholdInput = document.getElementById('threshold-slider');
     if (thresholdInput) {
         thresholdInput.addEventListener('input', function() {
+            const currentChamber = getCurrentChamber();
             const modelSelect = document.getElementById('model-select');
-            if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+            const umbralValue = parseFloat(this.value);
+            
+            // UI Feedback: Indicar estado del umbral
+            let feedbackMsg = '';
+            let feedbackClass = '';
+            
+            if (umbralValue > 10) {
+                feedbackMsg = ` Umbral muy alto (${umbralValue}%) - Puede eliminar todos los partidos`;
+                feedbackClass = 'umbral-muy-alto';
+            } else if (umbralValue > 5) {
+                feedbackMsg = ` Umbral alto (${umbralValue}%) - Reducirá partidos significativamente`;
+                feedbackClass = 'umbral-alto';
+            } else if (umbralValue > 0) {
+                feedbackMsg = ` Umbral normal (${umbralValue}%)`;
+                feedbackClass = 'umbral-normal';
+            } else {
+                feedbackMsg = 'Sin umbral electoral';
+                feedbackClass = 'umbral-off';
+            }
+            
+            console.log('[DEBUG]  Umbral slider changed:', {
+                valor: umbralValue,
+                camara: currentChamber,
+                modeloActual: modelSelect?.value,
+                feedback: feedbackMsg
+            });
+            
+            // TEMPORAL: Solo actualizar para diputados mientras debuggeamos senado
+            if (currentChamber === 'diputados' || 
+                (modelSelect && modelSelect.value === 'personalizado')) {
+                console.log('[DEBUG]  Umbral changed, triggering update for chamber:', currentChamber);
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
+            } else {
+                console.log('[DEBUG]  UMBRAL DESHABILITADO TEMPORALMENTE PARA SENADO NO-PERSONALIZADO');
             }
         });
     }
@@ -48,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         overrepInput.addEventListener('input', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
             }
         });
     }
@@ -58,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
         seatCapInput.addEventListener('input', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
             }
         });
     }
@@ -202,7 +305,7 @@ console.log(' Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
-// ✨ FUNCIÓN CENTRALIZADA: Mapeo modelo → plan
+//  FUNCIÓN CENTRALIZADA: Mapeo modelo → plan
 function mapearModeloAPlan(modelo) {
     const mapeo = {
         'vigente': 'vigente',
@@ -210,13 +313,13 @@ function mapearModeloAPlan(modelo) {
         'plan b': 'B',
         'plan c': 'C',
         'plan_c': 'C',
-        'personalizado': 'personalizado'  // ✅ CORRECTO: mantener como personalizado
+        'personalizado': 'personalizado'  //  CORRECTO: mantener como personalizado
     };
     
     // Si el modelo está en el mapeo, usarlo; sino usar el modelo tal como viene
     const resultado = mapeo[modelo.toLowerCase()] || modelo;
     
-    console.log('[DEBUG] 🎯 MAPEO CENTRALIZADO:', {
+    console.log('[DEBUG]  MAPEO CENTRALIZADO:', {
         entrada: modelo,
         salida: resultado,
         encontradoEnMapeo: modelo.toLowerCase() in mapeo
@@ -225,9 +328,21 @@ function mapearModeloAPlan(modelo) {
     return resultado;
 }
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, escanos_totales = undefined, quota_method = undefined, divisor_method = undefined, max_seats_per_party = undefined} = {}) {
+async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false} = {}) {
+    console.log('[DEBUG]  cargarSimulacion INICIADA con parámetros:', {anio, camara, modelo, magnitud, mr_seats, rp_seats, pm_seats, escanos_totales, reparto_mode, reparto_method, usar_coaliciones, silentLoad});
+    
+    //  🔄 NOTIFICACIÓN DE CARGA: Solo si NO es silentLoad (punto, sin más condiciones)
+    let notificationId = null;
+    if (!silentLoad) {
+        notificationId = safeNotification('loading',
+            'Cargando Datos Electorales',
+            `Procesando simulación para ${camara} (${anio})...`,
+            'data-loading'
+        );
+    }
+    
     try {
-        // ✨ ANTI-CACHÉ: Generar timestamp único
+        //  ANTI-CACHÉ: Generar timestamp único
         const timestamp = Date.now();
         const requestId = `${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
         
@@ -235,33 +350,42 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         const endpoint = camara === 'senado' ? 'procesar/senado' : 'procesar/diputados';
         let url = `https://back-electoral.onrender.com/${endpoint}?anio=${anio}`;
         
-        // ✨ USAR FUNCIÓN CENTRALIZADA
+        //  USAR FUNCIÓN CENTRALIZADA
         const plan = mapearModeloAPlan(modelo);
         url += `&plan=${plan}`;
         
-        // ✅ ENVIAR MAGNITUD PARA AMBAS CÁMARAS (solo si NO es personalizado)
+        //  ENVIAR MAGNITUD PARA AMBAS CÁMARAS (solo si NO es personalizado)
         if (typeof magnitud !== 'undefined' && modelo !== 'personalizado') {
             url += `&escanos_totales=${magnitud}`;
-            console.log('[DEBUG] 🏛️ Enviando magnitud estándar:', magnitud, 'para', camara);
+            console.log('[DEBUG]  Enviando magnitud estándar:', magnitud, 'para', camara);
         }
         
-        // 🎯 ENVIAR PARÁMETROS PERSONALIZADOS AL BACKEND
+        //  ENVIAR PARÁMETROS PERSONALIZADOS AL BACKEND
         // Solo cuando el modelo es personalizado, agregar parámetros adicionales
         if (modelo === 'personalizado') {
             console.log('[DEBUG] 🔧 MODO PERSONALIZADO: Enviando parámetros adicionales...');
             
-            // ✅ NOMBRES CORRECTOS SEGÚN EL BACKEND:
+            //  NOMBRES CORRECTOS SEGÚN EL BACKEND:
             
             // Umbral
             if (typeof umbral !== 'undefined' && umbral !== null) {
                 url += `&umbral=${umbral}`;
+                console.log('[DEBUG]  Enviando umbral:', umbral, 'para cámara:', camara);
+            } else {
+                console.log('[DEBUG]  NO se envía umbral (undefined o null) para cámara:', camara);
             }
             
-            // ✅ CORRECCIÓN: sobrerrepresentacion → max_seats_per_party (REDONDEADO A ENTERO)
+            
+            // Sobrerrepresentación (parámetro de tolerancia)
             if (typeof sobrerrepresentacion !== 'undefined' && sobrerrepresentacion !== null) {
-                const maxSeatsRounded = Math.round(sobrerrepresentacion);
-                url += `&max_seats_per_party=${maxSeatsRounded}`;
-                console.log('[DEBUG] 🔧 Mapeando sobrerrepresentacion →', sobrerrepresentacion, '→ max_seats_per_party →', maxSeatsRounded, '(redondeado)');
+                url += `&sobrerrepresentacion=${sobrerrepresentacion}`;
+                console.log('[DEBUG]  Enviando sobrerrepresentacion:', sobrerrepresentacion);
+            }
+            
+            // Tope de escaños por partido (parámetro separado del control específico)
+            if (typeof max_seats_per_party !== 'undefined' && max_seats_per_party !== null) {
+                url += `&max_seats_per_party=${max_seats_per_party}`;
+                console.log('[DEBUG]  Enviando max_seats_per_party:', max_seats_per_party);
             }
             
             // Sistema electoral
@@ -269,46 +393,72 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
                 url += `&sistema=${sistema}`;
             }
             
-            // ✅ MR_SEATS: Enviando escaños mayoría relativa (REDONDEADO A ENTERO)
+            //  MR_SEATS: Enviando escaños mayoría relativa (REDONDEADO A ENTERO)
             if (typeof mr_seats !== 'undefined' && mr_seats !== null) {
                 const mrSeatsRounded = Math.round(mr_seats);
                 url += `&mr_seats=${mrSeatsRounded}`;
-                console.log('[DEBUG] 🔧 Enviando mr_seats:', mr_seats, '→', mrSeatsRounded, '(redondeado)');
+                console.log('[DEBUG]  Enviando mr_seats:', mr_seats, '→', mrSeatsRounded, '(redondeado)');
             }
             
-            // ✅ RP_SEATS: Enviando escaños representación proporcional (REDONDEADO A ENTERO)
+            //  RP_SEATS: Enviando escaños representación proporcional (REDONDEADO A ENTERO)
             if (typeof rp_seats !== 'undefined' && rp_seats !== null) {
                 const rpSeatsRounded = Math.round(rp_seats);
                 url += `&rp_seats=${rpSeatsRounded}`;
-                console.log('[DEBUG] 🔧 Enviando rp_seats:', rp_seats, '→', rpSeatsRounded, '(redondeado)');
+                console.log('[DEBUG]  Enviando rp_seats:', rp_seats, '→', rpSeatsRounded, '(redondeado)');
             }
             
-            // ✅ ESCANOS_TOTALES: Total de escaños (REDONDEADO A ENTERO)
+            //  PM_SEATS: Enviando escaños primera minoría (REDONDEADO A ENTERO)
+            if (typeof pm_seats !== 'undefined' && pm_seats !== null) {
+                const pmSeatsRounded = Math.round(pm_seats);
+                url += `&pm_seats=${pmSeatsRounded}`;
+                console.log('[DEBUG]  Enviando pm_seats:', pm_seats, '→', pmSeatsRounded, '(redondeado)');
+            }
+            
+            //  ESCANOS_TOTALES: Total de escaños (REDONDEADO A ENTERO)
             if (typeof escanos_totales !== 'undefined' && escanos_totales !== null) {
                 const escanosTotalesRounded = Math.round(escanos_totales);
                 url += `&escanos_totales=${escanosTotalesRounded}`;
-                console.log('[DEBUG] 🔧 Enviando escanos_totales:', escanos_totales, '→', escanosTotalesRounded, '(redondeado)');
+                console.log('[DEBUG]  Enviando escanos_totales:', escanos_totales, '→', escanosTotalesRounded, '(redondeado) | Variable origen:', typeof escanos_totales);
+            } else {
+                //  FALLBACK CRÍTICO: Si no hay escanos_totales, usar magnitud
+                if (typeof magnitud !== 'undefined' && magnitud !== null) {
+                    const magnitudRounded = Math.round(magnitud);
+                    url += `&escanos_totales=${magnitudRounded}`;
+                    console.log('[DEBUG]  FALLBACK escanos_totales: Usando magnitud', magnitud, '→', magnitudRounded);
+                } else {
+                    //  ÚLTIMO RECURSO: Valores por defecto por cámara
+                    const defaultSeats = camara === 'senado' ? 128 : 500;
+                    url += `&escanos_totales=${defaultSeats}`;
+                    console.log('[DEBUG]  FALLBACK ÚLTIMO RECURSO: Usando default', defaultSeats, 'para', camara);
+                }
             }
             
-            // Método de cuota
-            if (typeof quota_method !== 'undefined' && quota_method !== null) {
-                url += `&quota_method=${quota_method}`;
+            // 🔄 NUEVO SISTEMA DE REPARTO EXCLUSIVO
+            if (typeof reparto_mode !== 'undefined' && reparto_mode !== null) {
+                url += `&reparto_mode=${reparto_mode}`;
+                console.log('[DEBUG]  Enviando reparto_mode:', reparto_mode);
             }
             
-            // Método divisor
-            if (typeof divisor_method !== 'undefined' && divisor_method !== null) {
-                url += `&divisor_method=${divisor_method}`;
+            if (typeof reparto_method !== 'undefined' && reparto_method !== null) {
+                url += `&reparto_method=${reparto_method}`;
+                console.log('[DEBUG]  Enviando reparto_method:', reparto_method);
             }
             
-            // ✅ ELIMINAR max_seats_per_party duplicado (ya se envía como sobrerrepresentacion)
+            // Toggle de coaliciones (solo en modo personalizado)
+            if (typeof usar_coaliciones !== 'undefined' && usar_coaliciones !== null) {
+                url += `&usar_coaliciones=${usar_coaliciones}`;
+                console.log('[DEBUG]  Enviando usar_coaliciones:', usar_coaliciones, 'para', camara, '(modo personalizado)');
+            }
+            
+            //  ELIMINAR max_seats_per_party duplicado (ya se envía como sobrerrepresentacion)
             // if (typeof max_seats_per_party !== 'undefined' && max_seats_per_party !== null) {
             //     url += `&max_seats_per_party=${max_seats_per_party}`;
             // }
             
-            console.log('[DEBUG] 🎯 PARÁMETROS PERSONALIZADOS AÑADIDOS CON NOMBRES CORRECTOS');
+            console.log('[DEBUG]  PARÁMETROS PERSONALIZADOS AÑADIDOS CON NOMBRES CORRECTOS');
         }
         
-        // ✨ ANTI-CACHÉ: Añadir timestamp a la URL
+        //  ANTI-CACHÉ: Añadir timestamp a la URL
         url += `&_t=${timestamp}&_r=${requestId}`;
         
         console.log('[DEBUG] URL generada para petición:', url);
@@ -316,105 +466,284 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         console.log('[DEBUG] Parámetros recibidos:', {
             anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, 
             sistema, mr_seats, rp_seats, escanos_totales,
-            quota_method, divisor_method, max_seats_per_party
+            reparto_mode, reparto_method, max_seats_per_party, usar_coaliciones
         });
         
-        // 🔍 DEBUG: Mostrar si es personalizado
+        //  DEBUG: Mostrar si es personalizado
         if (modelo === 'personalizado') {
-            console.log('[DEBUG] 🔧 PERSONALIZADO ACTIVO - URL incluye parámetros customizados');
+            console.log('[DEBUG]  PERSONALIZADO ACTIVO - URL incluye parámetros customizados');
         } else {
-            console.log('[DEBUG] 📋 PLAN ESTÁNDAR - Solo parámetros básicos');
+            console.log('[DEBUG]  PLAN ESTÁNDAR - Solo parámetros básicos');
         }
         
-        // 🔍 DEBUG ESPECÍFICO POR CÁMARA: Verificar diferencias Senado vs Diputados
-        console.log('[DEBUG] 🏛️ CÁMARA:', camara.toUpperCase());
-        console.log('[DEBUG] 🔢 MAGNITUD/ESCAÑOS:', {
+        //  DEBUG ESPECÍFICO POR CÁMARA: Verificar diferencias Senado vs Diputados
+        console.log('[DEBUG]  CÁMARA:', camara.toUpperCase());
+        console.log('[DEBUG]  MAGNITUD/ESCAÑOS:', {
             magnitudRecibida: magnitud,
             escanosTotalesRecibidos: escanos_totales,
             seEnviaEnURL: url.includes('escanos_totales'),
             urlCompleta: url
         });
         
-        // Cambiar a POST en lugar de GET
-        const resp = await fetch(url, {
+        //  CREAR NUEVO CONTROLLER Y CANCELAR ANTERIORES
+        const controller = createNewRequestController();
+        pendingRequestId = requestId;
+        
+        // AMBAS CÁMARAS: POST con query parameters (sin body)
+        const fetchOptions = {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                // ✨ ANTI-CACHÉ: Headers que fuerzan no-cache
+                //  ANTI-CACHÉ: Headers que fuerzan no-cache
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
+                'Pragma': 'no-cache', 
                 'Expires': '0',
                 'X-Request-ID': requestId
-            }
-        });
+            },
+            signal: controller.signal
+        };
+        
+        console.log('[DEBUG] Método HTTP: POST con query parameters para cámara:', camara);
+        console.log('[DEBUG] URL final:', url);
+        console.log('[DEBUG] Sin body - todos los parámetros en query string');
+        
+        //  Actualizar notificación: enviando petición
+        if (notificationId) {
+            safeNotification('update', notificationId, {
+                title: 'Procesando Modelo Electoral',
+                subtitle: `Enviando parámetros al servidor...`,
+                type: 'loading'
+            });
+        }
+        
+        const resp = await fetch(url, fetchOptions);
         
         console.log('[DEBUG] Status de respuesta:', resp.status, resp.statusText);
         
         if (!resp.ok) {
+            //  Notificación de error
+            if (window.notifications && notificationId) {
+                window.notifications.error(
+                    'Error al Cargar Datos',
+                    `No se pudieron procesar los datos (${resp.status})`,
+                    8000,
+                    notificationId
+                );
+            }
+            
             // Intentar leer el error del backend
             try {
                 const errorData = await resp.text();
                 console.error('[DEBUG] Error del backend:', errorData);
+                console.error('[DEBUG] 🚨 ERROR ESPECÍFICO PARA CÁMARA:', camara);
+                console.error('[DEBUG] 🚨 PARÁMETROS QUE CAUSARON ERROR:', {
+                    anio, camara, modelo, magnitud, umbral, sobrerrepresentacion,
+                    urlCompleta: url
+                });
+                
+                // Detección específica de IndexError
+                if (errorData.includes('IndexError') || errorData.includes('index') && errorData.includes('out of bounds')) {
+                    console.error('[DEBUG]  DETECTADO INDEX ERROR - Probable problema con umbral alto');
+                    console.error('[DEBUG]  SUGERENCIA: Reducir umbral a <5% o revisar backend');
+                    
+                    //  Notificación específica para IndexError
+                    if (window.notifications) {
+                        window.notifications.warning(
+                            'Parámetros Fuera de Rango',
+                            'El umbral seleccionado puede ser demasiado alto. Intenta con un valor menor.',
+                            10000
+                        );
+                    }
+                }
+                
                 throw new Error(`Backend error ${resp.status}: ${errorData}`);
             } catch (parseError) {
                 throw new Error(`Error ${resp.status}: ${resp.statusText}`);
             }
         }
+        
+        //  Actualizar notificación: procesando datos (solo si no es silentLoad)
+        if (window.notifications && notificationId && !silentLoad) {
+            window.notifications.update(notificationId, {
+                title: 'Procesando Resultados',
+                subtitle: 'Actualizando visualizaciones...',
+                type: 'loading'
+            });
+        }
+        
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
         
+        //  VERIFICAR QUE ESTA ES LA RESPUESTA MÁS RECIENTE
+        if (pendingRequestId !== requestId) {
+            console.log('[DEBUG]  Respuesta descartada - hay un request más reciente');
+            return;
+        }
+        
+        console.log('[DEBUG]  DATOS RECIBIDOS DETALLADOS:', {
+            hasResultados: !!data.resultados,
+            resultadosLength: data.resultados?.length || 0,
+            hasSeatChart: !!data.seat_chart,
+            seatChartLength: data.seat_chart?.length || 0,
+            hasKpis: !!data.kpis,
+            kpisKeys: data.kpis ? Object.keys(data.kpis) : [],
+            plan: data.plan,
+            timestamp: data.timestamp,
+            camara: camara,
+            modelo: modelo
+        });
+        
+        //  VERIFICACIÓN ESPECÍFICA PARA DIPUTADOS
+        if (camara === 'diputados' && (!data.seat_chart || data.seat_chart.length === 0)) {
+            console.error('[DEBUG]  PROBLEMA DIPUTADOS: No hay seat_chart data!', {
+                url: url,
+                parametros: { anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, sistema, mr_seats, rp_seats, escanos_totales },
+                respuestaCompleta: data
+            });
+        }
+        
+        //  VERIFICACIÓN ESPECÍFICA PARA SENADO
+        if (camara === 'senado' && (!data.seat_chart || data.seat_chart.length === 0)) {
+            console.error('[DEBUG] 🚨 PROBLEMA SENADO: No hay seat_chart data!', {
+                url: url,
+                parametros: { anio, camara, modelo, magnitud, umbral, sobrerrepresentacion, sistema, mr_seats, rp_seats, escanos_totales },
+                respuestaCompleta: data,
+                umbralEnviado: umbral,
+                modeloUsado: modelo
+            });
+            return;
+        }
+        
         // Usar los datos que ya vienen en la respuesta principal
         if (data.seat_chart) {
+            console.log('[DEBUG]  BUSCANDO seat-chart en el DOM...');
             const seatChart = document.querySelector('seat-chart');
+            console.log('[DEBUG]  seat-chart encontrado:', !!seatChart, seatChart);
             if (seatChart) {
                 // El componente espera un array
                 const seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : data.seat_chart.seats || [];
                 
-                // ✨ ANTI-CACHÉ: Forzar re-render con key única
+                //  DEBUGGING DETALLADO DE SEAT_CHART DATA
+                console.log('[DEBUG]  SEAT_CHART DATA ANALYSIS:');
+                console.log('[DEBUG]  data.seat_chart tipo:', typeof data.seat_chart);
+                console.log('[DEBUG]  data.seat_chart es array:', Array.isArray(data.seat_chart));
+                console.log('[DEBUG]  data.seat_chart completo:', data.seat_chart);
+                console.log('[DEBUG]  seatArray después de procesar:', seatArray);
+                console.log('[DEBUG]  seatArray length:', seatArray.length);
+                
+                // Calcular total de escaños de seatArray
+                let totalCalculado = 0;
+                if (Array.isArray(seatArray)) {
+                    totalCalculado = seatArray.reduce((total, partido) => {
+                        const seats = partido.seats || 0;
+                        console.log(`[DEBUG]  Partido ${partido.party}: ${seats} escaños`);
+                        return total + seats;
+                    }, 0);
+                }
+                console.log('[DEBUG]  TOTAL ESCAÑOS CALCULADO desde seatArray:', totalCalculado);
+                
+                //  DETECTAR SI EL TOPE DE ESCAÑOS ESTÁ LIMITANDO LOS RESULTADOS
+                if (seatArray.length > 0) {
+                    const maxSeatsEnPartidos = Math.max(...seatArray.map(p => p.seats || 0));
+                    if (max_seats_per_party && maxSeatsEnPartidos <= max_seats_per_party && totalCalculado < escanos_totales) {
+                        console.warn('[DEBUG]  POSIBLE LIMITACIÓN POR TOPE DE ESCAÑOS:');
+                        console.warn('[DEBUG]  max_seats_per_party configurado:', max_seats_per_party);
+                        console.warn('[DEBUG]  Máximo escaños en un partido:', maxSeatsEnPartidos);
+                        console.warn('[DEBUG]  Total calculado:', totalCalculado, 'vs esperado:', escanos_totales);
+                        console.warn('[DEBUG]  ¡ESTO PODRÍA ESTAR CAUSANDO LA DISCREPANCIA!');
+                    }
+                }
+                
+                // Comparar con los parámetros enviados
+                console.log('[DEBUG]  COMPARACIÓN CON PARÁMETROS ENVIADOS:');
+                console.log('[DEBUG]  escanos_totales enviado:', escanos_totales);
+                console.log('[DEBUG]  magnitud enviada:', magnitud);
+                console.log('[DEBUG]  mr_seats enviado:', mr_seats);
+                console.log('[DEBUG]  rp_seats enviado:', rp_seats);
+                console.log('[DEBUG]  Total desde backend:', totalCalculado);
+                
+                console.log('[DEBUG]  Datos seat_chart a enviar:', seatArray);
+                
+                //  ANTI-CACHÉ: Forzar re-render con key única
                 const renderKey = `${requestId}_seats`;
                 seatChart.setAttribute('data-key', renderKey);
                 seatChart.setAttribute('data', JSON.stringify(seatArray));
                 
-                // ✨ VERIFICAR CAMBIOS REALES: Hash de contenido
+                //  VERIFICAR CAMBIOS REALES: Hash de contenido
                 const contentHash = btoa(JSON.stringify(seatArray)).slice(0, 16);
                 console.log('[DEBUG] seat-chart actualizado desde respuesta principal');
                 console.log('[DEBUG] Content Hash:', contentHash, 'Render Key:', renderKey);
                 
-                // ✨ FORZAR ACTUALIZACIÓN: Trigger custom event
+                //  FORZAR ACTUALIZACIÓN: Trigger custom event
                 seatChart.dispatchEvent(new CustomEvent('force-update', { 
                     detail: { requestId, contentHash, timestamp } 
                 }));
+            } else {
+                console.error('[DEBUG]  NO SE ENCONTRÓ el elemento seat-chart en el DOM!');
             }
         }
         
         if (data.kpis) {
             const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+            console.log('[DEBUG]  BUSCANDO INDICADORES KPI:', {
+                selector: '.indicadores-resumen indicador-box',
+                encontrados: indicadores.length,
+                esperados: 4
+            });
+            
             if (indicadores.length >= 4) {
-                // ✨ FORZAR RE-RENDER: Key única para cada indicador
+                console.log('[DEBUG]  APLICANDO KPIs a indicadores:');
+                console.log('[DEBUG]  data.kpis completo:', data.kpis);
+                
+                //  FORZAR RE-RENDER: Key única para cada indicador
                 const kpiKey = `${requestId}_kpis`;
                 
+                console.log('[DEBUG]  KPI 0 - total_escanos:', data.kpis.total_escanos || 0);
                 indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
                 indicadores[0].setAttribute('valor', data.kpis.total_escanos || 0);
                 
+                console.log('[DEBUG]  KPI 1 - mae_votos_vs_escanos:', data.kpis.mae_votos_vs_escanos || 0);
                 indicadores[1].setAttribute('data-key', `${kpiKey}_2`);
-                indicadores[1].setAttribute('valor', `±${(data.kpis.mae_votos_escanos || 0).toFixed(2)}%`);
+                indicadores[1].setAttribute('valor', (data.kpis.mae_votos_vs_escanos || 0).toFixed(2));
                 
+                console.log('[DEBUG]  KPI 2 - gallagher:', data.kpis.gallagher || 0);
                 indicadores[2].setAttribute('data-key', `${kpiKey}_3`);
-                indicadores[2].setAttribute('valor', (data.kpis.indice_gallagher || 0).toFixed(2));
+                indicadores[2].setAttribute('valor', (data.kpis.gallagher || 0).toFixed(2));
                 
+                console.log('[DEBUG]  KPI 3 - total_votos:', data.kpis.total_votos || 0);
                 indicadores[3].setAttribute('data-key', `${kpiKey}_4`);
                 indicadores[3].setAttribute('valor', (data.kpis.total_votos || 0).toLocaleString('es-MX'));
                 
                 console.log('[DEBUG] KPIs actualizados desde respuesta principal');
                 console.log('[DEBUG] KPI Keys:', kpiKey);
                 
-                // ✨ TRIGGER CUSTOM EVENTS para forzar actualización
+                // Verificar que los atributos se aplicaron
+                indicadores.forEach((ind, idx) => {
+                    console.log(`[DEBUG]  Indicador ${idx} final:`, {
+                        valor: ind.getAttribute('valor'),
+                        dataKey: ind.getAttribute('data-key'),
+                        tagName: ind.tagName
+                    });
+                });
+                
+                //  TRIGGER CUSTOM EVENTS para forzar actualización
                 indicadores.forEach((ind, idx) => {
                     ind.dispatchEvent(new CustomEvent('force-update', { 
                         detail: { requestId, index: idx, timestamp } 
                     }));
                 });
+            } else {
+                console.error('[DEBUG]  NO SE ENCONTRARON SUFICIENTES INDICADORES KPI!', {
+                    encontrados: indicadores.length,
+                    esperados: 4,
+                    elementos: Array.from(indicadores).map(el => ({
+                        tagName: el.tagName,
+                        classes: el.className,
+                        valor: el.getAttribute('valor')
+                    }))
+                });
             }
+        } else {
+            console.error('[DEBUG]  NO HAY DATOS KPIs EN LA RESPUESTA!');
         }
         
         // Si no hay datos en la respuesta principal, intentar endpoints separados como fallback
@@ -428,30 +757,80 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         
         console.log('[DEBUG] Datos principales cargados, seat-chart y KPIs solicitados por separado');
         
+        //  ✅ NOTIFICACIÓN DE ÉXITO: Mostrar cuando NO es silentLoad O cuando se debe mostrar "ready"
+        if (window.notifications && (!silentLoad || showReadyNotification)) {
+            // Determinar tipo de mensaje
+            const esInicializacion = showReadyNotification;
+            
+            // Mostrar notificación de éxito
+            const successTitle = esInicializacion ? 'Tablero Listo' : 'Datos Actualizados';
+            const successMessage = esInicializacion ? 'Datos cargados' : `${camara} (${anio}) actualizado`;
+            
+            console.log('[DEBUG] Mostrando notificación de éxito:', { successTitle, successMessage, esInicializacion, showReadyNotification, silentLoad });
+            
+            window.notifications.success(
+                successTitle,
+                successMessage,
+                4000,
+                notificationId
+            );
+            
+            // Resetear flags
+            isInitializing = false;
+            showReadyNotification = false;
+        } else {
+            console.log('[DEBUG] NO se muestra notificación:', { 
+                hasNotifications: !!window.notifications, 
+                silentLoad, 
+                showReadyNotification,
+                condition: (!silentLoad || showReadyNotification)
+            });
+        }
+        
     } catch (err) {
+        //  MANEJAR CANCELACIÓN DE REQUESTS
+        if (err.name === 'AbortError') {
+            console.log('[DEBUG]  Request cancelado (normal cuando hay nuevos requests)');
+            //  Ocultar notificación si fue cancelado
+            if (window.notifications && notificationId) {
+                window.notifications.hide(notificationId);
+            }
+            return;
+        }
+        
         console.error('Error cargando simulación:', err);
+        
+        //  Notificación de error general
+        if (window.notifications && notificationId) {
+            window.notifications.error(
+                'Error Inesperado',
+                'No se pudieron cargar los datos. Inténtalo de nuevo.',
+                8000,
+                notificationId
+            );
+        }
     }
 }
 
 // Función para cargar datos del seat-chart
 async function cargarSeatChart(anio, camara, modelo) {
     try {
-        // ✨ ANTI-CACHÉ: Timestamp único
+        //  ANTI-CACHÉ: Timestamp único
         const timestamp = Date.now();
         const requestId = `${timestamp}_seatChart_${Math.random().toString(36).substr(2, 9)}`;
         
-        // ✨ USAR FUNCIÓN CENTRALIZADA
+        //  USAR FUNCIÓN CENTRALIZADA
         const plan = mapearModeloAPlan(modelo);
         let url = `https://back-electoral.onrender.com/seat-chart/${camara}/${anio}?plan=${plan}`;
         
-        // ✨ ANTI-CACHÉ: Añadir timestamp
+        //  ANTI-CACHÉ: Añadir timestamp
         url += `&_t=${timestamp}&_r=${requestId}`;
         
         console.log('[DEBUG] Cargando seat-chart desde:', url);
         console.log('[DEBUG] Seat-Chart Request ID:', requestId);
         
         const resp = await fetch(url, {
-            // ✨ ANTI-CACHÉ: Headers no-cache
+            //  ANTI-CACHÉ: Headers no-cache
             headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
@@ -476,17 +855,17 @@ async function cargarSeatChart(anio, camara, modelo) {
             // El componente espera un array, no un objeto
             const seatArray = seatChartData.seats || seatChartData;
             
-            // ✨ FORZAR RE-RENDER: Key única
+            //  FORZAR RE-RENDER: Key única
             const renderKey = `${requestId}_fallback_seats`;
             seatChart.setAttribute('data-key', renderKey);
             seatChart.setAttribute('data', JSON.stringify(seatArray));
             
-            // ✨ VERIFICAR CAMBIOS: Content hash
+            //  VERIFICAR CAMBIOS: Content hash
             const contentHash = btoa(JSON.stringify(seatArray)).slice(0, 16);
             console.log('[DEBUG] seat-chart actualizado correctamente con array:', seatArray);
             console.log('[DEBUG] Fallback Content Hash:', contentHash, 'Render Key:', renderKey);
             
-            // ✨ FORZAR ACTUALIZACIÓN
+            //  FORZAR ACTUALIZACIÓN
             seatChart.dispatchEvent(new CustomEvent('force-update', { 
                 detail: { requestId, contentHash, timestamp, source: 'fallback' } 
             }));
@@ -501,22 +880,22 @@ async function cargarSeatChart(anio, camara, modelo) {
 // Función para cargar KPIs
 async function cargarKPIs(anio, camara, modelo) {
     try {
-        // ✨ ANTI-CACHÉ: Timestamp único
+        //  ANTI-CACHÉ: Timestamp único
         const timestamp = Date.now();
         const requestId = `${timestamp}_kpis_${Math.random().toString(36).substr(2, 9)}`;
         
-        // ✨ USAR FUNCIÓN CENTRALIZADA
+        //  USAR FUNCIÓN CENTRALIZADA
         const plan = mapearModeloAPlan(modelo);
         let url = `https://back-electoral.onrender.com/kpis/${camara}/${anio}?plan=${plan}`;
         
-        // ✨ ANTI-CACHÉ: Añadir timestamp
+        //  ANTI-CACHÉ: Añadir timestamp
         url += `&_t=${timestamp}&_r=${requestId}`;
         
         console.log('[DEBUG] Cargando KPIs desde:', url);
         console.log('[DEBUG] KPIs Request ID:', requestId);
         
         const resp = await fetch(url, {
-            // ✨ ANTI-CACHÉ: Headers no-cache
+            //  ANTI-CACHÉ: Headers no-cache
             headers: {
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
@@ -539,7 +918,7 @@ async function cargarKPIs(anio, camara, modelo) {
             // Actualizar indicadores con el formato correcto
             const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
             if (indicadores.length >= 4) {
-                // ✨ FORZAR RE-RENDER: Key única para cada indicador
+                //  FORZAR RE-RENDER: Key única para cada indicador
                 const kpiKey = `${requestId}_fallback_kpis`;
                 
                 indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
@@ -560,7 +939,7 @@ async function cargarKPIs(anio, camara, modelo) {
                 console.log('[DEBUG] KPIs actualizados correctamente');
                 console.log('[DEBUG] Fallback KPI Keys:', kpiKey);
                 
-                // ✨ TRIGGER CUSTOM EVENTS para forzar actualización
+                //  TRIGGER CUSTOM EVENTS para forzar actualización
                 indicadores.forEach((ind, idx) => {
                     ind.dispatchEvent(new CustomEvent('force-update', { 
                         detail: { requestId, index: idx, timestamp, source: 'fallback' } 
@@ -577,15 +956,129 @@ async function cargarKPIs(anio, camara, modelo) {
 
 // === Vincular controles del panel de control con debounce ===
 let debounceTimer = null;
-function actualizarDesdeControlesDebounced() {
+function actualizarDesdeControlesDebounced(userTriggered = false) {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(actualizarDesdeControles, 120);
+    
+    //  CANCELAR REQUESTS PENDIENTES AL HACER DEBOUNCE
+    if (currentController) {
+        currentController.abort();
+        console.log('[DEBUG]  Request cancelado por debounce');
+    }
+    
+    // Marcar si es acción del usuario
+    isUserTriggered = userTriggered;
+    
+    debounceTimer = setTimeout(actualizarDesdeControles, 300); //  AUMENTAR DEBOUNCE DE 120ms a 300ms
 }
 
 
 document.addEventListener('DOMContentLoaded', function() {
+    //  BYPASS DIRECTO - FORZAR DIPUTADOS AL CARGAR
+    console.log('[DEBUG]  BYPASS DIRECTO ACTIVADO');
+    
+    // Esperar a que los componentes se carguen
+    setTimeout(() => {
+        // Forzar click en diputados
+        const diputadosBtn = document.querySelector('[data-chamber="diputados"]');
+        if (diputadosBtn) {
+            diputadosBtn.click();
+            console.log('[DEBUG]  BYPASS: Clicked diputados');
+            
+            // Forzar cambio a personalizado después de un momento
+            setTimeout(() => {
+                const modelSelect = document.getElementById('model-select');
+                if (modelSelect) {
+                    modelSelect.value = 'personalizado';
+                    modelSelect.dispatchEvent(new Event('change'));
+                    console.log('[DEBUG]  BYPASS: Set to personalizado');
+                    
+                    // Forzar actualización después de configurar
+                    setTimeout(() => {
+                        console.log('[DEBUG]  BYPASS: Llamando cargarSimulacion DIRECTAMENTE para diputados...');
+                        
+                        showReadyNotification = true; // ✅ Activar notificación de "listo"
+                        
+                        // 🔧 LLAMADA DIRECTA: Forzar diputados 2024 vigente SIN notificación de carga
+                        cargarSimulacion({
+                            anio: 2024,
+                            camara: 'diputados', 
+                            modelo: 'vigente',
+                            magnitud: 500,
+                            silentLoad: true // ❌ NO mostrar "Cargando datos", solo mostrar "Listo" al final
+                        });
+                    }, 200);
+                }
+            }, 300);
+        }
+    }, 1000);
+    
+    //  EVENT LISTENERS DIRECTOS (sin depender de ControlSidebar)
+    setTimeout(() => {
+        console.log('[DEBUG] 🔧 Configurando event listeners directos...');
+        
+        // Listeners para sliders MR/RP
+        const mrSlider = document.getElementById('input-mr');
+        const rpSlider = document.getElementById('input-rp');
+        
+        if (mrSlider) {
+            mrSlider.addEventListener('input', () => {
+                console.log('[DEBUG]  MR Slider changed:', mrSlider.value);
+                setTimeout(() => actualizarDesdeControlesSilent(), 150);
+            });
+            console.log('[DEBUG]  MR slider listener attached');
+        }
+        
+        if (rpSlider) {
+            rpSlider.addEventListener('input', () => {
+                console.log('[DEBUG]  RP Slider changed:', rpSlider.value);
+                setTimeout(() => actualizarDesdeControlesSilent(), 150);
+            });
+            console.log('[DEBUG]  RP slider listener attached');
+        }
+        
+        // Event listeners para Primera Minoría
+        const pmSwitch = document.getElementById('first-minority-switch');
+        const pmSlider = document.getElementById('input-first-minority');
+        
+        if (pmSwitch) {
+            pmSwitch.addEventListener('click', () => {
+                console.log('[DEBUG]  PM Switch changed:', pmSwitch.getAttribute('data-switch'));
+                setTimeout(() => actualizarDesdeControlesSilent(), 150);
+            });
+            console.log('[DEBUG]  PM switch listener attached');
+        }
+        
+        if (pmSlider) {
+            pmSlider.addEventListener('input', () => {
+                console.log('[DEBUG]  PM Slider changed:', pmSlider.value);
+                setTimeout(() => actualizarDesdeControlesSilent(), 150);
+            });
+            console.log('[DEBUG]  PM slider listener attached');
+        }
+        
+        // Listener para cambio de modelo
+        const modelSelect = document.getElementById('model-select');
+        if (modelSelect) {
+            modelSelect.addEventListener('change', () => {
+                console.log('[DEBUG]  Model changed:', modelSelect.value);
+                setTimeout(() => actualizarDesdeControlesSilent(), 100);
+            });
+            console.log('[DEBUG]  Model select listener attached');
+        }
+        
+        // Listeners para botones de cámara
+        document.querySelectorAll('[data-chamber]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                console.log('[DEBUG]  Chamber changed:', btn.getAttribute('data-chamber'));
+                setTimeout(() => actualizarDesdeControlesSilent(), 200);
+            });
+        });
+        console.log('[DEBUG]  Chamber button listeners attached');
+        
+    }, 1200);
+    
     // Inicializa con valores actuales
-    actualizarDesdeControles();
+    actualizarDesdeControlesSilent();
 
     // Cámara (botones): usar MutationObserver para detectar el cambio de clase 'active'
     const sidebar = document.getElementById('control-sidebar') || document.querySelector('control-sidebar');
@@ -652,15 +1145,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     if (modelSelect) {
-        modelSelect.addEventListener('change', actualizarDesdeControlesDebounced);
+        modelSelect.addEventListener('change', () => actualizarDesdeControlesDebounced(true)); // 🔔 Marcar como acción del usuario
     }
     // También actualizar modelos si cambia la cámara
     const chamberToggles = document.querySelectorAll('.master-toggle');
     chamberToggles.forEach(btn => {
         btn.addEventListener('click', function() {
+            //  Notificación específica para cambio de cámara - SOLO después de inicialización
+            if (!isInitializing) {
+                const chamberName = this.dataset.chamber === 'senadores' ? 'Senado' : 'Diputados';
+                if (window.notifications) {
+                    window.notifications.info(
+                        `Cambiando a ${chamberName}`,
+                        'Cargando...',
+                        2000,
+                        'chamber-change'
+                    );
+                }
+            }
+            
             setTimeout(() => {
                 updateModelosDisponibles();
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
             }, 50);
         });
     });
@@ -673,7 +1179,7 @@ document.addEventListener('DOMContentLoaded', function() {
         magnitudInput.addEventListener('input', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced();
+                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
             }
         });
     }
@@ -681,14 +1187,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function actualizarDesdeControles() {
-    // Cámara
-    let camara = 'diputados';
-    const activeChamber = document.querySelector('.master-toggle.active');
-    if (activeChamber) {
-        const val = activeChamber.getAttribute('data-chamber');
-        if (val === 'senadores' || val === 'senado') camara = 'senado';
-        else camara = 'diputados';
+    //  Notificación de cambio detectado - SOLO si es acción del usuario después de inicialización
+    if (!isInitializing) {
+        safeNotification('loading',
+            'Aplicando cambios',
+            'Recalculando...',
+            'param-change'
+        );
     }
+    
+    actualizarDesdeControlesSilent(null, true); // Mostrar notificación de éxito para interacciones del usuario
+}
+
+// Versión silenciosa para llamadas automáticas internas
+function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotification = false) {
+    
+    // Cámara: usar la forzada si se proporciona, sino leer del DOM
+    let camara = forceChamber || 'diputados';
+    
+    if (!forceChamber) {
+        const activeChamber = document.querySelector('.master-toggle.active');
+        if (activeChamber) {
+            const val = activeChamber.getAttribute('data-chamber');
+            if (val === 'senadores' || val === 'senado') camara = 'senado';
+            else camara = 'diputados';
+        }
+    }
+    
+    console.log('[DEBUG]  actualizarDesdeControlesSilent - cámara detectada/forzada:', camara, 'forceChamber:', forceChamber);
     // Actualiza el dropdown de año según la cámara
     const yearSelect = document.getElementById('year-select');
     if (yearSelect) {
@@ -730,6 +1256,28 @@ function actualizarDesdeControles() {
     else if (modelo === 'plan-a') modeloBackend = 'plan a';
     else if (modelo === 'plan-c') modeloBackend = 'plan c';
 
+    // ===== LEER SISTEMA DE REPARTO (PARA TODOS LOS MODELOS) =====
+    const repartoModeRadios = document.querySelectorAll('input[name="reparto-mode"]');
+    const repartoMethodSelect = document.getElementById('reparto-method');
+    
+    let reparto_mode = 'cuota'; // Default
+    let reparto_method = 'hare'; // Default
+    
+    // Leer modo de reparto seleccionado
+    for (const radio of repartoModeRadios) {
+        if (radio.checked) {
+            reparto_mode = radio.value; // "cuota" o "divisor"
+            break;
+        }
+    }
+    
+    // Leer método específico
+    if (repartoMethodSelect) {
+        reparto_method = repartoMethodSelect.value;
+    }
+    
+    console.log('[DEBUG] Sistema de reparto exclusivo (global):', { reparto_mode, reparto_method });
+
     // Si el modelo es personalizado, obtener el valor del slider de magnitud, sobrerrepresentación, umbral y regla electoral
     if (modelo === 'personalizado') {
         const magnitudInput = document.getElementById('input-magnitud');
@@ -749,22 +1297,48 @@ function actualizarDesdeControles() {
         const thresholdInput = document.getElementById('threshold-slider');
         const thresholdSwitch = document.getElementById('threshold-switch');
         let umbral = 0;
+        
+        console.log('[DEBUG]  UMBRAL DEBUG:', {
+            thresholdInputFound: !!thresholdInput,
+            thresholdSwitchFound: !!thresholdSwitch,
+            switchActive: thresholdSwitch ? thresholdSwitch.classList.contains('active') : false,
+            sliderValue: thresholdInput ? thresholdInput.value : 'N/A',
+            camara: camara,
+            modelo: modelo
+        });
+        
         if (thresholdSwitch && thresholdSwitch.classList.contains('active')) {
             umbral = thresholdInput ? parseFloat(thresholdInput.value) : 0;
             if (isNaN(umbral)) umbral = 0;
+            
+            // Validación robusta de rangos
+            let umbralStatus = 'normal';
+            if (umbral > 10) {
+                umbralStatus = 'muy_alto';
+                console.log('[DEBUG]  UMBRAL MUY ALTO:', umbral, '% - Puede eliminar todos los partidos');
+            } else if (umbral > 5) {
+                umbralStatus = 'alto';
+                console.log('[DEBUG]  UMBRAL ALTO:', umbral, '% - Puede reducir significativamente los partidos');
+            } else {
+                console.log('[DEBUG] UMBRAL NORMAL:', umbral, '%');
+            }
+            
+            console.log('[DEBUG]  UMBRAL ACTIVADO:', umbral, 'Status:', umbralStatus);
         } else {
             umbral = 0;
+            console.log('[DEBUG]  UMBRAL DESACTIVADO (switch off o no encontrado)');
         }
         const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
         let sistema = electoralRuleRadio ? electoralRuleRadio.value : undefined;
         
-        // 🔧 LEER TODOS LOS SLIDERS SIEMPRE (sin condicionar por sistema)
+        //  LEER TODOS LOS SLIDERS SIEMPRE (sin condicionar por sistema)
         let mr_seats = undefined;
         let rp_seats = undefined; 
+        let pm_seats = undefined;
         let escanos_totales = undefined;
         
-        // 🔍 DEBUG: Verificar qué sliders están disponibles
-        console.log('[DEBUG] 🔍 SLIDERS DISPONIBLES:', {
+        //  DEBUG: Verificar qué sliders están disponibles
+        console.log('[DEBUG]  SLIDERS DISPONIBLES:', {
             'input-mr': !!document.getElementById('input-mr'),
             'input-rp': !!document.getElementById('input-rp'), 
             'magnitude-slider': !!document.getElementById('magnitude-slider'),
@@ -777,18 +1351,29 @@ function actualizarDesdeControles() {
         const mrSlider = document.getElementById('input-mr');
         if (mrSlider) {
             mr_seats = Math.round(parseFloat(mrSlider.value));
-            console.log('[DEBUG] 🎛️ MR Slider leído:', mr_seats);
+            console.log('[DEBUG]  MR Slider leído:', mr_seats);
         }
         
         // Leer slider RP (representación proporcional) 
         const rpSlider = document.getElementById('input-rp');
         if (rpSlider) {
             rp_seats = Math.round(parseFloat(rpSlider.value));
-            console.log('[DEBUG] 🎛️ RP Slider leído:', rp_seats);
+            console.log('[DEBUG]  RP Slider leído:', rp_seats);
         }
         
-        // 🔍 BUSCAR SLIDER DE ESCAÑOS TOTALES (múltiples IDs posibles)
+        // Leer slider PM (primera minoría) - solo si está activo
+        const pmSwitch = document.getElementById('first-minority-switch');
+        const pmSlider = document.getElementById('input-first-minority');
+        if (pmSwitch && pmSlider && pmSwitch.getAttribute('data-switch') === 'On') {
+            pm_seats = Math.round(parseFloat(pmSlider.value));
+            console.log('[DEBUG]  PM Slider leído:', pm_seats);
+        } else {
+            console.log('[DEBUG]  PM Slider NO activo o no encontrado');
+        }
+        
+        //  BUSCAR SLIDER DE ESCAÑOS TOTALES (múltiples IDs posibles)
         const possibleTotalSliders = [
+            'input-magnitud',        //  ID CORRECTO del ControlSidebar
             'magnitude-slider',
             'total-seats-slider', 
             'seats-slider',
@@ -811,25 +1396,45 @@ function actualizarDesdeControles() {
         
         if (totalSeatsSlider) {
             escanos_totales = Math.round(parseFloat(totalSeatsSlider.value));
-            console.log('[DEBUG] 🎛️ Escaños Totales leído desde', sliderFound + ':', escanos_totales);
+            console.log('[DEBUG]  Escaños Totales leído desde', sliderFound + ':', escanos_totales, '| Valor crudo:', totalSeatsSlider.value);
         } else {
-            console.log('[DEBUG] ⚠️ NO SE ENCONTRÓ slider de escaños totales');
+            console.log('[DEBUG]  NO SE ENCONTRÓ slider de escaños totales en ninguno de estos IDs:', possibleTotalSliders);
             
-            // 🔄 FALLBACK: Usar la magnitud que viene como parámetro
+            //  FALLBACK: Usar la magnitud que viene como parámetro
             if (typeof magnitud !== 'undefined' && magnitud !== null) {
                 escanos_totales = Math.round(magnitud);
-                console.log('[DEBUG] 🔄 FALLBACK: Usando magnitud como escanos_totales:', escanos_totales);
+                console.log('[DEBUG]  FALLBACK: Usando magnitud como escanos_totales:', escanos_totales, '| Magnitud original:', magnitud);
             }
         }
         
-        console.log('[DEBUG] 🎯 SISTEMA ELECTORAL:', sistema);
-        console.log('[DEBUG] 🎛️ VALORES SLIDERS:', { mr_seats, rp_seats, escanos_totales });
+        console.log('[DEBUG]  SISTEMA ELECTORAL:', sistema);
         
-        // Leer métodos de reparto
-        const quotaMethodSelect = document.getElementById('quota-method');
-        const divisorMethodSelect = document.getElementById('divisor-method');
-        let quota_method = quotaMethodSelect ? quotaMethodSelect.value : 'hare';
-        let divisor_method = divisorMethodSelect ? divisorMethodSelect.value : 'dhondt';
+        //  VALIDACIÓN ROBUSTA DE ESCAÑOS TOTALES
+        if (escanos_totales && !isNaN(escanos_totales)) {
+            if (escanos_totales < 50) {
+                console.warn('[DEBUG]  ESCAÑOS TOTALES MUY BAJO:', escanos_totales, '- Verificar configuración');
+            } else if (escanos_totales > 1000) {
+                console.warn('[DEBUG]  ESCAÑOS TOTALES MUY ALTO:', escanos_totales, '- Posible error');
+            } else {
+                console.log('[DEBUG]  ESCAÑOS TOTALES VÁLIDO:', escanos_totales);
+            }
+        }
+        
+        console.log('[DEBUG]  VALORES SLIDERS:', { mr_seats, rp_seats, escanos_totales });
+        
+        // CORRECCIÓN: Ajustar mr_seats y rp_seats según el sistema electoral
+        if (sistema === 'mr') {
+            // Sistema mayoría relativa pura: todos los escaños van a MR
+            mr_seats = escanos_totales;
+            rp_seats = 0;
+            console.log('[DEBUG]  SISTEMA MR: mr_seats ajustado a', mr_seats, ', rp_seats a', rp_seats);
+        } else if (sistema === 'rp') {
+            // Sistema representación proporcional pura: todos los escaños van a RP  
+            mr_seats = 0;
+            rp_seats = escanos_totales;
+            console.log('[DEBUG]  SISTEMA RP: mr_seats ajustado a', mr_seats, ', rp_seats a', rp_seats);
+        }
+        // Para sistema 'mixto', usar los valores de los sliders tal como están
         
         // Leer tope de escaños por partido
         const seatCapSwitch = document.getElementById('seat-cap-switch');
@@ -837,56 +1442,79 @@ function actualizarDesdeControles() {
         let max_seats_per_party = undefined;
         if (seatCapSwitch && seatCapSwitch.classList.contains('active') && seatCapInput) {
             max_seats_per_party = parseInt(seatCapInput.value, 10);
+            console.log('[DEBUG]  TOPE DE ESCAÑOS POR PARTIDO ACTIVO:', max_seats_per_party);
+        } else {
+            console.log('[DEBUG] Tope de escaños por partido NO activo');
         }
         
-        // 🎯 CORRECCIÓN CRÍTICA: Usar escanos_totales como magnitud si está definido
+        // Leer toggle de coaliciones
+        const coalitionSwitch = document.getElementById('coalition-switch');
+        let usar_coaliciones = true; // Por defecto activado
+        if (coalitionSwitch) {
+            usar_coaliciones = coalitionSwitch.classList.contains('active');
+            console.log('[DEBUG]  COALICIONES:', usar_coaliciones ? 'ACTIVADAS' : 'DESACTIVADAS');
+        } else {
+            console.log('[DEBUG]  Coalition switch no encontrado, usando valor por defecto: true');
+        }
+        
+        //  CORRECCIÓN CRÍTICA: Usar escanos_totales como magnitud si está definido
         let magnitudFinal = magnitud;
         if (typeof escanos_totales !== 'undefined' && escanos_totales !== null) {
             magnitudFinal = escanos_totales;
-            console.log('[DEBUG] 🎯 USANDO escanos_totales como magnitud:', escanos_totales, '(en lugar de', magnitud, ')');
+            console.log('[DEBUG]  USANDO escanos_totales como magnitud:', escanos_totales, '(en lugar de', magnitud, ')');
         }
         
-        console.log('[DEBUG] 🎯 PARÁMETROS FINALES ANTES DE ENVIAR:', {
+        console.log('[DEBUG]  PARÁMETROS FINALES ANTES DE ENVIAR:', {
             anio, camara, modelo: modeloBackend, 
             magnitudOriginal: magnitud,
             magnitudFinal: magnitudFinal,
             escanos_totales,
             mr_seats, rp_seats,
             sobrerrepresentacion, umbral, sistema,
-            quota_method, divisor_method, max_seats_per_party
+            reparto_mode, reparto_method, max_seats_per_party,
+            usar_coaliciones
         });
         
         cargarSimulacion({
             anio, camara, modelo: modeloBackend, magnitud: magnitudFinal, 
             sobrerrepresentacion, umbral, sistema, 
-            mr_seats, rp_seats, escanos_totales,  // ✅ Nuevos parámetros
-            quota_method, divisor_method, max_seats_per_party
+            mr_seats, rp_seats, pm_seats, escanos_totales,  //  Nuevos parámetros
+            reparto_mode, reparto_method, max_seats_per_party,
+            usar_coaliciones,
+            silentLoad: !showSuccessNotification  // Mostrar notificación de éxito si es interacción del usuario
         });
     } else {
         // Estado por defecto: vigente diputados=500, senado=128
         let magnitud = (camara === 'senado') ? 128 : 500;
-    cargarSimulacion({anio, camara, modelo: modeloBackend, magnitud});
+        cargarSimulacion({
+            anio, camara, modelo: modeloBackend, magnitud, 
+            reparto_mode, reparto_method,
+            silentLoad: !showSuccessNotification
+        });
     }
 }
 
-// ===== 🛠️ DEBUG HELPER - ANTI-CACHÉ =====
+//  EXPONER FUNCIÓN GLOBALMENTE PARA DEBUGGING
+window.actualizarDesdeControles = actualizarDesdeControles;
+
+// =====  DEBUG HELPER - ANTI-CACHÉ =====
 window.electoralDebugger = {
-    // 🔍 Ver estado actual de componentes
+    //  Ver estado actual de componentes
     getComponentState() {
-        console.log('🔍 ESTADO ACTUAL DE COMPONENTES:');
+        console.log(' ESTADO ACTUAL DE COMPONENTES:');
         
         const seatChart = document.querySelector('seat-chart');
         const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
         
         if (seatChart) {
-            console.log('📊 SeatChart:', {
+            console.log(' SeatChart:', {
                 hasData: !!seatChart.getAttribute('data'),
                 dataKey: seatChart.getAttribute('data-key'),
                 dataLength: seatChart.getAttribute('data') ? JSON.parse(seatChart.getAttribute('data')).length : 0
             });
         }
         
-        console.log('📈 KPIs:', Array.from(indicadores).map((ind, idx) => ({
+        console.log(' KPIs:', Array.from(indicadores).map((ind, idx) => ({
             index: idx,
             valor: ind.getAttribute('valor'),
             dataKey: ind.getAttribute('data-key')
@@ -895,9 +1523,9 @@ window.electoralDebugger = {
         return { seatChart, indicadores };
     },
     
-    // 🔄 Forzar refresh manual (Solución Nuclear)
+    //  Forzar refresh manual (Solución Nuclear)
     forceRefresh() {
-        console.log('🚨 FORZANDO REFRESH NUCLEAR...');
+        console.log(' FORZANDO REFRESH NUCLEAR...');
         
         // Limpiar completamente los componentes
         const seatChart = document.querySelector('seat-chart');
@@ -912,28 +1540,28 @@ window.electoralDebugger = {
             parent.removeChild(seatChart);
             setTimeout(() => {
                 parent.insertBefore(seatChart, nextSibling);
-                console.log('✅ SeatChart recreado');
+                console.log(' SeatChart recreado');
             }, 100);
         }
         
         indicadores.forEach((ind, idx) => {
             ind.removeAttribute('data-key');
-            ind.setAttribute('valor', '🔄');
+            ind.setAttribute('valor', '');
             setTimeout(() => {
-                console.log(`✅ KPI ${idx} limpiado`);
+                console.log(` KPI ${idx} limpiado`);
             }, 50);
         });
         
         // Triggear una nueva carga después de limpiar
         setTimeout(() => {
-            console.log('🔄 Ejecutando actualizarDesdeControles después del refresh...');
-            actualizarDesdeControles();
+            console.log(' Ejecutando actualizarDesdeControles después del refresh...');
+            actualizarDesdeControlesSilent();
         }, 200);
     },
     
-    // 📊 Monitorear cambios en tiempo real
+    //  Monitorear cambios en tiempo real
     startMonitoring() {
-        console.log('👀 INICIANDO MONITOREO EN TIEMPO REAL...');
+        console.log(' INICIANDO MONITOREO EN TIEMPO REAL...');
         
         // Observer para cambios en seat-chart
         const seatChart = document.querySelector('seat-chart');
@@ -942,7 +1570,7 @@ window.electoralDebugger = {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'attributes' && 
                         (mutation.attributeName === 'data' || mutation.attributeName === 'data-key')) {
-                        console.log('🔔 SeatChart actualizado:', {
+                        console.log(' SeatChart actualizado:', {
                             timestamp: new Date().toISOString(),
                             attribute: mutation.attributeName,
                             newValue: mutation.target.getAttribute(mutation.attributeName)?.slice(0, 50) + '...'
@@ -964,7 +1592,7 @@ window.electoralDebugger = {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'attributes' && 
                         (mutation.attributeName === 'valor' || mutation.attributeName === 'data-key')) {
-                        console.log(`🔔 KPI ${idx} actualizado:`, {
+                        console.log(` KPI ${idx} actualizado:`, {
                             timestamp: new Date().toISOString(),
                             attribute: mutation.attributeName,
                             newValue: mutation.target.getAttribute(mutation.attributeName)
@@ -979,12 +1607,12 @@ window.electoralDebugger = {
             });
         });
         
-        console.log('✅ Monitoreo activo. Los cambios aparecerán en la consola.');
+        console.log(' Monitoreo activo. Los cambios aparecerán en la consola.');
     },
     
-    // 🧪 Test de conectividad
+    //  Test de conectividad
     async testConnectivity() {
-        console.log('🧪 TESTING CONECTIVIDAD...');
+        console.log(' TESTING CONECTIVIDAD...');
         
         const testUrls = [
             'https://back-electoral.onrender.com/procesar/diputados?anio=2018&plan=A',
@@ -1005,36 +1633,110 @@ window.electoralDebugger = {
                     }
                 });
                 
-                console.log(`✅ ${url}: ${response.status} ${response.statusText}`);
+                console.log(` ${url}: ${response.status} ${response.statusText}`);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log(`   📦 Datos recibidos: ${JSON.stringify(data).length} caracteres`);
+                    console.log(`    Datos recibidos: ${JSON.stringify(data).length} caracteres`);
                 }
             } catch (error) {
-                console.error(`❌ ${url}: ${error.message}`);
+                console.error(` ${url}: ${error.message}`);
             }
         }
+    },
+    
+    //  TEST ESPECÍFICO PARA DIPUTADOS
+    testDiputados() {
+        console.log(' TESTING DIPUTADOS ESPECÍFICAMENTE...');
+        
+        // Cambiar a diputados
+        const diputadosBtn = document.querySelector('[data-chamber="diputados"]');
+        if (diputadosBtn) {
+            diputadosBtn.click();
+            console.log(' Clicked Diputados button');
+        } else {
+            console.error(' No se encontró botón de diputados');
+        }
+        
+        setTimeout(() => {
+            // Cambiar a personalizado
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect) {
+                modelSelect.value = 'personalizado';
+                modelSelect.dispatchEvent(new Event('change'));
+                console.log(' Changed to personalizado');
+            }
+            
+            setTimeout(() => {
+                // Llamar directamente la función
+                console.log(' Calling actualizarDesdeControles directly...');
+                if (typeof actualizarDesdeControlesSilent === 'function') {
+                    actualizarDesdeControlesSilent();
+                } else {
+                    console.error(' actualizarDesdeControlesSilent no está disponible');
+                }
+            }, 500);
+        }, 500);
+    },
+    
+    //  TEST BRUTAL DIRECTO AL BACKEND
+    testDiputadosBrutal() {
+        console.log(' TEST BRUTAL DIRECTO AL BACKEND...');
+        
+        const url = 'https://back-electoral.onrender.com/procesar/diputados?anio=2018&plan=personalizado&umbral=0&max_seats_per_party=8&sistema=mixto&mr_seats=250&rp_seats=250&escanos_totales=500&quota_method=hare&divisor_method=dhondt&_t=' + Date.now();
+        
+        console.log(' URL de prueba:', url);
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(resp => {
+            console.log(' Status:', resp.status);
+            return resp.json();
+        })
+        .then(data => {
+            console.log(' RESPUESTA BRUTAL:', data);
+            
+            // Forzar actualización directa del seat-chart
+            const seatChart = document.querySelector('seat-chart');
+            if (seatChart && data.seat_chart) {
+                seatChart.setAttribute('data', JSON.stringify(data.seat_chart));
+                seatChart.setAttribute('data-key', 'brutal_test_' + Date.now());
+                console.log(' SeatChart actualizado brutalmente');
+            }
+        })
+        .catch(err => {
+            console.error(' Error en test brutal:', err);
+        });
     }
 };
 
-// 🎯 Comandos rápidos para la consola
+//  Comandos rápidos para la consola
 console.log(`
-🚀 ANTI-CACHÉ CONFIGURADO! 
+ ANTI-CACHÉ CONFIGURADO! 
 
 Comandos disponibles en la consola:
 • electoralDebugger.getComponentState() - Ver estado actual
 • electoralDebugger.forceRefresh() - Refresh nuclear (last resort)  
 • electoralDebugger.startMonitoring() - Monitorear cambios en tiempo real
 • electoralDebugger.testConnectivity() - Test de conectividad
+• electoralDebugger.testDiputados() -  TEST ESPECÍFICO DIPUTADOS
+• electoralDebugger.testDiputadosBrutal() -  TEST BRUTAL BYPASS TOTAL
 
 Mejoras implementadas:
-✅ Timestamp único en cada request
-✅ Headers no-cache forzados  
-✅ Keys únicas para re-render
-✅ Content hashing para verificar cambios
-✅ Custom events para forzar actualización
-✅ Debug helper completo
+Timestamp único en cada request
+Headers no-cache forzados  
+Keys únicas para re-render
+Content hashing para verificar cambios
+Custom events para forzar actualización
+Debug helper completo
+Request cancellation system
+Bypass directo de componentes
+Event listeners directos
 
-¡El problema de caché debería estar resuelto! 🎉
+¡El problema de caché debería estar resuelto! 
 `);

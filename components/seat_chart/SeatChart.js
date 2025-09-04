@@ -5,29 +5,69 @@ class SeatChart extends HTMLElement {
   }
 
   connectedCallback() {
+    console.log('[DEBUG] 🎯 SeatChart connectedCallback - elemento conectado al DOM');
     this.render();
   }
 
-  attributeChangedCallback() {
+  attributeChangedCallback(name, oldValue, newValue) {
+    console.log('[DEBUG]  SeatChart attributeChangedCallback:', name, 'oldValue:', oldValue?.slice(0, 50), 'newValue:', newValue?.slice(0, 50));
     // Limpia el contenido antes de renderizar para forzar el refresco visual
     this.innerHTML = '';
     this.render();
   }
 
   render() {
-    // Example data fallback
+    console.log('[DEBUG]  SeatChart render() iniciado');
+    console.log('[DEBUG]  SeatChart this.getAttribute("data"):', this.getAttribute('data'));
+    
+    // Datos de ejemplo con partidos mexicanos reales y colores oficiales
     let data = [
-      { party: 'Partido Azul', seats: 50, color: '#1976d2', percent: 39.1 },
-      { party: 'Partido Rojo', seats: 40, color: '#d32f2f', percent: 31.3 },
-      { party: 'Partido Verde', seats: 25, color: '#1E9F00', percent: 19.5 },
-      { party: 'Partido Amarillo', seats: 13, color: '#fbc02d', percent: 10.1 },
+      { party: 'MORENA', seats: 167, color: '#8B4513', percent: 33.4 },
+      { party: 'PAN', seats: 111, color: '#0073B7', percent: 22.2 },
+      { party: 'PRI', seats: 69, color: '#EE1C25', percent: 13.8 },
+      { party: 'PVEM', seats: 44, color: '#00A651', percent: 8.8 },
+      { party: 'PT', seats: 61, color: '#ED1C24', percent: 12.2 },
+      { party: 'MC', seats: 28, color: '#FF8800', percent: 5.6 },
+      { party: 'PRD', seats: 20, color: '#FFD700', percent: 4.0 },
     ];
+    
     if (this.getAttribute('data')) {
       try {
-        data = JSON.parse(this.getAttribute('data'));
-      } catch (e) {}
+        const rawData = this.getAttribute('data');
+        console.log('[DEBUG]  SeatChart datos RAW completos:', rawData);
+        
+        const parsedData = JSON.parse(rawData);
+        console.log('[DEBUG]  SeatChart datos parseados:', parsedData);
+        console.log('[DEBUG]  SeatChart tipo de datos:', typeof parsedData, Array.isArray(parsedData));
+        
+        if (Array.isArray(parsedData)) {
+          console.log('[DEBUG]  SeatChart número de partidos:', parsedData.length);
+          parsedData.forEach((partido, index) => {
+            console.log(`[DEBUG]  SeatChart partido ${index}:`, {
+              party: partido.party,
+              seats: partido.seats,
+              color: partido.color,
+              percent: partido.percent
+            });
+          });
+        }
+        
+        data = parsedData;
+      } catch (e) {
+        console.error('[DEBUG]  SeatChart error parseando datos:', e);
+        console.error('[DEBUG]  SeatChart datos que causaron error:', this.getAttribute('data'));
+      }
+    } else {
+      console.log('[DEBUG]  SeatChart usando datos de ejemplo (no hay atributo data)');
     }
+    
     const total = data.reduce((sum, p) => sum + p.seats, 0);
+    console.log('[DEBUG]  SeatChart TOTAL ESCAÑOS CALCULADO:', total, 'partidos:', data.length);
+    
+    // Log individual de cada partido para verificar escaños
+    data.forEach((partido, index) => {
+      console.log(`[DEBUG]  SeatChart verificación partido ${index}: ${partido.party} = ${partido.seats} escaños`);
+    });
     
     // Calcular distribución dinámica de escaños por fila según el total
     function calculateSeatsPerRow(totalSeats) {
@@ -109,6 +149,7 @@ class SeatChart extends HTMLElement {
         </div>
       </div>
     `;
+    console.log('[DEBUG]  SeatChart render() completado, innerHTML establecido');
   }
 }
 customElements.define('seat-chart', SeatChart);

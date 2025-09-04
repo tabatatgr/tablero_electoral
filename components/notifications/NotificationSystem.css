@@ -1,0 +1,262 @@
+/* ===================================
+   🔔 SISTEMA DE NOTIFICACIONES - Dashboard Electoral
+   =================================== */
+
+.notification-system {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-width: 400px;
+  pointer-events: none;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.notification {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  margin-bottom: 12px;
+  transform: translateX(120%);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: auto;
+  overflow: hidden;
+  position: relative;
+}
+
+.notification.show {
+  transform: translateX(0);
+}
+
+.notification.hidden {
+  transform: translateX(120%);
+  opacity: 0;
+}
+
+.notification-content {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #0F2027;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.notification-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #F3F4F6;
+}
+
+.notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: #0F2027;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.notification-subtitle {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.4;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+/* ===================================
+   🎨 TIPOS DE NOTIFICACIÓN - Paleta Electoral
+   =================================== */
+
+/* Loading/Cargando - Verde principal */
+.notification.loading {
+  border-left: 4px solid var(--Green-500, #1E5B4F);
+}
+
+.notification.loading .notification-icon {
+  background: transparent;
+  color: var(--Green-500, #1E5B4F);
+}
+
+/* Success/Éxito - Verde tablero */
+.notification.success {
+  border-left: 4px solid var(--Green-500, #1E5B4F);
+  background: #FFFFFF;
+}
+
+.notification.success .notification-icon {
+  background: transparent;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification.success .notification-title {
+  color: #0F2027;
+}
+
+.notification.success .notification-subtitle {
+  color: #6B7280;
+}
+
+/* Warning/Advertencia - Verde tablero */
+.notification.warning {
+  border-left: 4px solid var(--Green-500, #1E5B4F);
+  background: #FFFFFF;
+}
+
+.notification.warning .notification-icon {
+  background: transparent;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification.warning .notification-title {
+  color: #0F2027;
+}
+
+.notification.warning .notification-subtitle {
+  color: #6B7280;
+}
+
+/* Error - Verde tablero */
+.notification.error {
+  border-left: 4px solid var(--Green-500, #1E5B4F);
+  background: #FFFFFF;
+}
+
+.notification.error .notification-icon {
+  background: transparent;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification.error .notification-title {
+  color: #0F2027;
+}
+
+.notification.error .notification-subtitle {
+  color: #6B7280;
+}
+
+/* Info - Verde tablero */
+.notification.info {
+  border-left: 4px solid var(--Green-500, #1E5B4F);
+  background: #FFFFFF;
+}
+
+.notification.info .notification-icon {
+  background: transparent;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification.info .notification-title {
+  color: #0F2027;
+}
+
+.notification.info .notification-subtitle {
+  color: #6B7280;
+}
+
+/* ===================================
+   🌀 SPINNER DE CARGA
+   =================================== */
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #E5E7EB;
+  border-top: 2px solid var(--Green-500, #1E5B4F);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===================================
+   📱 ICONOS PARA DIFERENTES ESTADOS
+   =================================== */
+
+.notification-icon.success::after {
+  content: "✓";
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification-icon.warning::after {
+  content: "⚠";
+  font-size: 18px;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification-icon.error::after {
+  content: "✕";
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--Green-500, #1E5B4F);
+}
+
+.notification-icon.info::after {
+  content: "ℹ";
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--Green-500, #1E5B4F);
+}
+
+/* ===================================
+   💫 BARRA DE PROGRESO
+   =================================== */
+
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--Green-500, #1E5B4F);
+  transition: width 0.3s ease;
+  border-radius: 0 0 8px 8px;
+  opacity: 0.3;
+}
+
+/* ===================================
+   📱 RESPONSIVE
+   =================================== */
+
+@media (max-width: 768px) {
+  .notification-system {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .notification-content {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .notification-title {
+    font-size: 14px;
+  }
+  
+  .notification-subtitle {
+    font-size: 12px;
+  }
+  
+  .notification-icon {
+    width: 28px;
+    height: 28px;
+  }
+}

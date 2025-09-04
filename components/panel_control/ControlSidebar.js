@@ -115,8 +115,8 @@ export class ControlSidebar extends HTMLElement {
               </div>
             </div>
             
-            <!-- 4. Primera Minoría (solo para senado) -->
-            <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:block;">
+            <!-- 4. Primera Minoría (solo para senado con MR o Mixto) -->
+            <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:none;">
               <button class="group-toggle" data-target="first-minority">
                 <span class="group-title">Primera Minoría</span>
                 <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
@@ -135,11 +135,12 @@ export class ControlSidebar extends HTMLElement {
                 <div class="control-item" id="first-minority-input-group" style="display:none;">
                   <label class="control-label">Escaños por Primera Minoría: <span id="input-first-minority-value">0</span></label>
                   <input type="range" class="control-slider" id="input-first-minority" min="0" max="700" step="1" value="0">
+                  <div id="first-minority-warning" style="display:none; margin-top: 5px; font-size: 0.8em; color: #f59e0b;"></div>
                 </div>
               </div>
             </div>
             
-            <!-- 5. Método de Reparto -->
+            <!-- 5. Método de Reparto EXCLUSIVO -->
             <div class="control-group" data-group="method">
               <button class="group-toggle" data-target="method">
                 <span class="group-title">Método de reparto</span>
@@ -149,17 +150,25 @@ export class ControlSidebar extends HTMLElement {
               </button>
               <div class="group-content" id="group-method">
                 <div class="control-item">
-                  <label class="control-label">Cociente + restos:</label>
-                  <select class="control-select" id="quota-method">
-                    <option value="hare" selected>Hare</option>
-                    <option value="droop">Droop</option>
-                  </select>
+                  <label class="control-label">Tipo de sistema:</label>
+                  <div class="radio-group">
+                    <div class="radio-item">
+                      <input class="radio" type="radio" id="reparto-cuota" name="reparto-mode" value="cuota" checked>
+                      <label class="radio-label" for="reparto-cuota">Métodos de cuota</label>
+                    </div>
+                    <div class="radio-item">
+                      <input class="radio" type="radio" id="reparto-divisor" name="reparto-mode" value="divisor">
+                      <label class="radio-label" for="reparto-divisor">Métodos de divisor</label>
+                    </div>
+                  </div>
                 </div>
                 <div class="control-item">
-                  <label class="control-label">Divisores:</label>
-                  <select class="control-select" id="divisor-method">
-                    <option value="dhondt" selected>D'Hondt</option>
-                    <option value="sainte-lague">Sainte-Laguë</option>
+                  <label class="control-label">Método específico:</label>
+                  <select class="control-select" id="reparto-method">
+                    <!-- Opciones se actualizan dinámicamente según el radio seleccionado -->
+                    <option value="hare" selected>Hare</option>
+                    <option value="droop">Droop</option>
+                    <option value="imperiali">Imperiali</option>
                   </select>
                 </div>
               </div>
@@ -383,9 +392,54 @@ initializeSidebarControls() {
       if (thresholdRadioGroup) thresholdRadioGroup.style.display = isActive ? 'block' : 'none';
       if (thresholdControlsGroup) thresholdControlsGroup.style.display = isActive ? 'block' : 'none';
     }
+    
+    // Función para controlar visibilidad de sobrerrepresentación según sistema electoral
+    function updateOverrepresentationVisibility() {
+      const overrepGroup = document.getElementById('overrepresentation-group');
+      const activeChamber = document.querySelector('.master-toggle.active');
+      const currentChamber = activeChamber ? activeChamber.dataset.chamber : 'diputados';
+      const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+      const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+      
+      if (overrepGroup && currentChamber === 'diputados') {
+        let shouldShowOverrep = false;
+        let reason = '';
+        
+        if (electoralValue === 'mr') {
+          shouldShowOverrep = false;
+          reason = 'MR puro: resultado ya definido distrito por distrito';
+        } else if (electoralValue === 'rp') {
+          const hasThreshold = thresholdSwitch && thresholdSwitch.classList.contains('active');
+          if (!hasThreshold) {
+            shouldShowOverrep = false;
+            reason = 'RP puro sin umbral: reparto perfectamente proporcional';
+          } else {
+            shouldShowOverrep = true;
+            reason = 'RP con umbral: posible pero es doble freno';
+          }
+        } else if (electoralValue === 'mixto') {
+          shouldShowOverrep = true;
+          reason = 'Mixto: escenario clásico para sobrerrepresentación';
+        }
+        
+        overrepGroup.style.display = shouldShowOverrep ? 'block' : 'none';
+        console.log(` [updateOverrepresentationVisibility] ${shouldShowOverrep ? 'MOSTRADA' : 'OCULTADA'} - ${reason}`);
+        
+        // Si se oculta, desactivar el switch automáticamente
+        if (!shouldShowOverrep) {
+          const overrepSwitch = document.getElementById('overrep-switch');
+          if (overrepSwitch && overrepSwitch.classList.contains('active')) {
+            overrepSwitch.click();
+            console.log(' Sobrerrepresentación desactivada automáticamente');
+          }
+        }
+      }
+    }
     if (thresholdSwitch) {
       thresholdSwitch.addEventListener('click', function() {
         setTimeout(updateThresholdVisibility, 0);
+        // También actualizar visibilidad de sobrerrepresentación
+        setTimeout(updateOverrepresentationVisibility, 0);
       });
       // Inicializar visibilidad al cargar
       updateThresholdVisibility();
@@ -410,13 +464,30 @@ initializeSidebarControls() {
           if (overrepGroup) overrepGroup.style.display = 'block';
           if (seatCapGroup) seatCapGroup.style.display = 'block';
           if (firstMinorityGroup) firstMinorityGroup.style.display = 'none';
-          console.log('📊 Switched to Diputados - showing overrepresentation controls');
+          console.log(' Switched to Diputados - showing overrepresentation controls');
         } else if (selectedChamber === 'senadores') {
-          // Show first minority for senators, hide deputy-specific controls
+          // Hide deputy-specific controls
           if (overrepGroup) overrepGroup.style.display = 'none';
           if (seatCapGroup) seatCapGroup.style.display = 'none';
-          if (firstMinorityGroup) firstMinorityGroup.style.display = 'block';
-          console.log('📊 Switched to Senadores - showing first minority controls');
+          
+          // Para senado, verificar también el sistema electoral antes de mostrar primera minoría
+          if (firstMinorityGroup) {
+            const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+            const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+            const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+            
+            firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+            
+            console.log(` Switched to Senadores - Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} (Sistema: ${electoralValue})`);
+          }
+        }
+        
+        //  LLAMAR ACTUALIZACIÓN CUANDO CAMBIE CÁMARA
+        if (typeof window.actualizarDesdeControles === 'function') {
+          window.actualizarDesdeControles();
+          console.log(' Called actualizarDesdeControles after chamber change');
+        } else {
+          console.error(' actualizarDesdeControles no disponible');
         }
       });
     });
@@ -519,7 +590,15 @@ initializeSidebarControls() {
       ultimoModificado = 'mr';
       updateValidation();
       
-      console.log(`🎛️ Slider MR: ${nuevoMrNum} → ${mrLimitado}, RP auto-ajustado: ${nuevoRp}`);
+      //  ACTUALIZAR LÍMITES DE PRIMERA MINORÍA CUANDO CAMBIE MR
+      updateFirstMinorityLimits();
+      
+      console.log(` Slider MR: ${nuevoMrNum} → ${mrLimitado}, RP auto-ajustado: ${nuevoRp}`);
+      
+      //  LLAMAR ACTUALIZACIÓN CUANDO CAMBIEN SLIDERS
+      if (typeof window.actualizarDesdeControles === 'function') {
+        setTimeout(() => window.actualizarDesdeControles(), 100);
+      }
     };
     
     // Función para validar y ajustar RP
@@ -544,7 +623,15 @@ initializeSidebarControls() {
       ultimoModificado = 'rp';
       updateValidation();
       
+      //  ACTUALIZAR LÍMITES DE PRIMERA MINORÍA CUANDO CAMBIE MR (por auto-ajuste)
+      updateFirstMinorityLimits();
+      
       console.log(` Slider RP: ${nuevoRpNum} → ${rpLimitado}, MR auto-ajustado: ${nuevoMr}`);
+      
+      //  LLAMAR ACTUALIZACIÓN CUANDO CAMBIEN SLIDERS
+      if (typeof window.actualizarDesdeControles === 'function') {
+        setTimeout(() => window.actualizarDesdeControles(), 100);
+      }
     };
     
     // Función para mostrar validación visual
@@ -600,6 +687,60 @@ initializeSidebarControls() {
         const nuevoMr = Math.round(magnitudTotal * proporcionMr);
         handleMrChange(nuevoMr);
       }
+      
+      //  VALIDAR PRIMERA MINORÍA TRAS CAMBIOS DE MAGNITUD
+      updateFirstMinorityLimits();
+    };
+    
+    //  Función para validar límites de Primera Minoría
+    const updateFirstMinorityLimits = () => {
+      const firstMinoritySlider = document.getElementById('input-first-minority');
+      const firstMinorityValue = document.getElementById('input-first-minority-value');
+      const firstMinorityWarning = document.getElementById('first-minority-warning');
+      
+      if (firstMinoritySlider && firstMinorityValue) {
+        const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
+        const magnitudTotal = getMagnitudTotal();
+        
+        // El máximo de primera minoría no puede superar escaños MR
+        const maxFirstMinority = Math.min(mrActual, magnitudTotal);
+        firstMinoritySlider.max = maxFirstMinority;
+        
+        // Si el valor actual supera el nuevo límite, ajustarlo
+        const currentFirstMinority = parseInt(firstMinoritySlider.value);
+        if (currentFirstMinority > maxFirstMinority) {
+          const newValue = Math.min(currentFirstMinority, maxFirstMinority);
+          firstMinoritySlider.value = newValue;
+          firstMinorityValue.textContent = newValue;
+          
+          console.log(` Primera Minoría ajustada: ${currentFirstMinority} → ${newValue} (Límite MR: ${mrActual})`);
+          
+          // Trigger update if function exists
+          if (typeof window.actualizarDesdeControles === 'function') {
+            setTimeout(() => window.actualizarDesdeControles(), 100);
+          }
+        }
+        
+        // Mostrar información de límites
+        if (firstMinorityWarning) {
+          const finalFirstMinority = parseInt(firstMinoritySlider.value);
+          const percentageOfMr = mrActual > 0 ? Math.round((finalFirstMinority / mrActual) * 100) : 0;
+          
+          if (finalFirstMinority >= maxFirstMinority * 0.8 && maxFirstMinority > 0) {
+            firstMinorityWarning.innerHTML = `Límite: máx ${maxFirstMinority} escaños (MR disponibles)`;
+            firstMinorityWarning.style.display = 'block';
+            firstMinorityWarning.style.color = '#f59e0b';
+          } else if (finalFirstMinority > 0) {
+            firstMinorityWarning.innerHTML = `${percentageOfMr}% de escaños MR (${finalFirstMinority}/${mrActual})`;
+            firstMinorityWarning.style.display = 'block';
+            firstMinorityWarning.style.color = '#6B7280';
+          } else {
+            firstMinorityWarning.style.display = 'none';
+          }
+        }
+        
+        console.log(` Primera Minoría - Límite actualizado: max ${maxFirstMinority} (MR: ${mrActual}, Total: ${magnitudTotal})`);
+      }
     };
     
     // Event listeners para sliders MR/RP
@@ -636,6 +777,14 @@ initializeSidebarControls() {
     if (firstMinoritySlider && firstMinorityValue) {
       firstMinoritySlider.addEventListener('input', function() {
         firstMinorityValue.textContent = this.value;
+        
+        //  ACTUALIZAR WARNING EN TIEMPO REAL
+        updateFirstMinorityLimits();
+        
+        // Trigger update if function exists
+        if (typeof window.actualizarDesdeControles === 'function') {
+          setTimeout(() => window.actualizarDesdeControles(), 100);
+        }
       });
       firstMinorityValue.textContent = firstMinoritySlider.value;
     }
@@ -660,7 +809,7 @@ initializeSidebarControls() {
         
         // Handle specific switch behaviors
         const switchId = switchEl.id;
-        console.log(`🔄 Switch ${switchId} toggled: ${isActive ? 'ON' : 'OFF'}`);
+        console.log(` Switch ${switchId} toggled: ${isActive ? 'ON' : 'OFF'}`);
         
         // Seat cap switch - show/hide additional controls
         if (switchId === 'seat-cap-switch') {
@@ -692,13 +841,80 @@ initializeSidebarControls() {
       radios.forEach(radio => {
         radio.addEventListener('change', function() {
           if (this.checked) {
-            console.log(`📻 ${groupName} selected: ${this.value}`);
+            console.log(` ${groupName} selected: ${this.value}`);
             
             // Handle specific logic for electoral rule changes
             if (groupName === 'electoral-rule') {
               const mixtoInputs = document.getElementById('mixto-inputs');
               if (mixtoInputs) {
                 mixtoInputs.style.display = this.value === 'mixto' ? 'block' : 'none';
+              }
+              
+              // Controlar visibilidad de Primera Minoría según sistema electoral
+              const firstMinorityGroup = document.getElementById('first-minority-group');
+              if (firstMinorityGroup) {
+                // Mostrar solo si es mayoría relativa o mixto
+                const shouldShow = this.value === 'mr' || this.value === 'mixto';
+                firstMinorityGroup.style.display = shouldShow ? 'block' : 'none';
+                
+                console.log(` Primera Minoría ${shouldShow ? 'MOSTRADA' : 'OCULTADA'} para sistema: ${this.value}`);
+                
+                // Si se oculta, desactivar el switch automáticamente
+                if (!shouldShow) {
+                  const firstMinoritySwitch = document.getElementById('first-minority-switch');
+                  if (firstMinoritySwitch && firstMinoritySwitch.getAttribute('data-switch') === 'On') {
+                    firstMinoritySwitch.click(); // Desactivar
+                    console.log(' Primera Minoría desactivada automáticamente');
+                  }
+                }
+              }
+              
+              // Controlar visibilidad de Sobrerrepresentación según sistema electoral
+              const overrepGroup = document.getElementById('overrepresentation-group');
+              const activeChamber = document.querySelector('.master-toggle.active');
+              const currentChamber = activeChamber ? activeChamber.dataset.chamber : 'diputados';
+              
+              if (overrepGroup && currentChamber === 'diputados') {
+                // Lógica según tu análisis constitucional:
+                let shouldShowOverrep = false;
+                let reason = '';
+                
+                if (this.value === 'mr') {
+                  // MR puro → NO tiene sentido (resultado ya dado distrito por distrito)
+                  shouldShowOverrep = false;
+                  reason = 'MR puro: resultado ya definido distrito por distrito';
+                } else if (this.value === 'rp') {
+                  // RP puro → Verificar si hay umbral
+                  const thresholdSwitch = document.getElementById('threshold-switch');
+                  const hasThreshold = thresholdSwitch && thresholdSwitch.getAttribute('data-switch') === 'On';
+                  
+                  if (!hasThreshold) {
+                    // RP sin umbral → NO tiene sentido (reparto perfectamente proporcional)
+                    shouldShowOverrep = false;
+                    reason = 'RP puro sin umbral: reparto perfectamente proporcional';
+                  } else {
+                    // RP con umbral → PODRÍA tener sentido pero es "doble freno"
+                    shouldShowOverrep = true;
+                    reason = 'RP con umbral: posible pero es doble freno';
+                  }
+                } else if (this.value === 'mixto') {
+                  // Mixto → SÍ tiene sentido (combinación clásica donde puede haber sobrerrep)
+                  shouldShowOverrep = true;
+                  reason = 'Mixto: escenario clásico para sobrerrepresentación';
+                }
+                
+                overrepGroup.style.display = shouldShowOverrep ? 'block' : 'none';
+                
+                console.log(` Sobrerrepresentación ${shouldShowOverrep ? 'MOSTRADA' : 'OCULTADA'} - Sistema: ${this.value} (${reason})`);
+                
+                // Si se oculta, desactivar el switch automáticamente
+                if (!shouldShowOverrep) {
+                  const overrepSwitch = document.getElementById('overrep-switch');
+                  if (overrepSwitch && overrepSwitch.getAttribute('data-switch') === 'On') {
+                    overrepSwitch.click(); // Desactivar
+                    console.log(' Sobrerrepresentación desactivada automáticamente');
+                  }
+                }
               }
             }
           }
@@ -733,13 +949,81 @@ initializeSidebarControls() {
       if (overrepGroup) overrepGroup.style.display = 'block';
       if (seatCapGroup) seatCapGroup.style.display = 'block';
       if (firstMinorityGroup) firstMinorityGroup.style.display = 'none';
+      
+      // Aplicar lógica constitucional para sobrerrepresentación
+      updateOverrepresentationVisibility();
     } else {
+      // Para senado, verificar también el sistema electoral
       if (overrepGroup) overrepGroup.style.display = 'none';
       if (seatCapGroup) seatCapGroup.style.display = 'none';
-      if (firstMinorityGroup) firstMinorityGroup.style.display = 'block';
+      
+      // Primera minoría solo visible en senado Y con sistema MR o Mixto
+      if (firstMinorityGroup) {
+        const selectedElectoralRule = this.querySelector('input[name="electoral-rule"]:checked');
+        const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+        
+        firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+        
+        console.log(` Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} - Cámara: ${selectedChamber}, Sistema: ${electoralValue}`);
+      }
     }
     
     console.log(`Initialized chamber controls for: ${selectedChamber}`);
+    
+    // 🔄 INICIALIZAR SISTEMA DE REPARTO EXCLUSIVO
+    this.initializeRepartoSystem();
+  }
+  
+  initializeRepartoSystem() {
+    const repartoModeRadios = this.querySelectorAll('input[name="reparto-mode"]');
+    const repartoMethodSelect = this.querySelector('#reparto-method');
+    
+    // Métodos disponibles por modo
+    const metodos = {
+      cuota: [
+        { value: 'hare', label: 'Hare' },
+        { value: 'droop', label: 'Droop' },
+        { value: 'imperiali', label: 'Imperiali' }
+      ],
+      divisor: [
+        { value: 'dhondt', label: "D'Hondt" },
+        { value: 'sainte_lague', label: 'Sainte-Laguë' },
+        { value: 'webster', label: 'Webster' }
+      ]
+    };
+    
+    // Función para actualizar el dropdown
+    const updateMethodSelect = (mode) => {
+      if (!repartoMethodSelect) return;
+      
+      const opciones = metodos[mode] || metodos.cuota;
+      repartoMethodSelect.innerHTML = opciones
+        .map(metodo => `<option value="${metodo.value}">${metodo.label}</option>`)
+        .join('');
+      
+      console.log(`[DEBUG] Métodos de ${mode} cargados:`, opciones.map(m => m.value));
+    };
+    
+    // Event listeners para los radio buttons
+    repartoModeRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          updateMethodSelect(e.target.value);
+          console.log(`[DEBUG] Modo de reparto cambiado a: ${e.target.value}`);
+        }
+      });
+    });
+    
+    // Inicializar con el modo seleccionado por defecto
+    const modoSeleccionado = this.querySelector('input[name="reparto-mode"]:checked');
+    if (modoSeleccionado) {
+      updateMethodSelect(modoSeleccionado.value);
+    } else {
+      updateMethodSelect('cuota'); // Default
+    }
+    
+    console.log('[DEBUG] Sistema de reparto exclusivo inicializado');
   }
 }
 
