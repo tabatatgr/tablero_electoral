@@ -113,13 +113,24 @@ class SeatChart extends HTMLElement {
         partySeatMap.push(p.color);
       }
     });
+    
+    // 🔧 CALCULAR DIMENSIONES DINÁMICAS
+    const baseRadius = 130;
+    const maxRadius = baseRadius + (rows - 1) * (seatRadius * 2 + seatGap + 6);
+    const svgWidth = (maxRadius + 50) * 2; // Margen extra a los lados
+    const svgHeight = maxRadius + 100; // Margen extra arriba y abajo
+    const centerX = svgWidth / 2;
+    const centerY = maxRadius + 50; // Posición del centro del hemiciclo
+    
+    console.log(`[DEBUG] 📐 SeatChart dimensiones: ${rows} filas, radio máximo: ${maxRadius}, SVG: ${svgWidth}x${svgHeight}`);
+    
     for (let row = 0; row < rows; row++) {
       const seats = seatsPerRow[row];
-      const radius = 130 + row * (seatRadius * 2 + seatGap + 6); // Aumentado radio base de 110 a 130
+      const radius = baseRadius + row * (seatRadius * 2 + seatGap + 6);
       for (let i = 0; i < seats; i++) {
         const angle = Math.PI * (i / (seats - 1)); // Cambiar para que vaya de 0 a π (boca hacia abajo)
-        const x = 260 + radius * Math.cos(angle); // Centrado en viewBox más ancho (520/2 = 260)
-        const y = 200 - radius * Math.sin(angle); // Ajustar posición vertical para mejor centrado
+        const x = centerX + radius * Math.cos(angle); // Centrado dinámicamente
+        const y = centerY - radius * Math.sin(angle); // Posición vertical dinámica
         const color = partySeatMap[seatIndex] || '#eee';
         seatElements.push(`<circle cx="${x}" cy="${y}" r="${seatRadius}" fill="${color}" stroke="#fff" stroke-width="2" />`);
         seatIndex++;
@@ -140,7 +151,7 @@ class SeatChart extends HTMLElement {
     this.innerHTML = `
       <div class="seat-chart-container">
         <div class="seat-chart-svg" style="display: flex; align-items: center; justify-content: center;">
-          <svg viewBox="0 0 520 450" aria-label="Distribución de escaños" style="width: 100%; height: auto; display: block; transform: translateY(70px);">
+          <svg viewBox="0 0 ${svgWidth} ${svgHeight}" aria-label="Distribución de escaños" style="width: 100%; height: auto; display: block;">
             ${seatElements.join('')}
           </svg>
         </div>

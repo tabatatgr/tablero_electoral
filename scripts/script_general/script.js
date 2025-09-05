@@ -11,7 +11,6 @@ function safeNotification(method, ...args) {
 
 //  Variables para control de notificaciones - SIMPLIFICADO
 let isInitializing = true; // Solo para controlar la primera carga
-let showReadyNotification = false; // Para mostrar "Tablero Listo"
 
 // Función para obtener la cámara actual
 function getCurrentChamber() {
@@ -55,11 +54,11 @@ document.addEventListener('DOMContentLoaded', function() {
     /*
     //  Esperar a que el sistema de notificaciones esté listo
     function showInitialNotification() {
-        const result = safeNotification('loading',
-            'Inicializando Tablero Electoral',
-            'Cargando componentes y datos iniciales...',
-            'init-loading'
-        );
+        const result = safeNotification('show', {
+            title: 'Cargando componentes y datos iniciales...',
+            type: 'loading',
+            autoHide: false
+        });
         
         if (!result) {
             // Reintentar después de un momento
@@ -76,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced(true); // 🔔 Marcar como acción del usuario
+                actualizarDesdeControlesDebounced(); // Modo de reparto NO activa "Calculando modelo"
                 console.log('[DEBUG] Modo de reparto cambiado:', this.value);
             }
         });
@@ -87,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         repartoMethodSelect.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced(true); // 🔔 Marcar como acción del usuario
+                actualizarDesdeControlesDebounced(); // Método de reparto NO activa "Calculando modelo"
                 console.log('[DEBUG] Método de reparto cambiado:', this.value);
             }
         });
@@ -98,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
         radio.addEventListener('change', function() {
             const modelSelect = document.getElementById('model-select');
             if (modelSelect && modelSelect.value === 'personalizado') {
-                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
+                actualizarDesdeControlesDebounced(); // Regla electoral NO activa "Calculando modelo"
             }
         });
     });
@@ -331,15 +330,8 @@ function mapearModeloAPlan(modelo) {
 async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false} = {}) {
     console.log('[DEBUG]  cargarSimulacion INICIADA con parámetros:', {anio, camara, modelo, magnitud, mr_seats, rp_seats, pm_seats, escanos_totales, reparto_mode, reparto_method, usar_coaliciones, silentLoad});
     
-    //  🔄 NOTIFICACIÓN DE CARGA: Solo si NO es silentLoad (punto, sin más condiciones)
+    // Sin notificación en cargarSimulacion - las notificaciones se manejan en actualizarDesdeControles
     let notificationId = null;
-    if (!silentLoad) {
-        notificationId = safeNotification('loading',
-            'Cargando Datos Electorales',
-            `Procesando simulación para ${camara} (${anio})...`,
-            'data-loading'
-        );
-    }
     
     try {
         //  ANTI-CACHÉ: Generar timestamp único
@@ -506,29 +498,15 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         console.log('[DEBUG] URL final:', url);
         console.log('[DEBUG] Sin body - todos los parámetros en query string');
         
-        //  Actualizar notificación: enviando petición
-        if (notificationId) {
-            safeNotification('update', notificationId, {
-                title: 'Procesando Modelo Electoral',
-                subtitle: `Enviando parámetros al servidor...`,
-                type: 'loading'
-            });
-        }
+        // Sin actualización de notificación - se maneja en actualizarDesdeControles
         
         const resp = await fetch(url, fetchOptions);
         
         console.log('[DEBUG] Status de respuesta:', resp.status, resp.statusText);
         
         if (!resp.ok) {
-            //  Notificación de error
-            if (window.notifications && notificationId) {
-                window.notifications.error(
-                    'Error al Cargar Datos',
-                    `No se pudieron procesar los datos (${resp.status})`,
-                    8000,
-                    notificationId
-                );
-            }
+            // Las notificaciones de error se manejan en actualizarDesdeControles
+            console.error('[DEBUG] Error al cargar datos:', resp.status, resp.statusText);
             
             // Intentar leer el error del backend
             try {
@@ -561,14 +539,7 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
             }
         }
         
-        //  Actualizar notificación: procesando datos (solo si no es silentLoad)
-        if (window.notifications && notificationId && !silentLoad) {
-            window.notifications.update(notificationId, {
-                title: 'Procesando Resultados',
-                subtitle: 'Actualizando visualizaciones...',
-                type: 'loading'
-            });
-        }
+        // Sin actualización de notificación - se maneja en actualizarDesdeControles
         
         const data = await resp.json();
         console.log('[DEBUG] Respuesta backend:', data);
@@ -757,58 +728,49 @@ async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vi
         
         console.log('[DEBUG] Datos principales cargados, seat-chart y KPIs solicitados por separado');
         
-        //  ✅ NOTIFICACIÓN DE ÉXITO: Mostrar cuando NO es silentLoad O cuando se debe mostrar "ready"
-        if (window.notifications && (!silentLoad || showReadyNotification)) {
-            // Determinar tipo de mensaje
-            const esInicializacion = showReadyNotification;
-            
-            // Mostrar notificación de éxito
-            const successTitle = esInicializacion ? 'Tablero Listo' : 'Datos Actualizados';
-            const successMessage = esInicializacion ? 'Datos cargados' : `${camara} (${anio}) actualizado`;
-            
-            console.log('[DEBUG] Mostrando notificación de éxito:', { successTitle, successMessage, esInicializacion, showReadyNotification, silentLoad });
-            
-            window.notifications.success(
-                successTitle,
-                successMessage,
-                4000,
-                notificationId
-            );
-            
-            // Resetear flags
-            isInitializing = false;
-            showReadyNotification = false;
+        //  ✅ NOTIFICACIÓN DE ÉXITO: Mostrar cuando NO es silentLoad Y NO es inicialización
+        if (window.notifications && !silentLoad && !isInitializing) {
+            if (isUserTriggered) {
+                // Para interacciones del usuario: mostrar "Listo" (reemplazará automáticamente si hay una previa)
+                console.log('[DEBUG] Mostrando notificación "Listo" para usuario');
+                
+                window.notifications.success(
+                    'Listo',
+                    'Simulación actualizada',
+                    5000, // Auto-hide 5 segundos
+                    'user-calculation' // Usar mismo ID para reemplazar
+                );
+                
+                // Resetear flag de usuario
+                isUserTriggered = false;
+            } else {
+                // Para otras actualizaciones: mensaje estándar
+                console.log('[DEBUG] Mostrando notificación estándar');
+                
+                window.notifications.success(
+                    'Datos Actualizados',
+                    `${camara} (${anio}) actualizado`,
+                    4000
+                );
+            }
         } else {
             console.log('[DEBUG] NO se muestra notificación:', { 
                 hasNotifications: !!window.notifications, 
                 silentLoad, 
-                showReadyNotification,
-                condition: (!silentLoad || showReadyNotification)
+                isInitializing 
             });
         }
-        
+
     } catch (err) {
         //  MANEJAR CANCELACIÓN DE REQUESTS
         if (err.name === 'AbortError') {
             console.log('[DEBUG]  Request cancelado (normal cuando hay nuevos requests)');
-            //  Ocultar notificación si fue cancelado
-            if (window.notifications && notificationId) {
-                window.notifications.hide(notificationId);
-            }
             return;
         }
         
         console.error('Error cargando simulación:', err);
         
-        //  Notificación de error general
-        if (window.notifications && notificationId) {
-            window.notifications.error(
-                'Error Inesperado',
-                'No se pudieron cargar los datos. Inténtalo de nuevo.',
-                8000,
-                notificationId
-            );
-        }
+        // Los errores se manejan en actualizarDesdeControles
     }
 }
 
@@ -973,8 +935,16 @@ function actualizarDesdeControlesDebounced(userTriggered = false) {
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    //  BYPASS DIRECTO - FORZAR DIPUTADOS AL CARGAR
-    console.log('[DEBUG]  BYPASS DIRECTO ACTIVADO');
+    // 🔔 FLUJO DE NOTIFICACIONES INICIAL
+    console.log('[DEBUG] Iniciando flujo de notificaciones...');
+    
+    // 1️⃣ Mostrar "Cargando datos" con ID fijo
+    const loadingNotificationId = safeNotification('show', { 
+        title: 'Cargando datos...',
+        type: 'loading', 
+        autoHide: false,
+        id: 'initial-loading'
+    });
     
     // Esperar a que los componentes se carguen
     setTimeout(() => {
@@ -982,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const diputadosBtn = document.querySelector('[data-chamber="diputados"]');
         if (diputadosBtn) {
             diputadosBtn.click();
-            console.log('[DEBUG]  BYPASS: Clicked diputados');
+            console.log('[DEBUG] BYPASS: Clicked diputados');
             
             // Forzar cambio a personalizado después de un momento
             setTimeout(() => {
@@ -990,21 +960,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (modelSelect) {
                     modelSelect.value = 'personalizado';
                     modelSelect.dispatchEvent(new Event('change'));
-                    console.log('[DEBUG]  BYPASS: Set to personalizado');
+                    console.log('[DEBUG] BYPASS: Set to personalizado');
                     
                     // Forzar actualización después de configurar
                     setTimeout(() => {
-                        console.log('[DEBUG]  BYPASS: Llamando cargarSimulacion DIRECTAMENTE para diputados...');
+                        console.log('[DEBUG] BYPASS: Llamando cargarSimulacion DIRECTAMENTE para diputados...');
                         
-                        showReadyNotification = true; // ✅ Activar notificación de "listo"
-                        
-                        // 🔧 LLAMADA DIRECTA: Forzar diputados 2024 vigente SIN notificación de carga
+                        // 🔧 LLAMADA DIRECTA: Forzar diputados 2024 vigente con notificaciones
                         cargarSimulacion({
                             anio: 2024,
                             camara: 'diputados', 
                             modelo: 'vigente',
                             magnitud: 500,
-                            silentLoad: true // ❌ NO mostrar "Cargando datos", solo mostrar "Listo" al final
+                            silentLoad: false // ✅ Permitir notificaciones completas
+                        }).then(() => {
+                            // 2️⃣ Actualizar a "Tablero listo" y auto-ocultar en 5 segundos
+                            safeNotification('update', { 
+                                id: 'initial-loading',
+                                title: 'Tablero listo',
+                                type: 'success'
+                            });
+                            
+                            // Auto-ocultar después de 5 segundos
+                            setTimeout(() => {
+                                safeNotification('hide', 'initial-loading');
+                            }, 5000);
+                            
+                            // ✅ Resetear flag de inicialización DESPUÉS de mostrar "Tablero listo"
+                            isInitializing = false;
                         });
                     }, 200);
                 }
@@ -1141,11 +1124,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (yearSelect) {
         yearSelect.addEventListener('change', function() {
             updateModelosDisponibles();
-            actualizarDesdeControlesDebounced();
+            actualizarDesdeControlesDebounced(true); // Año SÍ activa "Calculando modelo"
         });
     }
     if (modelSelect) {
-        modelSelect.addEventListener('change', () => actualizarDesdeControlesDebounced(true)); // 🔔 Marcar como acción del usuario
+        modelSelect.addEventListener('change', () => actualizarDesdeControlesDebounced(true)); // Modelo SÍ activa "Calculando modelo"
     }
     // También actualizar modelos si cambia la cámara
     const chamberToggles = document.querySelectorAll('.master-toggle');
@@ -1166,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             setTimeout(() => {
                 updateModelosDisponibles();
-                actualizarDesdeControlesDebounced(true); //  Marcar como acción del usuario
+                actualizarDesdeControlesDebounced(); // Botón cámara: sin userTriggered
             }, 50);
         });
     });
@@ -1187,13 +1170,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function actualizarDesdeControles() {
-    //  Notificación de cambio detectado - SOLO si es acción del usuario después de inicialización
-    if (!isInitializing) {
-        safeNotification('loading',
-            'Aplicando cambios',
-            'Recalculando...',
-            'param-change'
-        );
+    //  Notificación de "Calculando modelo" - SOLO si es acción del usuario después de inicialización
+    if (!isInitializing && isUserTriggered) {
+        safeNotification('show', { 
+            title: 'Calculando modelo...',
+            type: 'loading',
+            autoHide: false,
+            id: 'user-calculation' // ID fijo para poder actualizar después
+        });
     }
     
     actualizarDesdeControlesSilent(null, true); // Mostrar notificación de éxito para interacciones del usuario
