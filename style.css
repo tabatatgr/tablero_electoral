@@ -58,7 +58,8 @@ body {
   width: 100%;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: hidden; /* Restaurar para mantener panel fijo */
+  overflow-y: auto; /* Cambiar a auto para permitir scroll y sticky */
+  overflow-x: hidden;
   align-items: flex-start;
   box-sizing: border-box;
 }

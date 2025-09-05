@@ -327,7 +327,17 @@ function mapearModeloAPlan(modelo) {
     return resultado;
 }
 
-async function cargarSimulacion({anio = 2018, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false} = {}) {
+async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false} = {}) {
+    // 🆕 LÓGICA PARA COALICIONES - Establecer año por defecto basado en si están activadas
+    if (anio === null) {
+        if (usar_coaliciones) {
+            anio = 2024; // Si coaliciones están activadas, usar 2024 por defecto
+            console.log('[DEBUG] 🤝 Coaliciones activadas: usando año 2024 por defecto');
+        } else {
+            anio = 2018; // Si coaliciones están desactivadas, usar 2018 por defecto
+            console.log('[DEBUG] 🚫 Coaliciones desactivadas: usando año 2018 por defecto');
+        }
+    }
     console.log('[DEBUG]  cargarSimulacion INICIADA con parámetros:', {anio, camara, modelo, magnitud, mr_seats, rp_seats, pm_seats, escanos_totales, reparto_mode, reparto_method, usar_coaliciones, silentLoad});
     
     // Sin notificación en cargarSimulacion - las notificaciones se manejan en actualizarDesdeControles
@@ -946,53 +956,29 @@ document.addEventListener('DOMContentLoaded', function() {
         id: 'initial-loading'
     });
     
-    // Esperar a que los componentes se carguen
+    // Cargar simulación inicial con vigente por defecto
     setTimeout(() => {
-        // Forzar click en diputados
-        const diputadosBtn = document.querySelector('[data-chamber="diputados"]');
-        if (diputadosBtn) {
-            diputadosBtn.click();
-            console.log('[DEBUG] BYPASS: Clicked diputados');
+        cargarSimulacion({
+            anio: 2024,
+            camara: 'diputados', 
+            modelo: 'vigente',
+            silentLoad: false
+        }).then(() => {
+            // 2️⃣ Actualizar a "Tablero listo" y auto-ocultar en 5 segundos
+            safeNotification('update', { 
+                id: 'initial-loading',
+                title: 'Tablero listo',
+                type: 'success'
+            });
             
-            // Forzar cambio a personalizado después de un momento
+            // Auto-ocultar después de 5 segundos
             setTimeout(() => {
-                const modelSelect = document.getElementById('model-select');
-                if (modelSelect) {
-                    modelSelect.value = 'personalizado';
-                    modelSelect.dispatchEvent(new Event('change'));
-                    console.log('[DEBUG] BYPASS: Set to personalizado');
-                    
-                    // Forzar actualización después de configurar
-                    setTimeout(() => {
-                        console.log('[DEBUG] BYPASS: Llamando cargarSimulacion DIRECTAMENTE para diputados...');
-                        
-                        // 🔧 LLAMADA DIRECTA: Forzar diputados 2024 vigente con notificaciones
-                        cargarSimulacion({
-                            anio: 2024,
-                            camara: 'diputados', 
-                            modelo: 'vigente',
-                            magnitud: 500,
-                            silentLoad: false // ✅ Permitir notificaciones completas
-                        }).then(() => {
-                            // 2️⃣ Actualizar a "Tablero listo" y auto-ocultar en 5 segundos
-                            safeNotification('update', { 
-                                id: 'initial-loading',
-                                title: 'Tablero listo',
-                                type: 'success'
-                            });
-                            
-                            // Auto-ocultar después de 5 segundos
-                            setTimeout(() => {
-                                safeNotification('hide', 'initial-loading');
-                            }, 5000);
-                            
-                            // ✅ Resetear flag de inicialización DESPUÉS de mostrar "Tablero listo"
-                            isInitializing = false;
-                        });
-                    }, 200);
-                }
-            }, 300);
-        }
+                safeNotification('hide', 'initial-loading');
+            }, 5000);
+            
+            // ✅ Resetear flag de inicialización
+            isInitializing = false;
+        });
     }, 1000);
     
     //  EVENT LISTENERS DIRECTOS (sin depender de ControlSidebar)
@@ -1210,8 +1196,29 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
     }
     // Año
     let anio = 2018;
+    
+    // 🆕 LÓGICA PARA COALICIONES - Determinar año por defecto
+    const coalitionSwitch = document.getElementById('coalition-switch');
+    let coalicionesActivadas = false;
+    if (coalitionSwitch) {
+        coalicionesActivadas = coalitionSwitch.classList.contains('active');
+    }
+    
     if (yearSelect) {
         anio = parseInt(yearSelect.value, 10);
+        
+        // Si las coaliciones están activadas y estamos en el año por defecto, cambiar a 2024
+        if (coalicionesActivadas && (anio === 2018 || !yearSelect.value)) {
+            if (camara === 'diputados') {
+                anio = 2024;
+                yearSelect.value = '2024';
+                console.log('[DEBUG] 🤝 Coaliciones activadas para diputados: estableciendo año 2024');
+            } else if (camara === 'senado') {
+                anio = 2024;
+                yearSelect.value = '2024';
+                console.log('[DEBUG] 🤝 Coaliciones activadas para senado: estableciendo año 2024');
+            }
+        }
     }
     // Modelos válidos
     const modelosValidos = [

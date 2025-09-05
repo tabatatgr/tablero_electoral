@@ -46,7 +46,7 @@ export class ControlSidebar extends HTMLElement {
                 <div class="control-item">
                   <label class="control-label">Modelo</label>
                   <select class="control-select" id="model-select">
-                    <option value="vigente">Vigente</option>
+                    <option value="vigente" selected>Vigente</option>
                     <option value="personalizado">Personalizado</option>
                   </select>
                 </div>
@@ -319,6 +319,9 @@ export class ControlSidebar extends HTMLElement {
                 </svg>
               </button>
               <div class="group-content" id="group-coalition">
+                <div class="control-description">
+                  ¿Activar coaliciones electorales?
+                </div>
                 <div class="control-item">
                   <div class="toggle-switch">
                     <div class="switch active" id="coalition-switch" data-switch="On" role="switch" aria-checked="true">
@@ -455,6 +458,17 @@ initializeSidebarControls() {
         
         // Handle chamber-specific controls
         const selectedChamber = this.dataset.chamber;
+        
+        // 🆕 LÓGICA PARA COALICIONES - Ajustar año cuando cambie la cámara
+        const coalitionSwitch = document.querySelector('#coalition-switch');
+        const yearSelect = document.getElementById('year-select');
+        
+        if (coalitionSwitch && yearSelect && coalitionSwitch.classList.contains('active')) {
+          // Si las coaliciones están activadas, cambiar a 2024 automáticamente
+          yearSelect.value = '2024';
+          console.log('[DEBUG] 🤝 Cámara cambiada a', selectedChamber, 'con coaliciones activadas: estableciendo año 2024');
+        }
+        
         const overrepGroup = document.getElementById('overrepresentation-group');
         const seatCapGroup = document.getElementById('seat-cap-group');
         const firstMinorityGroup = document.getElementById('first-minority-group');
@@ -1021,6 +1035,38 @@ initializeSidebarControls() {
       updateMethodSelect(modoSeleccionado.value);
     } else {
       updateMethodSelect('cuota'); // Default
+    }
+    
+    // 🆕 Event listener para el switch de coaliciones
+    const coalitionSwitch = this.querySelector('#coalition-switch');
+    if (coalitionSwitch) {
+      coalitionSwitch.addEventListener('click', function() {
+        // Pequeño delay para que el estado del switch se actualice
+        setTimeout(() => {
+          const isActive = coalitionSwitch.classList.contains('active');
+          const yearSelect = document.getElementById('year-select');
+          const activeChamber = document.querySelector('.master-toggle.active');
+          
+          if (yearSelect && activeChamber) {
+            const camara = activeChamber.getAttribute('data-chamber');
+            
+            if (isActive) {
+              // Coaliciones activadas: cambiar a 2024
+              yearSelect.value = '2024';
+              console.log('[DEBUG] 🤝 Coaliciones activadas: cambiando a año 2024 para', camara);
+            } else {
+              // Coaliciones desactivadas: cambiar a 2018
+              yearSelect.value = '2018';
+              console.log('[DEBUG] 🚫 Coaliciones desactivadas: cambiando a año 2018 para', camara);
+            }
+            
+            // Trigger change event para actualizar la simulación
+            if (window.actualizarDesdeControles) {
+              window.actualizarDesdeControles();
+            }
+          }
+        }, 10);
+      });
     }
     
     console.log('[DEBUG] Sistema de reparto exclusivo inicializado');

@@ -1,4 +1,14 @@
 
+/* Header normal para el título */
+.dashboard-title-sticky-header {
+  position: static;
+  z-index: auto;
+  background: transparent;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .dashboard-title-bar {
   width: 100%;
   max-width: none;
@@ -19,10 +29,10 @@
   min-height: 0;
   position: relative;
   box-sizing: border-box;
-  height: calc(100vh - 80px); /* Restaurar altura fija */
-  overflow-y: auto; /* Restaurar scroll pero solo en Y */
-  overflow-x: visible; /* Permitir que el hemiciclo se extienda horizontalmente */
-  flex: 1 1 auto;
+  position: relative;
+  flex: none; /* No tomar altura fija */
+  height: auto; /* Altura automática */
+  overflow: visible; /* Sin scroll propio */
 }
 
 .dashboard-title-text {
@@ -33,7 +43,7 @@
   line-height: 1.2;
   text-align: center;
   margin: 0;
-  padding: 12px 0;
+  padding: 16px 24px;
   font-family: 'Noto Sans', sans-serif;
   word-break: break-word;
   max-width: 100%;
@@ -42,12 +52,6 @@
   box-sizing: border-box;
   visibility: visible;
   opacity: 1;
-  position: sticky;
-  top: 0;
-  background: rgba(248, 250, 252, 0.95);
-  backdrop-filter: blur(10px);
-  z-index: 10;
-  border-radius: 8px;
 }
 
 .dashboard-title-bar > slot {
