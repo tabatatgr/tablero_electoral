@@ -13,15 +13,33 @@
     <link rel="stylesheet" href="components/panel_control/ControlSidebar.css">
     <link rel="stylesheet" href="components/titulo/DashboardTitle.css">
     <link rel="stylesheet" href="components/seat_chart/SeatChart.css">
+    <link rel="stylesheet" href="components/notifications/NotificationSystem.css">
     <script type="module" src="components/IndicadorBox/index.js"></script>
     <script type="module" src="components/DashboardHeader/DashboardHeader.js"></script>
     <script type="module" src="components/panel_control/ControlSidebar.js"></script>
     <script type="module" src="components/titulo/DashboardTitle.js"></script>
     <script type="module" src="components/seat_chart/SeatChart.js"></script>
+    <script type="module" src="components/vote_redistribution/VoteRedistribution.js"></script>
+    <script src="components/notifications/NotificationSystem.js"></script>
     <script src="scripts/script_general/script.js"></script>
 </head>
 <body>
     <div class="root">
+        <!-- Sistema de Notificaciones -->
+        <div id="notification-system" class="notification-system">
+            <div id="main-notification" class="notification hidden">
+                <div class="notification-content">
+                    <div class="notification-icon">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="notification-text">
+                        <div class="notification-title">Cargando...</div>
+                        <div class="notification-subtitle">Preparando datos del tablero</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <dashboard-header></dashboard-header>
         <div class="layout-container">
             <control-sidebar id="control-sidebar"></control-sidebar>
@@ -29,9 +47,9 @@
                 <div class="indicadores-resumen">
                     <indicador-box etiqueta="Total de escaños" valor="128"></indicador-box>
                     <indicador-box 
-                        etiqueta="Proporcionalidad" 
+                        etiqueta="Relación votos-escaños" 
                         valor="±2.1%" 
-                        tooltip="Diferencia promedio entre el porcentaje de votos obtenidos por cada partido y el porcentaje de escaños asignados. Un valor bajo indica mayor proporcionalidad electoral.">
+                        tooltip="La relación votos-escaños muestra qué tan fielmente se traducen los votos en asientos en el Congreso. Se calcula dividiendo el porcentaje de curules que obtiene un partido entre el porcentaje de votos que recibió. Un valor igual a 1 denota correspondencia perfecta; valores superiores a 1 reflejan sobrerrepresentación, mientras que valores inferiores a 1 indican subrepresentación.">
                     </indicador-box>
                     <indicador-box 
                         etiqueta="Índice de Gallagher" 

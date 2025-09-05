@@ -8,8 +8,8 @@
   padding: 16px;
   margin: 12px 0 24px 0;
   width: 100%;
-  min-height: 620px; /* Aumentado significativamente */
-  height: auto;
+  min-height: 400px; /* Reducido para ser más flexible */
+  height: auto; /* Altura completamente automática */
   gap: 24px;
   box-sizing: border-box;
   position: relative;
@@ -23,11 +23,12 @@
   align-items: center; /* Centrado vertical del SVG */
   justify-content: center; /* Centrado horizontal del SVG */
   min-width: 280px;
-  height: auto; /* Cambiar de 100% a auto */
-  min-height: 600px; /* Aumentado significativamente */
+  height: auto; /* Altura completamente automática */
+  min-height: 300px; /* Reducido para ser más flexible */
   background: transparent;
   border-radius: 8px;
   overflow: visible; /* Asegurar que no se corte nada */
+  padding: 10px; /* Margen interno para evitar cortes */
 }
 
 .seat-chart-svg svg {
@@ -36,6 +37,7 @@
   min-width: 300px; /* Tamaño mínimo para legibilidad */
   max-width: 100%; /* Responsive */
   display: block;
+  /* Eliminado cualquier restricción de altura máxima */
 }
 
 .seat-chart-legend {
@@ -63,24 +65,26 @@
     margin: 12px 0 20px 0;
     height: auto;
     gap: 16px;
+    min-height: 300px; /* Reducido para ser más flexible */
   }
   
   .seat-chart-svg {
     flex: none;
     min-width: 0;
     width: 100%;
-    height: auto; /* Cambiar de altura fija a auto */
-    min-height: 400px; /* Altura mínima para el hemiciclo */
+    height: auto; /* Altura completamente automática */
+    min-height: 250px; /* Reducido para ser más flexible */
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 10px; /* Asegurar margen en móviles */
   }
   
   .seat-chart-svg svg {
-    max-height: none; /* Eliminar restricción de altura */
+    max-height: none; /* Eliminar cualquier restricción de altura */
     max-width: 100%;
-    width: auto;
-    height: auto;
+    width: 100%; /* Usar todo el ancho disponible */
+    height: auto; /* Altura completamente automática */
   }
   
   .seat-chart-legend {

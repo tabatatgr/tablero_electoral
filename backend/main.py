@@ -272,10 +272,128 @@ def simulacion(
 	return JSONResponse(
 		content={
 			"seatChart": seat_chart,
-			"kpis": kpis,
 			"tabla": seat_chart
 		},
 		headers={"Access-Control-Allow-Origin": "*"},
 		status_code=200
 	)
+
+@app.get("/partidos/por-anio")
+def obtener_partidos_por_anio(anio: int, camara: str = "diputados"):
+	"""
+	Endpoint para obtener los partidos y sus porcentajes base según el año y cámara.
+	Retorna los datos necesarios para inicializar los sliders de partidos.
+	"""
+	try:
+		# Define partidos base según año y cámara
+		if camara.lower() == "diputados":
+			if anio == 2018:
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 30.5},
+					{"partido": "PAN", "porcentaje_vigente": 25.2},
+					{"partido": "PRI", "porcentaje_vigente": 15.8},
+					{"partido": "MC", "porcentaje_vigente": 12.3},
+					{"partido": "PVEM", "porcentaje_vigente": 6.2},
+					{"partido": "PT", "porcentaje_vigente": 4.1},
+					{"partido": "PRD", "porcentaje_vigente": 3.9},
+					{"partido": "PES", "porcentaje_vigente": 1.5},
+					{"partido": "NA", "porcentaje_vigente": 0.5}
+				]
+			elif anio == 2021:
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 32.1},
+					{"partido": "PAN", "porcentaje_vigente": 23.8},
+					{"partido": "PRI", "porcentaje_vigente": 14.2},
+					{"partido": "MC", "porcentaje_vigente": 11.7},
+					{"partido": "PVEM", "porcentaje_vigente": 7.3},
+					{"partido": "PT", "porcentaje_vigente": 4.9},
+					{"partido": "PRD", "porcentaje_vigente": 3.2},
+					{"partido": "PES", "porcentaje_vigente": 1.8},
+					{"partido": "RSP", "porcentaje_vigente": 0.7},
+					{"partido": "FXM", "porcentaje_vigente": 0.3}
+				]
+			elif anio == 2024:
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 35.2},
+					{"partido": "PAN", "porcentaje_vigente": 22.1},
+					{"partido": "PRI", "porcentaje_vigente": 12.4},
+					{"partido": "MC", "porcentaje_vigente": 15.3},
+					{"partido": "PVEM", "porcentaje_vigente": 8.1},
+					{"partido": "PT", "porcentaje_vigente": 5.2},
+					{"partido": "PRD", "porcentaje_vigente": 1.7}
+				]
+			else:
+				# Default para años no especificados (usar 2024)
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 35.2},
+					{"partido": "PAN", "porcentaje_vigente": 22.1},
+					{"partido": "PRI", "porcentaje_vigente": 12.4},
+					{"partido": "MC", "porcentaje_vigente": 15.3},
+					{"partido": "PVEM", "porcentaje_vigente": 8.1},
+					{"partido": "PT", "porcentaje_vigente": 5.2},
+					{"partido": "PRD", "porcentaje_vigente": 1.7}
+				]
+		elif camara.lower() == "senado" or camara.lower() == "senadores":
+			if anio == 2018:
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 31.8},
+					{"partido": "PAN", "porcentaje_vigente": 24.3},
+					{"partido": "PRI", "porcentaje_vigente": 16.2},
+					{"partido": "MC", "porcentaje_vigente": 11.9},
+					{"partido": "PVEM", "porcentaje_vigente": 6.4},
+					{"partido": "PT", "porcentaje_vigente": 4.2},
+					{"partido": "PRD", "porcentaje_vigente": 3.1},
+					{"partido": "PES", "porcentaje_vigente": 1.6},
+					{"partido": "NA", "porcentaje_vigente": 0.5}
+				]
+			elif anio == 2024:
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 36.1},
+					{"partido": "PAN", "porcentaje_vigente": 21.7},
+					{"partido": "PRI", "porcentaje_vigente": 11.8},
+					{"partido": "MC", "porcentaje_vigente": 16.2},
+					{"partido": "PVEM", "porcentaje_vigente": 8.4},
+					{"partido": "PT", "porcentaje_vigente": 4.9},
+					{"partido": "PRD", "porcentaje_vigente": 0.9}
+				]
+			else:
+				# Default para años no especificados (usar 2024)
+				partidos_data = [
+					{"partido": "MORENA", "porcentaje_vigente": 36.1},
+					{"partido": "PAN", "porcentaje_vigente": 21.7},
+					{"partido": "PRI", "porcentaje_vigente": 11.8},
+					{"partido": "MC", "porcentaje_vigente": 16.2},
+					{"partido": "PVEM", "porcentaje_vigente": 8.4},
+					{"partido": "PT", "porcentaje_vigente": 4.9},
+					{"partido": "PRD", "porcentaje_vigente": 0.9}
+				]
+		else:
+			return JSONResponse(
+				content={"error": f"Cámara '{camara}' no soportada. Use 'diputados' o 'senado'"},
+				status_code=400,
+				headers={"Access-Control-Allow-Origin": "*"}
+			)
+		
+		return JSONResponse(
+			content={
+				"partidos": partidos_data,
+				"anio": anio,
+				"camara": camara,
+				"total_partidos": len(partidos_data)
+			},
+			headers={"Access-Control-Allow-Origin": "*"},
+			status_code=200
+		)
+	
+	except Exception as e:
+		return JSONResponse(
+			content={"error": f"Error interno del servidor: {str(e)}"},
+			status_code=500,
+			headers={"Access-Control-Allow-Origin": "*"}
+		)
+
+if __name__ == "__main__":
+	import uvicorn
+	port = int(os.environ.get("PORT", 8000))  # Usar variable PORT o 8000 por defecto
+	uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
 

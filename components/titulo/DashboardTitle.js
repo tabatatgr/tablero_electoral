@@ -23,8 +23,10 @@ class DashboardTitle extends HTMLElement {
           }
           ${cssText}
         </style>
+        <div class="dashboard-title-sticky-header">
+          <h1 class="dashboard-title-text">Herramienta de Simulación Electoral</h1>
+        </div>
         <div class="dashboard-title-bar" style="background: transparent; box-shadow: none; width: 100%; max-width: 100vw; box-sizing: border-box; border-radius: 16px;">
-          <h1 class="dashboard-title-text" style="color: #0F2027; font-size: 2rem; font-weight: 700; text-align: center; margin: 0; padding: 16px 0;">Herramienta de Simulación Electoral</h1>
           <slot style="width: 100%; display: block;"></slot>
         </div>
       `;
