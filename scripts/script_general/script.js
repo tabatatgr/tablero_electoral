@@ -327,7 +327,7 @@ function mapearModeloAPlan(modelo) {
     return resultado;
 }
 
-async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false} = {}) {
+async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false, porcentajes_redistribucion = null} = {}) {
     // 🆕 LÓGICA PARA COALICIONES - Establecer año por defecto basado en si están activadas
     if (anio === null) {
         if (usar_coaliciones) {
@@ -491,7 +491,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         const controller = createNewRequestController();
         pendingRequestId = requestId;
         
-        // AMBAS CÁMARAS: POST con query parameters (sin body)
+        // Preparar opciones de fetch
         const fetchOptions = {
             method: 'POST',
             headers: {
@@ -504,9 +504,30 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             signal: controller.signal
         };
         
-        console.log('[DEBUG] Método HTTP: POST con query parameters para cámara:', camara);
+        // 🆕 REDISTRIBUCIÓN DE VOTOS: Si hay porcentajes, enviar en body
+        if (porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) {
+            console.log('[DEBUG] 🗳️ REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
+            
+            const formData = new URLSearchParams();
+            formData.append('porcentajes_partidos', JSON.stringify(porcentajes_redistribucion));
+            formData.append('partidos_fijos', JSON.stringify([]));
+            formData.append('overrides_pool', JSON.stringify({}));
+            
+            fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            fetchOptions.body = formData;
+            
+            console.log('[DEBUG] Body incluido para redistribución de votos');
+        } else {
+            console.log('[DEBUG] Sin redistribución - POST solo con query parameters');
+        }
+        
+        console.log('[DEBUG] Método HTTP: POST para cámara:', camara);
         console.log('[DEBUG] URL final:', url);
-        console.log('[DEBUG] Sin body - todos los parámetros en query string');
+        if (porcentajes_redistribucion) {
+            console.log('[DEBUG] Con body de redistribución - porcentajes personalizados');
+        } else {
+            console.log('[DEBUG] Sin body - todos los parámetros en query string');
+        }
         
         // Sin actualización de notificación - se maneja en actualizarDesdeControles
         
@@ -1472,7 +1493,8 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
             mr_seats, rp_seats, pm_seats, escanos_totales,  //  Nuevos parámetros
             reparto_mode, reparto_method, max_seats_per_party,
             usar_coaliciones,
-            silentLoad: !showSuccessNotification  // Mostrar notificación de éxito si es interacción del usuario
+            silentLoad: !showSuccessNotification,  // Mostrar notificación de éxito si es interacción del usuario
+            porcentajes_redistribucion: window.porcentajesTemporales || null  // 🆕 Incluir porcentajes si existen
         });
     } else {
         // Estado por defecto: vigente diputados=500, senado=128
@@ -1480,13 +1502,21 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         cargarSimulacion({
             anio, camara, modelo: modeloBackend, magnitud, 
             reparto_mode, reparto_method,
-            silentLoad: !showSuccessNotification
+            silentLoad: !showSuccessNotification,
+            porcentajes_redistribucion: window.porcentajesTemporales || null  // 🆕 Incluir porcentajes si existen
         });
+    }
+    
+    // 🧹 Limpiar porcentajes temporales después de usar
+    if (window.porcentajesTemporales) {
+        console.log('[DEBUG] 🗳️ Porcentajes de redistribución enviados:', window.porcentajesTemporales);
+        delete window.porcentajesTemporales;
     }
 }
 
 //  EXPONER FUNCIÓN GLOBALMENTE PARA DEBUGGING
 window.actualizarDesdeControles = actualizarDesdeControles;
+window.actualizarDesdeControlesSilent = actualizarDesdeControlesSilent;
 
 // =====  DEBUG HELPER - ANTI-CACHÉ =====
 window.electoralDebugger = {

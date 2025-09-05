@@ -1131,10 +1131,10 @@ initializeSidebarControls() {
   }
   
   updateUIWithResults(result) {
-    // Actualizar seat chart
-    if (result.seat_chart && window.updateSeatChart) {
-      window.updateSeatChart(result.seat_chart);
-    }
+    console.log('[DEBUG] ControlSidebar updateUIWithResults:', result);
+    
+    // El seat chart ya se actualiza automaticamente via VoteRedistribution.updateSeatChart()
+    // Solo actualizar KPIs y tabla de resultados si existen
     
     // Actualizar KPIs
     if (result.kpis) {
@@ -1146,7 +1146,7 @@ initializeSidebarControls() {
       this.updateResultsTable(result.resultados_detalle);
     }
     
-    console.log('[DEBUG] UI actualizada con nuevos resultados:', result);
+    console.log('[DEBUG] ControlSidebar UI actualizada con nuevos resultados');
   }
   
   updateKPIs(kpis) {
@@ -1346,8 +1346,8 @@ initializeSidebarControls() {
       // Actualizar sliders con nuevos datos
       this.updatePartySliders(partidosValidos);
       
-      // Actualizar sistema de redistribución con nuevos baseline
-      if (window.voteRedistribution && partidosValidos.length > 0) {
+      // 🆕 Crear baseline data para el sistema integrado (sin VoteRedistribution)
+      if (partidosValidos.length > 0) {
         const baselineData = {};
         
         // Usar todos los partidos válidos (ya no hay lista fija)
@@ -1365,10 +1365,9 @@ initializeSidebarControls() {
           throw new Error(`Datos baseline inválidos: suma ${totalBaseline.toFixed(1)}% (debería ser ~100%)`);
         }
         
-        console.log(`[DEBUG] 🎚️ Partidos para redistribución:`, Object.keys(baselineData));
+        console.log(`[DEBUG] 🎚️ Partidos para sistema integrado:`, Object.keys(baselineData));
         console.log(`[DEBUG] 📊 Baseline data completa:`, baselineData);
-        window.voteRedistribution.initializeWithBaselineData(baselineData);
-        console.log(`[DEBUG] 🔄 Sistema de redistribución actualizado con datos baseline para ${validYear}`);
+        console.log(`[DEBUG] 🔄 Sliders listos para ${validYear} con sistema integrado cargarSimulacion`);
       }
       
       // Ocultar indicador de carga
@@ -1427,13 +1426,7 @@ initializeSidebarControls() {
     // 🆕 RESET COMPLETO - Limpiar datos anteriores de memoria
     this.partidosData = {};
     
-    // 🆕 RESET VoteRedistribution para evitar datos fantasma
-    if (window.voteRedistribution) {
-      window.voteRedistribution.porcentajes = {};
-      console.log(`[DEBUG] 🧹 Reset completo de VoteRedistribution.porcentajes`);
-    }
-    
-    console.log(`[DEBUG] 🔄 Reset completo realizado - partidosData y VoteRedistribution limpiados`);
+    console.log(`[DEBUG] 🔄 Reset completo realizado - partidosData limpiado para sistema integrado`);
     
     // Generar slider para cada partido
     partidos.forEach(partido => {
@@ -1495,19 +1488,19 @@ initializeSidebarControls() {
           
           console.log(`[DEBUG] 🎚️ Slider actualizado - ${partyNameUpper}: ${newValue.toFixed(1)}%`);
           
-          // Enviar datos actualizados al sistema de redistribución
-          if (window.voteRedistribution) {
-            const porcentajesActuales = {};
-            Object.keys(this.partidosData).forEach(partido => {
-              porcentajesActuales[partido] = this.partidosData[partido].porcentajeActual;
-            });
-            
-            console.log(`[DEBUG] 🔄 Sincronizando con VoteRedistribution:`, porcentajesActuales);
-            
-            // Actualizar solo los porcentajes internos, sin actualizar UI (para evitar loops)
-            window.voteRedistribution.porcentajes = porcentajesActuales;
-            // NO llamar updateSlidersUI() para evitar loop infinito
-            window.voteRedistribution.debouncedFetchResultados();
+          // Enviar datos actualizados al sistema integrado de cargarSimulacion
+          const porcentajesActuales = {};
+          Object.keys(this.partidosData).forEach(partido => {
+            porcentajesActuales[partido] = this.partidosData[partido].porcentajeActual;
+          });
+          
+          console.log(`[DEBUG] 🔄 Iniciando cargarSimulacion con porcentajes actualizados:`, porcentajesActuales);
+          
+          // Usar el sistema integrado de cargarSimulacion con debounce
+          if (window.actualizarDesdeControlesSilent) {
+            // Guardar porcentajes en variable global temporal para que cargarSimulacion los use
+            window.porcentajesTemporales = porcentajesActuales;
+            window.actualizarDesdeControlesSilent();
           }
         });
         
@@ -1747,16 +1740,18 @@ initializeSidebarControls() {
       }
     });
     
-    // Sincronizar con VoteRedistribution
-    if (window.voteRedistribution) {
-      const porcentajesVigentes = {};
-      Object.keys(this.partidosData).forEach(partido => {
-        porcentajesVigentes[partido] = this.partidosData[partido].porcentajeVigente;
-      });
-      
-      console.log(`[DEBUG] 🔄 Sincronizando VoteRedistribution con porcentajes vigentes:`, porcentajesVigentes);
-      window.voteRedistribution.porcentajes = porcentajesVigentes;
-      window.voteRedistribution.debouncedFetchResultados();
+    // Sincronizar con cargarSimulacion en lugar de VoteRedistribution
+    const porcentajesVigentes = {};
+    Object.keys(this.partidosData).forEach(partido => {
+      porcentajesVigentes[partido] = this.partidosData[partido].porcentajeVigente;
+    });
+    
+    console.log(`[DEBUG] 🔄 Iniciando cargarSimulacion con porcentajes vigentes:`, porcentajesVigentes);
+    
+    // Usar cargarSimulacion integrado en lugar de VoteRedistribution separado
+    if (window.actualizarDesdeControles) {
+      // Llamar al sistema estándar que ya maneja cargarSimulacion con timing correcto
+      window.actualizarDesdeControlesSilent();
     }
     
     console.log(`[DEBUG] ✅ Sincronización forzada completada`);

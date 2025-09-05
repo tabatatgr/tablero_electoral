@@ -31,10 +31,13 @@ class VoteRedistribution {
 
     // Metodo para obtener resultados del backend - VERSION CORREGIDA
     async fetchResultados() {
-        console.log('[DEBUG] fetchResultados llamado - porcentajes actuales:', this.porcentajes);
+        // 🔍 DEBUGGING CRÍTICO: Verificar qué porcentajes vamos a enviar
+        console.log('🚨 [CRITICAL DEBUG] fetchResultados llamado');
+        console.log('🚨 this.porcentajes =', JSON.stringify(this.porcentajes, null, 2));
+        console.log('🚨 Object.keys(this.porcentajes).length =', Object.keys(this.porcentajes).length);
         
         if (!this.porcentajes || Object.keys(this.porcentajes).length === 0) {
-            console.warn('[WARN] No hay porcentajes para enviar al backend');
+            console.warn('🚨 [CRITICAL] No hay porcentajes para enviar al backend');
             return;
         }
         
@@ -202,8 +205,52 @@ class VoteRedistribution {
     }
 
     notifyUpdate() {
+        console.log('[DEBUG] notifyUpdate llamado con resultado:', this.result);
+        
+        // Actualizar seat chart directamente si hay datos
+        if (this.result && this.result.seat_chart) {
+            this.updateSeatChart(this.result.seat_chart);
+        }
+        
+        // Notificar a los callbacks registrados
         if (this.callbacks.onUpdate) {
             this.callbacks.onUpdate(this.result);
+        }
+        
+        console.log('[DEBUG] UI actualizada con nuevos resultados');
+    }
+
+    // Nuevo metodo para actualizar el seat chart
+    updateSeatChart(seatChartData) {
+        console.log('[DEBUG] Actualizando seat chart con datos:', seatChartData);
+        
+        const seatChart = document.querySelector('seat-chart');
+        if (!seatChart) {
+            console.warn('[WARN] No se encontro elemento seat-chart');
+            return;
+        }
+
+        try {
+            // El backend devuelve directamente un array con el formato correcto
+            let chartData = seatChartData;
+            
+            // Asegurar que tengamos el formato correcto
+            if (!Array.isArray(chartData)) {
+                console.warn('[WARN] Datos de seat chart no son array, intentando conversion');
+                chartData = Object.values(chartData);
+            }
+            
+            console.log('[DEBUG] Datos de seat chart procesados para componente:', chartData);
+            
+            // Forzar re-render con key única
+            const renderKey = `redistribution_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            seatChart.setAttribute('data-key', renderKey);
+            seatChart.setAttribute('data', JSON.stringify(chartData));
+            
+            console.log('[DEBUG] Seat chart actualizado exitosamente con', chartData.length, 'partidos');
+            
+        } catch (error) {
+            console.error('[ERROR] Error actualizando seat chart:', error);
         }
     }
 
@@ -278,6 +325,7 @@ class VoteRedistribution {
 }
 
 // Instancia global
+// 🆕 Crear instancia mínima para compatibilidad (no se usa activamente)
 window.voteRedistribution = new VoteRedistribution();
 
 export default VoteRedistribution;
