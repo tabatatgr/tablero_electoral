@@ -13,28 +13,14 @@
                 <h1>Tablero Electoral</h1>
                 <p>Inicia sesión para continuar</p>
             </div>
-            
-            <form id="loginForm" class="login-form">
-                <div class="form-group">
-                    <label for="username">Usuario</label>
-                    <input type="text" id="username" name="username" required autocomplete="username">
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Contraseña</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
-                </div>
-                
-                <button type="submit" class="login-button" id="loginButton">
-                    <span class="button-text">Iniciar Sesión</span>
-                    <span class="button-loading" style="display: none;">
-                        <span class="loading-spinner"></span>
-                        Validando...
-                    </span>
-                </button>
-                
-                <div id="errorMessage" class="error-message" style="display: none;"></div>
-            </form>
+
+            <!-- Botón Google -->
+            <a href="https://back-electoral.onrender.com/login" class="google-login-link">
+              <button type="button" class="login-google-btn">
+                <img src="https://cdn.jsdelivr.net/gh/tabatatgr/tablero_electoral@main/static/img/google-icon.svg" style="height:20px;vertical-align:middle;margin-right:8px;">
+                Iniciar sesión con Google
+              </button>
+            </a>
             
             <div class="login-footer">
                 <p class="demo-credentials">
@@ -50,16 +36,13 @@
     <script src="components/notifications/NotificationSystem.js"></script>
     <script src="components/AuthManager.js"></script>
     <script>
-        // Inicializar sistema de notificaciones
         const notifications = new NotificationSystem();
         window.notifications = notifications;
         
-        // Verificar si ya está autenticado
         if (window.authManager.isAuthenticated) {
             window.location.href = 'index.html';
         }
         
-        // Manejar submit del formulario
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -68,44 +51,32 @@
             const button = document.getElementById('loginButton');
             const errorMessage = document.getElementById('errorMessage');
             
-            // Mostrar estado de carga
             button.disabled = true;
             button.querySelector('.button-text').style.display = 'none';
             button.querySelector('.button-loading').style.display = 'flex';
             errorMessage.style.display = 'none';
             
-            // Simular delay de validación (como un backend real)
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Intentar login
             const success = window.authManager.login(username, password);
             
             if (success) {
-                // Login exitoso - redirigir
                 window.location.href = 'index.html';
             } else {
-                // Error de login
                 errorMessage.textContent = 'Usuario o contraseña incorrectos';
                 errorMessage.style.display = 'block';
-                
-                // Shake animation para el formulario
                 document.querySelector('.login-card').classList.add('shake');
                 setTimeout(() => {
                     document.querySelector('.login-card').classList.remove('shake');
                 }, 500);
-                
-                // Resetear botón
                 button.disabled = false;
                 button.querySelector('.button-text').style.display = 'inline';
                 button.querySelector('.button-loading').style.display = 'none';
-                
-                // Focus en el campo de usuario
                 document.getElementById('username').focus();
                 document.getElementById('username').select();
             }
         });
         
-        // Focus automático en el campo de usuario
         document.getElementById('username').focus();
     </script>
 </body>
