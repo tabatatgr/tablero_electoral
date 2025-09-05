@@ -137,7 +137,9 @@ class SeatChart extends HTMLElement {
       }
     }
     // Legend
-    let legend = `<div class="legend-title">Simbología</div>` + data.map(p => `
+    let legend = `<div class="legend-title">Simbología</div>
+  <div style='font-size:13px;color:#5F7272;margin-bottom:6px;'>El porcentaje mostrado indica el porcentaje de escaños que obtiene cada partido.</div>`
+      + data.map(p => `
       <div class="legend-item">
         <div class="legend-left">
           <span class="legend-dot" style="background:${p.color}"></span>

@@ -47,13 +47,14 @@ class VoteRedistribution {
         }
 
         const total = Object.values(this.porcentajes).reduce((sum, val) => sum + val, 0);
-        console.log('[DEBUG] Suma de porcentajes:', total.toFixed(2) + '%');
-        
-        if (total < 90 || total > 110) {
-            console.error('[ERROR] Porcentajes desbalanceados:', total.toFixed(2) + '%');
-            this.setError('Porcentajes invalidos: ' + total.toFixed(1) + '%');
-            return;
-        }
+        console.log('[DEBUG] Total antes de normalizar:', total.toFixed(2) + '%');
+
+        // Normalizar automáticamente usando el método existente
+        this.porcentajes = this.normalizePorcentajes(this.porcentajes);
+
+        const nuevoTotal = Object.values(this.porcentajes).reduce((sum, val) => sum + val, 0);
+        console.log('[DEBUG] Total después de normalizar:', nuevoTotal.toFixed(2) + '%');
+        console.log('[DEBUG] Porcentajes normalizados:', this.porcentajes);
 
         this.setLoading(true);
         this.setError(null);
