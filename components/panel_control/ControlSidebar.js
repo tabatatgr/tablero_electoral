@@ -1174,34 +1174,14 @@ initializeSidebarControls() {
   }
   
   showLoadingState(loading) {
-    if (loading) {
-      // Mostrar indicador de carga
-      if (window.notifications) {
-        window.notifications.show({
-          title: 'Calculando redistribución...',
-          type: 'loading',
-          autoHide: false,
-          id: 'vote-redistribution-loading'
-        });
-      }
-    } else {
-      // Ocultar indicador de carga
-      if (window.notifications) {
-        window.notifications.hide('vote-redistribution-loading');
-      }
-    }
+    // Notificaciones de redistribución deshabilitadas por solicitud del usuario
+    // El sistema funciona silenciosamente en segundo plano
   }
   
   showError(error) {
     console.error('[ERROR] Vote redistribution:', error);
-    if (window.notifications) {
-      window.notifications.error(
-        'Error en redistribución',
-        error,
-        5000,
-        'vote-redistribution-error'
-      );
-    }
+    // Notificaciones de error de redistribución deshabilitadas por solicitud del usuario
+    // Los errores se muestran solo en consola para debugging
   }
 
   // 🆕 Método para cargar partidos dinámicamente por año
@@ -1373,12 +1353,8 @@ initializeSidebarControls() {
       // Ocultar indicador de carga
       if (window.notifications) {
         window.notifications.hide('loading-parties');
-        window.notifications.success(
-          'Partidos actualizados',
-          `Datos cargados para ${validYear}`,
-          3000,
-          'parties-updated'
-        );
+        // Notificación "Partidos actualizados" eliminada por solicitud del usuario
+        // El sistema actualiza silenciosamente
       }
       
       console.log(`[DEBUG] ✅ loadPartiesByYear completado exitosamente - ID: ${callId}`);
