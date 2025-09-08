@@ -496,6 +496,26 @@ initializeSidebarControls() {
         const isPersonalizado = modelSelect.value === 'personalizado';
         this.updateSlidersState(isPersonalizado);
         console.log(`[DEBUG] 🎛️ Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'}`);
+
+        // Ajustar topes de sliders según modelo y cámara
+        const chamberBtn = this.querySelector('.master-toggle.active');
+        const camara = chamberBtn ? chamberBtn.dataset.chamber : 'diputados';
+        const mrSlider = this.querySelector('#input-mr');
+        const magnitudeSlider = this.querySelector('#input-magnitud');
+        let maxMr = 700;
+        let maxMagnitud = 700;
+        if (modelSelect.value === 'personalizado' || modelSelect.value === 'mixto') {
+          if (camara === 'senadores') {
+            maxMr = 64;
+            maxMagnitud = 128;
+          } else {
+            maxMr = 300;
+            maxMagnitud = 500;
+          }
+        }
+        if (mrSlider) mrSlider.max = maxMr;
+        if (magnitudeSlider) magnitudeSlider.max = maxMagnitud;
+      });
       });
       
       // Establecer estado inicial
