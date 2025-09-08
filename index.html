@@ -21,24 +21,11 @@
     <script type="module" src="components/seat_chart/SeatChart.js"></script>
     <script type="module" src="components/vote_redistribution/VoteRedistribution.js"></script>
     <script src="components/notifications/NotificationSystem.js"></script>
-    <script src="components/AuthManager.js"></script>
+    <!-- <script src="components/AuthManager.js"></script> -->
     <script src="scripts/script_general/script.js"></script>
 </head>
 <body>
-    <!-- Verificación de autenticación -->
-    <script>
-        // Verificar autenticación antes de cargar la aplicación
-        if (!window.authManager.requireAuth()) {
-            // Si no está autenticado, AuthManager redirige automáticamente
-            document.body.style.display = 'none';
-        }
-        
-        // Mostrar información del usuario en consola
-        const userInfo = window.authManager.getUserInfo();
-        if (userInfo) {
-            console.log(`[AUTH] Usuario autenticado: ${userInfo.username}`);
-        }
-    </script>
+    <!-- Login deshabilitado, acceso libre -->
     
     <div class="root"
         <!-- Sistema de Notificaciones -->
