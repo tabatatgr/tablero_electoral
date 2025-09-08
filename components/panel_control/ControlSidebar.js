@@ -3,7 +3,7 @@ export class ControlSidebar extends HTMLElement {
   connectedCallback() {
     console.log('ControlSidebar connected!');
     
-    // 🌍 Exposer referencia global para que VoteRedistribution pueda acceder
+    //  Exposer referencia global para que VoteRedistribution pueda acceder
     window.controlSidebar = this;
     
     this.render();
@@ -324,8 +324,8 @@ initializeSidebarControls() {
     if (overrepSwitch) {
       overrepSwitch.addEventListener('click', function() {
         setTimeout(updateOverrepVisibility, 0);
+        updateOverrepVisibility();
       });
-      updateOverrepVisibility();
     }
     // Collapsible groups
     const groupToggles = this.querySelectorAll('.group-toggle');
@@ -360,6 +360,7 @@ initializeSidebarControls() {
           localStorage.setItem(`group-${targetId}-expanded`, 'true');
         }
       });
+    });
 
     // Mostrar/ocultar controles de umbral según el switch
     const thresholdSwitch = this.querySelector('#threshold-switch');
@@ -380,7 +381,6 @@ initializeSidebarControls() {
       // Inicializar visibilidad al cargar
       updateThresholdVisibility();
     }
-    });
 
     // Master controls (chamber, year, model)
     const chamberToggles = this.querySelectorAll('.master-toggle[data-chamber]');
@@ -393,14 +393,14 @@ initializeSidebarControls() {
         // Handle chamber-specific controls
         const selectedChamber = clickedToggle.dataset.chamber;
         
-        // 🆕 LÓGICA PARA COALICIONES - Ajustar año cuando cambie la cámara
+        //  LÓGICA PARA COALICIONES - Ajustar año cuando cambie la cámara
         const coalitionSwitch = document.querySelector('#coalition-switch');
         const yearSelect = document.getElementById('year-select');
         
         if (coalitionSwitch && yearSelect && coalitionSwitch.classList.contains('active')) {
           // Si las coaliciones están activadas, cambiar a 2024 automáticamente
           yearSelect.value = '2024';
-          console.log('[DEBUG] 🤝 Cámara cambiada a', selectedChamber, 'con coaliciones activadas: estableciendo año 2024');
+          console.log('[DEBUG]  Cámara cambiada a', selectedChamber, 'con coaliciones activadas: estableciendo año 2024');
         }
         
         const overrepGroup = document.getElementById('overrepresentation-group');
@@ -438,21 +438,21 @@ initializeSidebarControls() {
           console.error(' actualizarDesdeControles no disponible');
         }
         
-        // 🆕 Recargar partidos cuando cambie la cámara
+        //  Recargar partidos cuando cambie la cámara
         const currentYearSelect = document.getElementById('year-select');
         if (currentYearSelect) {
           // Actualizar años disponibles según la cámara (comentado temporalmente)
           // this.updateAvailableYears(selectedChamber);
           
           const currentYear = parseInt(currentYearSelect.value);
-          console.log(`[DEBUG] 🔄 Cambiando cámara a ${selectedChamber}, manteniendo año ${currentYear}`);
+          console.log(`[DEBUG]  Cambiando cámara a ${selectedChamber}, manteniendo año ${currentYear}`);
           
-          // 🆕 Actualizar configuración de VoteRedistribution con nueva cámara
+          //  Actualizar configuración de VoteRedistribution con nueva cámara
           if (window.voteRedistribution) {
             window.voteRedistribution.setConfig({
               camara: selectedChamber
             });
-            console.log(`[DEBUG] 📊 Configuración actualizada - Cámara: ${selectedChamber}`);
+            console.log(`[DEBUG]  Configuración actualizada - Cámara: ${selectedChamber}`);
           }
           
           this.loadPartiesByYear(currentYear, selectedChamber);
@@ -468,7 +468,7 @@ initializeSidebarControls() {
         const activeChamber = this.querySelector('.master-toggle.active');
         const chamber = activeChamber ? activeChamber.dataset.chamber : 'diputados';
         
-        console.log(`[DEBUG] 📅 Año cambiado a ${selectedYear} para cámara ${chamber} - cargando partidos...`);
+        console.log(`[DEBUG]  Año cambiado a ${selectedYear} para cámara ${chamber} - cargando partidos...`);
         this.loadPartiesByYear(selectedYear, chamber);
       });
     }
@@ -495,7 +495,7 @@ initializeSidebarControls() {
       modelSelect.addEventListener('change', () => {
         const isPersonalizado = modelSelect.value === 'personalizado';
         this.updateSlidersState(isPersonalizado);
-        console.log(`[DEBUG] 🎛️ Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'}`);
+        console.log(`[DEBUG]  Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'}`);
 
         // Ajustar topes de sliders según modelo y cámara
         const chamberBtn = this.querySelector('.master-toggle.active');
@@ -516,7 +516,6 @@ initializeSidebarControls() {
         if (mrSlider) mrSlider.max = maxMr;
         if (magnitudeSlider) magnitudeSlider.max = maxMagnitud;
       });
-      });
       
       // Establecer estado inicial
       const initialPersonalizado = modelSelect.value === 'personalizado';
@@ -525,7 +524,7 @@ initializeSidebarControls() {
 
     // Sliders de shock por partido - AHORA SON DINÁMICOS
     // Los event listeners se agregan automáticamente en updatePartySliders()
-    console.log('[DEBUG] 🎚️ Sliders dinámicos - event listeners se configuran automáticamente');
+    console.log('[DEBUG]  Sliders dinámicos - event listeners se configuran automáticamente');
 
     // Example for other sliders (add as needed):
     const magnitudeSlider = this.querySelector('#input-magnitud');
@@ -669,7 +668,7 @@ initializeSidebarControls() {
       }
     };
     
-    // 📡 Función para actualizar límites cuando cambia magnitud
+    //  Función para actualizar límites cuando cambia magnitud
     const updateSliderLimits = () => {
       const magnitudTotal = getMagnitudTotal();
       const minValue = Math.max(1, Math.floor(magnitudTotal * 0.1));
@@ -1005,7 +1004,7 @@ initializeSidebarControls() {
     
     console.log(`Initialized chamber controls for: ${selectedChamber}`);
     
-    // 🔄 INICIALIZAR SISTEMA DE REPARTO EXCLUSIVO
+    //  INICIALIZAR SISTEMA DE REPARTO EXCLUSIVO
     this.initializeRepartoSystem();
   }
   
@@ -1057,7 +1056,7 @@ initializeSidebarControls() {
       updateMethodSelect('cuota'); // Default
     }
     
-    // 🆕 Event listener para el switch de coaliciones
+    //  Event listener para el switch de coaliciones
     const coalitionSwitch = this.querySelector('#coalition-switch');
     if (coalitionSwitch) {
       coalitionSwitch.addEventListener('click', function() {
@@ -1073,11 +1072,11 @@ initializeSidebarControls() {
             if (isActive) {
               // Coaliciones activadas: cambiar a 2024
               yearSelect.value = '2024';
-              console.log('[DEBUG] 🤝 Coaliciones activadas: cambiando a año 2024 para', camara);
+              console.log('[DEBUG]  Coaliciones activadas: cambiando a año 2024 para', camara);
             } else {
               // Coaliciones desactivadas: cambiar a 2018
               yearSelect.value = '2018';
-              console.log('[DEBUG] 🚫 Coaliciones desactivadas: cambiando a año 2018 para', camara);
+              console.log('[DEBUG]  Coaliciones desactivadas: cambiando a año 2018 para', camara);
             }
             
             // Trigger change event para actualizar la simulación
@@ -1128,21 +1127,21 @@ initializeSidebarControls() {
         
         window.voteRedistribution.setConfig({
           anio: yearSelect ? parseInt(yearSelect.value) : 2024,
-          camara: chamber, // 🆕 Agregar cámara actual
+          camara: chamber, //  Agregar cámara actual
           usar_coaliciones: coalitionSwitch ? coalitionSwitch.classList.contains('active') : true,
           mr_seats: 64,
           rp_seats: 64,
           escanos_totales: 128
         });
         
-        // 🆕 Cargar partidos dinámicamente en lugar de datos estáticos
+        //  Cargar partidos dinámicamente en lugar de datos estáticos
         const initialYear = yearSelect ? parseInt(yearSelect.value) : 2024;
         
         // Configurar años disponibles para la cámara inicial (comentado temporalmente)
         // this.updateAvailableYears(chamber);
         
-        console.log(`[DEBUG] 🎬 Inicialización: año ${initialYear}, cámara ${chamber}`);
-        console.log(`[DEBUG] 🚀 LLAMANDO loadPartiesByYear(${initialYear}, ${chamber})`);
+        console.log(`[DEBUG]  Inicialización: año ${initialYear}, cámara ${chamber}`);
+        console.log(`[DEBUG]  LLAMANDO loadPartiesByYear(${initialYear}, ${chamber})`);
         this.loadPartiesByYear(initialYear, chamber);
       }
     }).catch(error => {
@@ -1204,20 +1203,20 @@ initializeSidebarControls() {
     // Los errores se muestran solo en consola para debugging
   }
 
-  // 🆕 Método para cargar partidos dinámicamente por año
+  //  Método para cargar partidos dinámicamente por año
   async loadPartiesByYear(year, chamber = 'diputados') {
     // Generar ID único para esta llamada
     const callId = Math.random().toString(36).substr(2, 9);
-    console.log(`[DEBUG] 🆔 loadPartiesByYear iniciado - ID: ${callId}, año: ${year}, cámara: ${chamber}`);
-    console.log(`[DEBUG] 🔒 Estado del lock actual: this.loadingParties = ${this.loadingParties}`);
+    console.log(`[DEBUG]  loadPartiesByYear iniciado - ID: ${callId}, año: ${year}, cámara: ${chamber}`);
+    console.log(`[DEBUG]  Estado del lock actual: this.loadingParties = ${this.loadingParties}`);
     
     // Prevenir llamadas simultáneas
     if (this.loadingParties) {
-      console.log(`[DEBUG] ⏸️ Ya hay una carga en progreso, saltando llamada ${callId}`);
+      console.log(`[DEBUG] ⏸ Ya hay una carga en progreso, saltando llamada ${callId}`);
       return;
     }
     
-    console.log(`[DEBUG] 🔓 Estableciendo lock - this.loadingParties = true`);
+    console.log(`[DEBUG]  Estableciendo lock - this.loadingParties = true`);
     this.loadingParties = true;
     
     // Declarar validYear fuera del try/catch para acceso en catch
@@ -1236,7 +1235,7 @@ initializeSidebarControls() {
       if (!validYears.includes(year)) {
         // Fallback al año más reciente disponible
         validYear = validYears[0];
-        console.warn(`[WARN] ⚠️ Año ${year} no disponible para ${chamber}. Usando ${validYear} como fallback.`);
+        console.warn(`[WARN]  Año ${year} no disponible para ${chamber}. Usando ${validYear} como fallback.`);
         
         // Actualizar el selector de año
         const yearSelect = document.getElementById('year-select');
@@ -1245,7 +1244,7 @@ initializeSidebarControls() {
         }
       }
       
-      console.log(`[DEBUG] 🔄 Cargando partidos para año ${validYear}, cámara ${chamber}...`);
+      console.log(`[DEBUG]  Cargando partidos para año ${validYear}, cámara ${chamber}...`);
       
       // Mostrar indicador de carga
       if (window.notifications) {
@@ -1265,8 +1264,8 @@ initializeSidebarControls() {
       const camaraParam = chamber === 'senadores' ? 'senado' : 'diputados';
       
       const peticionURL = `${API_BASE}/partidos/por-anio?anio=${validYear}&camara=${camaraParam}`;
-      console.log(`[DEBUG] 🔍 ANTES de fetch - URL: ${peticionURL}`);
-      console.log(`[DEBUG] 🔍 Petición: ${peticionURL}`);
+      console.log(`[DEBUG]  ANTES de fetch - URL: ${peticionURL}`);
+      console.log(`[DEBUG]  Petición: ${peticionURL}`);
       
       const response = await fetch(peticionURL);
       
@@ -1277,8 +1276,8 @@ initializeSidebarControls() {
       }
       
       const data = await response.json();
-      console.log(`[DEBUG] 🔍 RESPUESTA RAW COMPLETA del backend:`, JSON.stringify(data, null, 2));
-      console.log(`[DEBUG] ✅ Datos recibidos del backend:`, {
+      console.log(`[DEBUG] RESPUESTA RAW COMPLETA del backend:`, JSON.stringify(data, null, 2));
+      console.log(`[DEBUG] Datos recibidos del backend:`, {
         year: validYear,
         chamber: camaraParam,
         totalPartidos: data.partidos?.length,
@@ -1293,16 +1292,16 @@ initializeSidebarControls() {
         throw new Error('Formato de respuesta inválido: no se encontraron partidos');
       }
       
-      console.log(`[DEBUG] 📥 Partidos recibidos del backend (${data.partidos.length}):`, 
+      console.log(`[DEBUG]  Partidos recibidos del backend (${data.partidos.length}):`, 
         data.partidos.map(p => `${p.partido}: ${p.porcentaje_vigente}%`));
       
-      // 🆕 Debug: Mostrar específicamente partidos con 0% cuando el backend esté actualizado
+      //  Debug: Mostrar específicamente partidos con 0% cuando el backend esté actualizado
       const partidosConCero = data.partidos.filter(p => p.porcentaje_vigente === 0.0);
       if (partidosConCero.length > 0) {
-        console.log(`[DEBUG] 🆕 Partidos con 0% detectados (${partidosConCero.length}):`, 
+        console.log(`[DEBUG]  Partidos con 0% detectados (${partidosConCero.length}):`, 
           partidosConCero.map(p => p.partido));
       } else {
-        console.log(`[DEBUG] ℹ️ No hay partidos con 0% en esta respuesta (backend en actualización)`);
+        console.log(`[DEBUG] ℹ No hay partidos con 0% en esta respuesta (backend en actualización)`);
       }
       
       // Filtrar partidos válidos (eliminar entradas extrañas como TOTAL_PARTIDOS_SUM)
@@ -1321,13 +1320,13 @@ initializeSidebarControls() {
         const esPorcentajeValido = !isNaN(porcentaje) && porcentaje >= 0 && porcentaje <= 100;
         
         // Debug detallado: mostrar TODOS los partidos y su estado de validación
-        console.log(`[DEBUG] 🔍 Validando partido: ${nombre} (${porcentaje}%) - Nombre: ${esNombreValido ? '✅' : '❌'}, Porcentaje: ${esPorcentajeValido ? '✅' : '❌'}`);
+        console.log(`[DEBUG]  Validando partido: ${nombre} (${porcentaje}%) - Nombre: ${esNombreValido ? '✅' : '❌'}, Porcentaje: ${esPorcentajeValido ? '✅' : '❌'}`);
         
         // Debug: mostrar qué partidos se están filtrando
         if (!esNombreValido || !esPorcentajeValido) {
-          console.log(`[DEBUG] 🚫 Partido RECHAZADO: ${nombre} - Nombre válido: ${esNombreValido}, Porcentaje válido: ${esPorcentajeValido} (${porcentaje})`);
+          console.log(`[DEBUG] Partido RECHAZADO: ${nombre} - Nombre válido: ${esNombreValido}, Porcentaje válido: ${esPorcentajeValido} (${porcentaje})`);
         } else {
-          console.log(`[DEBUG] ✅ Partido ACEPTADO: ${nombre} (${porcentaje}%)`);
+          console.log(`[DEBUG]  Partido ACEPTADO: ${nombre} (${porcentaje}%)`);
         }
         
         return esNombreValido && esPorcentajeValido;
@@ -1337,16 +1336,16 @@ initializeSidebarControls() {
         throw new Error(`No se encontraron partidos válidos para ${year}/${camaraParam}`);
       }
       
-      console.log(`[DEBUG] 🔍 Partidos válidos encontrados: ${partidosValidos.length}`, partidosValidos.map(p => `${p.partido}: ${p.porcentaje_vigente}%`));
+      console.log(`[DEBUG]  Partidos válidos encontrados: ${partidosValidos.length}`, partidosValidos.map(p => `${p.partido}: ${p.porcentaje_vigente}%`));
       
-      // 🔍 Verificar suma total de partidos válidos
+      //  Verificar suma total de partidos válidos
       const sumaTotal = partidosValidos.reduce((sum, p) => sum + p.porcentaje_vigente, 0);
-      console.log(`[DEBUG] 📊 Suma total de partidos válidos: ${sumaTotal.toFixed(2)}%`);
+      console.log(`[DEBUG]  Suma total de partidos válidos: ${sumaTotal.toFixed(2)}%`);
       
       // Actualizar sliders con nuevos datos
       this.updatePartySliders(partidosValidos);
       
-      // 🆕 Crear baseline data para el sistema integrado (sin VoteRedistribution)
+      //  Crear baseline data para el sistema integrado (sin VoteRedistribution)
       if (partidosValidos.length > 0) {
         const baselineData = {};
         
@@ -1356,18 +1355,18 @@ initializeSidebarControls() {
           baselineData[nombreUpper] = partido.porcentaje_vigente;
         });
         
-        // 🔍 Validar suma de porcentajes baseline
+        // Validar suma de porcentajes baseline
         const totalBaseline = Object.values(baselineData).reduce((sum, val) => sum + val, 0);
-        console.log(`[DEBUG] 📊 Suma baseline: ${totalBaseline.toFixed(2)}%`);
+        console.log(`[DEBUG]  Suma baseline: ${totalBaseline.toFixed(2)}%`);
         
         if (totalBaseline < 90 || totalBaseline > 110) {
-          console.error(`[ERROR] ⚠️ Datos baseline inválidos - Suma: ${totalBaseline.toFixed(2)}%`);
+          console.error(`[ERROR]  Datos baseline inválidos - Suma: ${totalBaseline.toFixed(2)}%`);
           throw new Error(`Datos baseline inválidos: suma ${totalBaseline.toFixed(1)}% (debería ser ~100%)`);
         }
         
-        console.log(`[DEBUG] 🎚️ Partidos para sistema integrado:`, Object.keys(baselineData));
-        console.log(`[DEBUG] 📊 Baseline data completa:`, baselineData);
-        console.log(`[DEBUG] 🔄 Sliders listos para ${validYear} con sistema integrado cargarSimulacion`);
+        console.log(`[DEBUG]  Partidos para sistema integrado:`, Object.keys(baselineData));
+        console.log(`[DEBUG]  Baseline data completa:`, baselineData);
+        console.log(`[DEBUG]  Sliders listos para ${validYear} con sistema integrado cargarSimulacion`);
       }
       
       // Ocultar indicador de carga
@@ -1377,7 +1376,7 @@ initializeSidebarControls() {
         // El sistema actualiza silenciosamente
       }
       
-      console.log(`[DEBUG] ✅ loadPartiesByYear completado exitosamente - ID: ${callId}`);
+      console.log(`[DEBUG]  loadPartiesByYear completado exitosamente - ID: ${callId}`);
       
     } catch (error) {
       console.error(`[ERROR] Al cargar partidos por año (ID: ${callId}):`, error);
@@ -1395,18 +1394,18 @@ initializeSidebarControls() {
     } finally {
       // Liberar lock
       this.loadingParties = false;
-      console.log(`[DEBUG] 🔓 Lock liberado - ID: ${callId}`);
+      console.log(`[DEBUG]  Lock liberado - ID: ${callId}`);
     }
   }
 
-  // 🆕 Método para generar sliders dinámicos según partidos disponibles
+  //  Método para generar sliders dinámicos según partidos disponibles
   updatePartySliders(partidos) {
     if (!partidos || !Array.isArray(partidos)) {
       console.warn('[WARN] Datos de partidos inválidos:', partidos);
       return;
     }
 
-    console.log(`[DEBUG] 🎚️ INICIANDO updatePartySliders con ${partidos.length} partidos:`, partidos.map(p => `${p.partido}: ${p.porcentaje_vigente}%`));
+    console.log(`[DEBUG]  INICIANDO updatePartySliders con ${partidos.length} partidos:`, partidos.map(p => `${p.partido}: ${p.porcentaje_vigente}%`));
     
     const container = this.querySelector('#dynamic-party-sliders');
     if (!container) {
@@ -1417,12 +1416,12 @@ initializeSidebarControls() {
     // Limpiar sliders existentes
     const slidersAnteriores = container.children.length;
     container.innerHTML = '';
-    console.log(`[DEBUG] 🧹 Limpiados ${slidersAnteriores} sliders anteriores`);
+    console.log(`[DEBUG]  Limpiados ${slidersAnteriores} sliders anteriores`);
     
-    // 🆕 RESET COMPLETO - Limpiar datos anteriores de memoria
+    //  RESET COMPLETO - Limpiar datos anteriores de memoria
     this.partidosData = {};
     
-    console.log(`[DEBUG] 🔄 Reset completo realizado - partidosData limpiado para sistema integrado`);
+    console.log(`[DEBUG]  Reset completo realizado - partidosData limpiado para sistema integrado`);
     
     // Generar slider para cada partido
     partidos.forEach(partido => {
@@ -1436,7 +1435,7 @@ initializeSidebarControls() {
         porcentajeActual: porcentajeVigente
       };
       
-      console.log(`[DEBUG] 📝 Partido inicializado: ${partyLabel} = vigente:${porcentajeVigente}%, actual:${porcentajeVigente}%`);
+      console.log(`[DEBUG]  Partido inicializado: ${partyLabel} = vigente:${porcentajeVigente}%, actual:${porcentajeVigente}%`);
       
       // Crear HTML del slider - ahora muestra porcentajes absolutos
       const sliderGroup = document.createElement('div');
@@ -1449,7 +1448,7 @@ initializeSidebarControls() {
       
       container.appendChild(sliderGroup);
       
-      console.log(`[DEBUG] ✅ Slider creado: ${partyLabel} -> ${porcentajeVigente.toFixed(1)}% (min:0, max:100, value:${porcentajeVigente})`);
+      console.log(`[DEBUG]  Slider creado: ${partyLabel} -> ${porcentajeVigente.toFixed(1)}% (min:0, max:100, value:${porcentajeVigente})`);
       
       // Agregar event listener al slider recién creado
       const slider = sliderGroup.querySelector(`#shock-${partyName}`);
@@ -1466,12 +1465,12 @@ initializeSidebarControls() {
           // Actualizar datos internos
           this.partidosData[partyNameUpper].porcentajeActual = newValue;
           
-          // 🎯 Solo activar redistribución si el modelo es "personalizado"
+          //  Solo activar redistribución si el modelo es "personalizado"
           const modelSelect = document.getElementById('model-select');
           const isPersonalizado = modelSelect && modelSelect.value === 'personalizado';
           
           if (!isPersonalizado) {
-            console.log(`[DEBUG] 🔒 Redistribución desactivada - Modelo: ${modelSelect ? modelSelect.value : 'desconocido'}`);
+            console.log(`[DEBUG] Redistribución desactivada - Modelo: ${modelSelect ? modelSelect.value : 'desconocido'}`);
             // Si no es personalizado, revertir al valor vigente
             slider.value = this.partidosData[partyNameUpper].porcentajeVigente;
             valueBox.textContent = `${this.partidosData[partyNameUpper].porcentajeVigente.toFixed(1)}%`;
@@ -1479,10 +1478,10 @@ initializeSidebarControls() {
             return;
           }
           
-          // 🎚️ Implementar normalización automática
+          //  Implementar normalización automática
           this.normalizeSliders(partyNameUpper, newValue);
           
-          console.log(`[DEBUG] 🎚️ Slider actualizado - ${partyNameUpper}: ${newValue.toFixed(1)}%`);
+          console.log(`[DEBUG]  Slider actualizado - ${partyNameUpper}: ${newValue.toFixed(1)}%`);
           
           // Enviar datos actualizados al sistema integrado de cargarSimulacion
           const porcentajesActuales = {};
@@ -1490,7 +1489,7 @@ initializeSidebarControls() {
             porcentajesActuales[partido] = this.partidosData[partido].porcentajeActual;
           });
           
-          console.log(`[DEBUG] 🔄 Iniciando cargarSimulacion con porcentajes actualizados:`, porcentajesActuales);
+          console.log(`[DEBUG] Iniciando cargarSimulacion con porcentajes actualizados:`, porcentajesActuales);
           
           // Usar el sistema integrado de cargarSimulacion con debounce
           if (window.actualizarDesdeControlesSilent) {
@@ -1500,47 +1499,47 @@ initializeSidebarControls() {
           }
         });
         
-        console.log(`[DEBUG] ✅ Slider generado: ${partyLabel} -> base: ${porcentajeVigente.toFixed(1)}%`);
+        console.log(`[DEBUG]  Slider generado: ${partyLabel} -> base: ${porcentajeVigente.toFixed(1)}%`);
       }
     });
     
-    console.log(`[DEBUG] 🎯 ${partidos.length} sliders dinámicos generados exitosamente`);
-      console.log(`[DEBUG] 📊 Estado final partidosData:`, Object.keys(this.partidosData).map(partido => 
+    console.log(`[DEBUG]  ${partidos.length} sliders dinámicos generados exitosamente`);
+      console.log(`[DEBUG]  Estado final partidosData:`, Object.keys(this.partidosData).map(partido => 
         `${partido}: vigente=${this.partidosData[partido].porcentajeVigente}%, actual=${this.partidosData[partido].porcentajeActual}%`));
       
-      // 🆕 Resumen de cambios importantes
+      //  Resumen de cambios importantes
       const partidosConPorcentajeBajo = Object.keys(this.partidosData).filter(partido => 
         this.partidosData[partido].porcentajeVigente < 1.0);
       const partidosConPorcentajeCero = Object.keys(this.partidosData).filter(partido => 
         this.partidosData[partido].porcentajeVigente === 0.0);
         
       if (partidosConPorcentajeBajo.length > 0) {
-        console.log(`[DEBUG] 🔍 Partidos con < 1%: ${partidosConPorcentajeBajo.join(', ')}`);
+        console.log(`[DEBUG]  Partidos con < 1%: ${partidosConPorcentajeBajo.join(', ')}`);
       }
       if (partidosConPorcentajeCero.length > 0) {
-        console.log(`[DEBUG] 0️⃣ Partidos con 0%: ${partidosConPorcentajeCero.join(', ')}`);
+        console.log(`[DEBUG] 0️ Partidos con 0%: ${partidosConPorcentajeCero.join(', ')}`);
       }
       
     // Aplicar estado actual del modelo a los sliders recién generados
     const modelSelect = document.getElementById('model-select');
     if (modelSelect) {
       const isPersonalizado = modelSelect.value === 'personalizado';
-      console.log(`[DEBUG] 🎛️ Aplicando estado del modelo después de regenerar sliders: ${isPersonalizado ? 'personalizado' : 'vigente'}`);
+      console.log(`[DEBUG]  Aplicando estado del modelo después de regenerar sliders: ${isPersonalizado ? 'personalizado' : 'vigente'}`);
       
-      // 🆕 Pequeño delay para asegurar que los sliders estén completamente en el DOM
+      //  Pequeño delay para asegurar que los sliders estén completamente en el DOM
       setTimeout(() => {
         this.updateSlidersState(isPersonalizado);
         
-        // 🆕 Forzar sincronización adicional si está en modo personalizado
+        //  Forzar sincronización adicional si está en modo personalizado
         if (isPersonalizado) {
-          console.log(`[DEBUG] 🔄 Forzando sincronización adicional en modo personalizado`);
+          console.log(`[DEBUG]  Forzando sincronización adicional en modo personalizado`);
           this.forceSyncPersonalizedSliders();
         }
       }, 10);
     }
   }
 
-  // 🆕 Método para normalizar sliders automáticamente a 100%
+  // Método para normalizar sliders automáticamente a 100%
   normalizeSliders(changedParty, newValue) {
     if (!this.partidosData) return;
     
@@ -1608,10 +1607,10 @@ initializeSidebarControls() {
     
     // Verificar que la suma sea exactamente 100%
     const totalSum = Object.values(this.partidosData).reduce((sum, data) => sum + data.porcentajeActual, 0);
-    console.log(`[DEBUG] 🎚️ Normalización completada - Suma total: ${totalSum.toFixed(2)}%`);
+    console.log(`[DEBUG]  Normalización completada - Suma total: ${totalSum.toFixed(2)}%`);
   }
 
-  // 🆕 Método para actualizar estado de sliders según modelo
+  //  Método para actualizar estado de sliders según modelo
   updateSlidersState(enabled) {
     const container = this.querySelector('#dynamic-party-sliders');
     if (!container) return;
@@ -1621,26 +1620,26 @@ initializeSidebarControls() {
     
     if (enabled) {
       // Modelo personalizado - habilitar sliders Y sincronizar con valores vigentes del año actual
-      console.log(`[DEBUG] 🎛️ Habilitando modo personalizado - sincronizando valores vigentes`);
+      console.log(`[DEBUG]  Habilitando modo personalizado - sincronizando valores vigentes`);
       
       sliders.forEach(slider => {
         slider.disabled = false;
         
-        // 🆕 IMPORTANTE: Sincronizar con valor vigente del año actual
+        //  IMPORTANTE: Sincronizar con valor vigente del año actual
         const partyName = slider.id.replace('shock-', '').toUpperCase();
         if (this.partidosData && this.partidosData[partyName]) {
           const porcentajeVigente = this.partidosData[partyName].porcentajeVigente;
           slider.value = porcentajeVigente;
           this.partidosData[partyName].porcentajeActual = porcentajeVigente;
           
-          console.log(`[DEBUG] 🔄 Slider ${partyName} sincronizado: ${porcentajeVigente}%`);
+          console.log(`[DEBUG]  Slider ${partyName} sincronizado: ${porcentajeVigente}%`);
         }
       });
       
       valueBoxes.forEach(valueBox => {
         valueBox.style.opacity = '1';
         
-        // 🆕 IMPORTANTE: Sincronizar display con valor vigente del año actual
+        //  IMPORTANTE: Sincronizar display con valor vigente del año actual
         const partyName = valueBox.id.replace('shock-value-', '').toUpperCase();
         if (this.partidosData && this.partidosData[partyName]) {
           const porcentajeVigente = this.partidosData[partyName].porcentajeVigente;
@@ -1648,14 +1647,14 @@ initializeSidebarControls() {
         }
       });
       
-      // 🆕 Sincronizar también con VoteRedistribution
+      //  Sincronizar también con VoteRedistribution
       if (window.voteRedistribution && this.partidosData) {
         const porcentajesActuales = {};
         Object.keys(this.partidosData).forEach(partido => {
           porcentajesActuales[partido] = this.partidosData[partido].porcentajeVigente; // Usar vigente como baseline
         });
         
-        console.log(`[DEBUG] 🔄 Sincronizando VoteRedistribution con valores vigentes:`, porcentajesActuales);
+        console.log(`[DEBUG]  Sincronizando VoteRedistribution con valores vigentes:`, porcentajesActuales);
         window.voteRedistribution.porcentajes = porcentajesActuales;
         window.voteRedistribution.debouncedFetchResultados();
       }
@@ -1697,21 +1696,21 @@ initializeSidebarControls() {
       }
     }
     
-    console.log(`[DEBUG] 🎚️ Sliders ${enabled ? 'habilitados' : 'deshabilitados'} - Total: ${sliders.length}`);
+    console.log(`[DEBUG]  Sliders ${enabled ? 'habilitados' : 'deshabilitados'} - Total: ${sliders.length}`);
   }
 
-  // 🆕 Método para forzar sincronización en modo personalizado
+  //  Método para forzar sincronización en modo personalizado
   forceSyncPersonalizedSliders() {
     if (!this.partidosData) {
-      console.warn(`[WARN] 🚫 forceSyncPersonalizedSliders: No hay partidosData disponible`);
+      console.warn(`[WARN]  forceSyncPersonalizedSliders: No hay partidosData disponible`);
       return;
     }
     
-    console.log(`[DEBUG] 🔄 Iniciando sincronización forzada de sliders personalizados`);
+    console.log(`[DEBUG]  Iniciando sincronización forzada de sliders personalizados`);
     
     const container = this.querySelector('#dynamic-party-sliders');
     if (!container) {
-      console.error(`[ERROR] 🚫 No se encontró contenedor de sliders dinámicos`);
+      console.error(`[ERROR]  No se encontró contenedor de sliders dinámicos`);
       return;
     }
     
@@ -1730,9 +1729,9 @@ initializeSidebarControls() {
         // Actualizar datos internos
         this.partidosData[partyNameUpper].porcentajeActual = vigente;
         
-        console.log(`[DEBUG] ✅ Slider sincronizado: ${partyNameUpper} = ${vigente}%`);
+        console.log(`[DEBUG]  Slider sincronizado: ${partyNameUpper} = ${vigente}%`);
       } else {
-        console.warn(`[WARN] 🚫 No se encontró slider para ${partyNameUpper}`);
+        console.warn(`[WARN]  No se encontró slider para ${partyNameUpper}`);
       }
     });
     
@@ -1742,7 +1741,7 @@ initializeSidebarControls() {
       porcentajesVigentes[partido] = this.partidosData[partido].porcentajeVigente;
     });
     
-    console.log(`[DEBUG] 🔄 Iniciando cargarSimulacion con porcentajes vigentes:`, porcentajesVigentes);
+    console.log(`[DEBUG]  Iniciando cargarSimulacion con porcentajes vigentes:`, porcentajesVigentes);
     
     // Usar cargarSimulacion integrado en lugar de VoteRedistribution separado
     if (window.actualizarDesdeControles) {
@@ -1750,10 +1749,10 @@ initializeSidebarControls() {
       window.actualizarDesdeControlesSilent();
     }
     
-    console.log(`[DEBUG] ✅ Sincronización forzada completada`);
+    console.log(`[DEBUG]  Sincronización forzada completada`);
   }
 
-  // 🆕 Método para actualizar años disponibles según la cámara
+  // Método para actualizar años disponibles según la cámara
   updateAvailableYears(chamber) {
     const yearSelect = document.getElementById('year-select');
     if (!yearSelect) return;
@@ -1794,10 +1793,10 @@ initializeSidebarControls() {
       yearSelect.value = yearsForChamber[0].value;
     }
     
-    console.log(`[DEBUG] 📅 Años actualizados para ${chamber}:`, availableValues, `Seleccionado: ${yearSelect.value}`);
+    console.log(`[DEBUG]  Años actualizados para ${chamber}:`, availableValues, `Seleccionado: ${yearSelect.value}`);
   }
 
-  // 🆕 Método para controlar visibilidad de sobrerrepresentación según sistema electoral
+  //  Método para controlar visibilidad de sobrerrepresentación según sistema electoral
   updateOverrepresentationVisibility() {
     const overrepGroup = document.getElementById('overrepresentation-group');
     const activeChamber = document.querySelector('.master-toggle.active');
