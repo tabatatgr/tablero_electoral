@@ -3,10 +3,48 @@ console.log('Loading Electoral Dashboard...');
 
 //  Helper para notificaciones seguras
 function safeNotification(method, ...args) {
+    // Intentar llamar inmediatamente si el sistema está listo
     if (window.notifications && window.notifications.isReady && typeof window.notifications[method] === 'function') {
-        return window.notifications[method](...args);
+        try {
+            return window.notifications[method](...args);
+        } catch (err) {
+            console.warn('[safeNotification] Error al ejecutar método inmediato:', err);
+            return null;
+        }
     }
-    return null;
+
+    // Si no está listo, hacer reintentos con backoff corto (evita condiciones de carrera)
+    const maxAttempts = 12; // hasta ~1.2s
+    const attemptDelay = 100; // ms
+
+    let attempt = 0;
+    const tryLater = () => {
+        attempt++;
+        if (window.notifications && window.notifications.isReady && typeof window.notifications[method] === 'function') {
+            try {
+                return window.notifications[method](...args);
+            } catch (err) {
+                console.warn('[safeNotification] Error al ejecutar método en retry:', err);
+                return null;
+            }
+        }
+        if (attempt < maxAttempts) {
+            setTimeout(tryLater, attemptDelay);
+        } else {
+            // Al agotar reintentos, hacer un último intento directo si existe la API
+            if (window.notifications && typeof window.notifications[method] === 'function') {
+                try {
+                    return window.notifications[method](...args);
+                } catch (err) {
+                    console.warn('[safeNotification] Último intento falló:', err);
+                }
+            }
+        }
+    };
+
+    // Lanzar el primer retry asincrónico
+    setTimeout(tryLater, attemptDelay);
+    return null; // No siempre podremos devolver un ID síncrono
 }
 
 //  Variables para control de notificaciones - SIMPLIFICADO
@@ -768,7 +806,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 window.notifications.success(
                     'Listo',
                     'Simulación actualizada',
-                    5000, // Auto-hide 5 segundos
+                    20000, // Auto-hide 20 segundos
                     'user-calculation' // Usar mismo ID para reemplazar
                 );
                 
@@ -1212,7 +1250,29 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         let years = camara === 'senado' ? [2018, 2024] : [2018, 2021, 2024];
         const currentOptions = Array.from(yearSelect.options).map(opt => parseInt(opt.value, 10));
         if (JSON.stringify(currentOptions) !== JSON.stringify(years)) {
+            // Preserve current selection if user explicitly chose an year
+            const prevValue = yearSelect.value;
+            const userSelected = yearSelect.dataset && yearSelect.dataset.userSelected === 'true';
             yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            // If the previous value is still valid, restore it
+            if (prevValue && years.includes(parseInt(prevValue, 10))) {
+                yearSelect.value = prevValue;
+            } else if (userSelected) {
+                // If user had selected a year that is no longer in the options, keep the closest newer/older logic
+                // but prefer to keep the previous textual value if possible
+                const parsedPrev = parseInt(prevValue, 10);
+                if (!isNaN(parsedPrev)) {
+                    // If parsedPrev not in years, try to pick the nearest year
+                    let nearest = years.reduce((a, b) => Math.abs(b - parsedPrev) < Math.abs(a - parsedPrev) ? b : a);
+                    yearSelect.value = String(nearest);
+                } else {
+                    // Fallback to the first year
+                    yearSelect.value = String(years[0]);
+                }
+            } else {
+                // No user selection, default to first available
+                yearSelect.value = String(years[0]);
+            }
         }
     }
     // Año
@@ -1229,7 +1289,9 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         anio = parseInt(yearSelect.value, 10);
         
         // Si las coaliciones están activadas y estamos en el año por defecto, cambiar a 2024
-        if (coalicionesActivadas && (anio === 2018 || !yearSelect.value)) {
+        // If coalitions are active, suggest 2024 only when the user did not explicitly select an year
+        const userSelected = yearSelect.dataset && yearSelect.dataset.userSelected === 'true';
+        if (!userSelected && coalicionesActivadas && (anio === 2018 || !yearSelect.value)) {
             if (camara === 'diputados') {
                 anio = 2024;
                 yearSelect.value = '2024';

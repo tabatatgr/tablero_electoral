@@ -57,21 +57,8 @@ export class ControlSidebar extends HTMLElement {
               </div>
             </div>
             
-            <!-- 2. Tamaño de la cámara -->
-            <div class="control-group" data-group="magnitude">
-              <button class="group-toggle" data-target="magnitude">
-                <span class="group-title">Tamaño de la cámara</span>
-                <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
-                  <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                </svg>
-              </button>
-              <div class="group-content" id="group-magnitude">
-                <div class="control-item">
-                  <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
-                  <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
-                </div>
-              </div>
-            </div>
+            <!-- 2. (movido) Tamaño de la cámara - ahora se renderiza después de la regla electoral -->
+            <!-- (placeholder removed here; block moved below rules to ensure magnitud se aplica tras seleccionar la regla) -->
             
             <!-- 3. Tipo de Regla Electoral -->
             <div class="control-group" data-group="rules">
@@ -101,6 +88,8 @@ export class ControlSidebar extends HTMLElement {
                     </div>
                   </div>
                 </div>
+
+                  <!-- magnitud: placeholder moved outside rules group -->
                 <div class="control-item mixto-inputs" id="mixto-inputs">
                   <div class="dual-slider">
                     <div class="slider-group">
@@ -119,7 +108,24 @@ export class ControlSidebar extends HTMLElement {
               </div>
             </div>
             
-            <!-- 4. Primera Minoría (solo para senado con MR o Mixto) -->
+              <!-- 2. Tamaño de la cámara (ubicado fuera de rules) -->
+              <div class="control-group" data-group="magnitude">
+                <button class="group-toggle" data-target="magnitude">
+                  <span class="group-title">Tamaño de la cámara</span>
+                  <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                    <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  </svg>
+                </button>
+                <div class="group-content" id="group-magnitude">
+                  <div class="control-item">
+                    <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
+                    <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
+                    <div id="magnitud-note" class="parameter-note" style="display:none; color:#6b7280; margin-top:6px; font-size:0.9em;">Nota: en sistemas de Mayoría Relativa (MR) el número de escaños asignables está limitado por la cantidad de distritos; no puedes asignar más escaños por MR que distritos disponibles. Ajusta la magnitud o la distribución según corresponda.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 4. Primera Minoría (solo para senado con MR o Mixto) -->
             <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:none;">
               <button class="group-toggle" data-target="first-minority">
                 <span class="group-title">Primera Minoría</span>
@@ -386,10 +392,13 @@ initializeSidebarControls() {
     const chamberToggles = this.querySelectorAll('.master-toggle[data-chamber]');
     chamberToggles.forEach(toggle => {
       toggle.addEventListener('click', (event) => {
-        const clickedToggle = event.target;
+        // Usar currentTarget para asegurar que el botón correcto reciba la clase
+        // si el usuario clickea un elemento hijo (span, svg, etc.).
+        const clickedToggle = event.currentTarget || event.target.closest('.master-toggle');
+        if (!clickedToggle) return;
         chamberToggles.forEach(t => t.classList.remove('active'));
         clickedToggle.classList.add('active');
-        
+
         // Handle chamber-specific controls
         const selectedChamber = clickedToggle.dataset.chamber;
         
@@ -464,6 +473,8 @@ initializeSidebarControls() {
     const yearSelect = this.querySelector('#year-select');
     if (yearSelect) {
       yearSelect.addEventListener('change', () => {
+  // Marcar que el usuario seleccionó explícitamente un año
+  try { yearSelect.dataset.userSelected = 'true'; } catch(e) { /* silent */ }
         const selectedYear = parseInt(yearSelect.value);
         const activeChamber = this.querySelector('.master-toggle.active');
         const chamber = activeChamber ? activeChamber.dataset.chamber : 'diputados';
@@ -476,8 +487,35 @@ initializeSidebarControls() {
     const yearPills = this.querySelectorAll('.master-pill[data-year]');
     yearPills.forEach(pill => {
       pill.addEventListener('click', function() {
+        // Marcar visualmente la pill seleccionada
         yearPills.forEach(p => p.classList.remove('active'));
         this.classList.add('active');
+
+        // Sincronizar con el select de año y disparar la carga correspondiente
+        const yearValue = this.getAttribute('data-year') || this.dataset.year || this.textContent.trim();
+        const yearSelectEl = document.getElementById('year-select');
+        const activeChamber = this.closest('control-sidebar') ? this.closest('control-sidebar').querySelector('.master-toggle.active') : document.querySelector('.master-toggle.active');
+        const chamber = activeChamber ? activeChamber.dataset.chamber : 'diputados';
+
+        if (yearSelectEl) {
+          // Indicar que el usuario eligió el año mediante la pill
+          try { yearSelectEl.dataset.userSelected = 'true'; } catch(e) { /* silent */ }
+          yearSelectEl.value = String(yearValue);
+          // Disparar evento change para reutilizar el listener existente
+          yearSelectEl.dispatchEvent(new Event('change'));
+        } else {
+          // Si no existe el select por alguna razón, llamar directamente al loader
+          const parsed = parseInt(yearValue, 10) || 2024;
+          try {
+            if (typeof window.controlSidebar !== 'undefined' && typeof window.controlSidebar.loadPartiesByYear === 'function') {
+              window.controlSidebar.loadPartiesByYear(parsed, chamber);
+            } else if (typeof this.loadPartiesByYear === 'function') {
+              this.loadPartiesByYear(parsed, chamber);
+            }
+          } catch (err) {
+            console.warn('[WARN] No se pudo invocar loadPartiesByYear desde pill click:', err);
+          }
+        }
       });
     });
 
@@ -883,23 +921,25 @@ initializeSidebarControls() {
                 mixtoInputs.style.display = this.value === 'mixto' ? 'block' : 'none';
               }
               
-              // Controlar visibilidad de Primera Minoría según sistema electoral
+              // Controlar visibilidad de Primera Minoría y nota de magnitud según sistema electoral
               const firstMinorityGroup = document.getElementById('first-minority-group');
+              const magnitudNote = document.getElementById('magnitud-note');
+              const showForMrOrMixto = this.value === 'mr' || this.value === 'mixto';
               if (firstMinorityGroup) {
-                // Mostrar solo si es mayoría relativa o mixto
-                const shouldShow = this.value === 'mr' || this.value === 'mixto';
-                firstMinorityGroup.style.display = shouldShow ? 'block' : 'none';
-                
-                console.log(` Primera Minoría ${shouldShow ? 'MOSTRADA' : 'OCULTADA'} para sistema: ${this.value}`);
-                
+                firstMinorityGroup.style.display = showForMrOrMixto ? 'block' : 'none';
+                console.log(` Primera Minoría ${showForMrOrMixto ? 'MOSTRADA' : 'OCULTADA'} para sistema: ${this.value}`);
                 // Si se oculta, desactivar el switch automáticamente
-                if (!shouldShow) {
+                if (!showForMrOrMixto) {
                   const firstMinoritySwitch = document.getElementById('first-minority-switch');
                   if (firstMinoritySwitch && firstMinoritySwitch.getAttribute('data-switch') === 'On') {
                     firstMinoritySwitch.click(); // Desactivar
                     console.log(' Primera Minoría desactivada automáticamente');
                   }
                 }
+              }
+              // Mostrar nota explicativa de magnitud sólo si MR o Mixto
+              if (magnitudNote) {
+                magnitudNote.style.display = showForMrOrMixto ? 'block' : 'none';
               }
               
               // Controlar visibilidad de Sobrerrepresentación según sistema electoral
@@ -1246,8 +1286,16 @@ initializeSidebarControls() {
       
       console.log(`[DEBUG]  Cargando partidos para año ${validYear}, cámara ${chamber}...`);
       
-      // Mostrar indicador de carga
-      if (window.notifications) {
+      // Mostrar indicador de carga (usar safeNotification si está disponible)
+      if (typeof safeNotification === 'function') {
+        safeNotification('show', {
+          title: 'Cargando partidos...',
+          message: `Actualizando datos para ${validYear}`,
+          type: 'loading',
+          autoHide: false,
+          id: 'loading-parties'
+        });
+      } else if (window.notifications) {
         window.notifications.show({
           title: 'Cargando partidos...',
           message: `Actualizando datos para ${validYear}`,
@@ -1370,10 +1418,10 @@ initializeSidebarControls() {
       }
       
       // Ocultar indicador de carga
-      if (window.notifications) {
+      if (typeof safeNotification === 'function') {
+        safeNotification('hide', 'loading-parties');
+      } else if (window.notifications) {
         window.notifications.hide('loading-parties');
-        // Notificación "Partidos actualizados" eliminada por solicitud del usuario
-        // El sistema actualiza silenciosamente
       }
       
       console.log(`[DEBUG]  loadPartiesByYear completado exitosamente - ID: ${callId}`);
@@ -1381,15 +1429,33 @@ initializeSidebarControls() {
     } catch (error) {
       console.error(`[ERROR] Al cargar partidos por año (ID: ${callId}):`, error);
       
-      // Ocultar indicador de carga y mostrar error
-      if (window.notifications) {
+      // Ocultar indicador de carga. Mostrar notificación de error sólo si el usuario
+      // está en modo personalizado (evita alertas durante cargas automáticas/iniciales).
+      const modelSelectEl = document.getElementById('model-select');
+      const isPersonalizado = modelSelectEl && modelSelectEl.value === 'personalizado';
+
+      if (typeof safeNotification === 'function') {
+        safeNotification('hide', 'loading-parties');
+        if (isPersonalizado) {
+          safeNotification('error', 'Error al cargar partidos', `No se pudieron cargar los datos para ${validYear}: ${error.message}`, 5000, 'error-loading-parties');
+        } else {
+          console.warn(`[WARN] loadPartiesByYear falló pero el modelo no es 'personalizado' (${modelSelectEl ? modelSelectEl.value : 'no disponible'}). Error: ${error.message}`);
+        }
+      } else if (window.notifications) {
         window.notifications.hide('loading-parties');
-        window.notifications.error(
-          'Error al cargar partidos',
-          `No se pudieron cargar los datos para ${validYear}: ${error.message}`,
-          5000,
-          'error-loading-parties'
-        );
+        if (isPersonalizado) {
+          window.notifications.error(
+            'Error al cargar partidos',
+            `No se pudieron cargar los datos para ${validYear}: ${error.message}`,
+            5000,
+            'error-loading-parties'
+          );
+        } else {
+          console.warn(`[WARN] loadPartiesByYear falló pero el modelo no es 'personalizado' (${modelSelectEl ? modelSelectEl.value : 'no disponible'}). Error: ${error.message}`);
+        }
+      } else {
+        // No hay sistema de notificaciones disponible
+        console.warn(`[WARN] loadPartiesByYear error (no hay notifications): ${error.message}`);
       }
     } finally {
       // Liberar lock
