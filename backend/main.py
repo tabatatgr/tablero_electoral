@@ -263,11 +263,29 @@ def simulacion(
 	]
 	# KPIs (toma el primer registro, todos tienen el mismo total)
 	kpi_row = df.iloc[0] if not df.empty else None
+	# Calcular ratio_promedio: promedio del (pct_escanos / pct_votos - 1) * 100 para partidos con pct_votos>0
+	try:
+		import numpy as _np
+		pct_escanos_arr = df['pct_escanos'].fillna(0).astype(float).to_numpy()
+		pct_votos_arr = df['pct_votos'].fillna(0).astype(float).to_numpy()
+		ratios = []
+		for pe, pv in zip(pct_escanos_arr, pct_votos_arr):
+			# Evitar división por cero
+			if pv and pv > 0:
+				ratios.append((pe / pv - 1.0) * 100.0)
+		if len(ratios) > 0:
+			ratio_promedio_value = float(_np.mean(ratios))
+		else:
+			ratio_promedio_value = 0.0
+	except Exception:
+		ratio_promedio_value = 0.0
+
 	kpis = {
 		"total_seats": int(kpi_row["total_escanos"]) if kpi_row is not None else 0,
 		"gallagher": float(kpi_row["indice_gallagher"]) if kpi_row is not None else 0,
 		"mae_votos_vs_escanos": float(kpi_row["mae_votos_vs_escanos"]) if kpi_row is not None else 0,
 		"total_votos": int(kpi_row["total_votos"]) if kpi_row is not None else 0,
+		"ratio_promedio": float(ratio_promedio_value)
 	}
 	return JSONResponse(
 		content={

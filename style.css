@@ -64,6 +64,22 @@ body {
   box-sizing: border-box;
 }
 
+/* Reservar espacio para el sidebar fijo a la izquierda en pantallas grandes */
+@media (min-width: 1100px) {
+  /* Usar padding-left en lugar de margin-left para evitar overflow horizontal
+     y permitir que el contenido interno se expanda hasta el borde derecho */
+  .layout-container {
+    padding-left: 360px; /* ancho del sidebar */
+    box-sizing: border-box;
+  }
+  /* No forzar width en main-content; dejar que flex maneje el espacio disponible */
+  .main-content {
+    width: auto;
+    /* opcional: garantizar que se pueda crecer y usar el espacio restante */
+    flex: 1 1 auto;
+  }
+}
+
 @media (max-width: 1100px) {
   .layout-container {
     flex-direction: column;

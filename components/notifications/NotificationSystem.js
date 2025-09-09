@@ -84,23 +84,35 @@ class NotificationSystem {
         // Agregar al contenedor
         this.container.appendChild(notification);
         
-        // Guardar referencia
+        // Guardar referencia (incluir handle para auto-hide)
         this.activeNotifications.set(notificationId, {
             element: notification,
             type,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            timeoutHandle: null
         });
         
-        // Mostrar con animación
+        // Mostrar con animación: asegurar que no tenga la clase 'hidden' y forzar reflow
+        if (notification.classList.contains('hidden')) {
+            notification.classList.remove('hidden');
+        }
+
+        // Forzar reflow para que la transición funcione consistentemente
+        // (leer offsetHeight obliga a que el navegador aplique estilos antes de la transición)
+        // eslint-disable-next-line no-unused-expressions
+        void notification.offsetHeight;
+
         setTimeout(() => {
             notification.classList.add('show');
-        }, 100);
+        }, 50);
         
-        // Auto-ocultar si tiene duración
+        // Auto-ocultar si tiene duración (almacenar handle para poder cancelarlo al actualizar)
         if (duration > 0) {
-            setTimeout(() => {
+            const handle = setTimeout(() => {
                 this.hide(notificationId);
             }, duration);
+            const entry = this.activeNotifications.get(notificationId);
+            if (entry) entry.timeoutHandle = handle;
         }
         
         console.log(`🔔 Notificación mostrada: ${title} (${type})`);
@@ -114,7 +126,7 @@ class NotificationSystem {
         const notification = this.activeNotifications.get(id);
         if (!notification) return null;
         
-        const { title, subtitle, type, showProgress } = options;
+        const { title, subtitle, type, showProgress, duration } = options;
         const element = notification.element;
         
         // Actualizar tipo si cambió
@@ -138,6 +150,18 @@ class NotificationSystem {
         const iconEl = element.querySelector('.notification-icon');
         this.updateIcon(iconEl, type || notification.type);
         
+        // Si se indicó duration, reprogramar auto-hide (cancelando previo si existe)
+        if (typeof duration === 'number') {
+            if (notification.timeoutHandle) {
+                clearTimeout(notification.timeoutHandle);
+                notification.timeoutHandle = null;
+            }
+            if (duration > 0) {
+                const handle = setTimeout(() => this.hide(id), duration);
+                notification.timeoutHandle = handle;
+            }
+        }
+
         console.log(`🔔 Notificación actualizada: ${id}`);
         return id;
     }
@@ -150,6 +174,12 @@ class NotificationSystem {
         if (!notification) return;
         
         const element = notification.element;
+
+        // Cancelar timeout si existiera
+        if (notification.timeoutHandle) {
+            clearTimeout(notification.timeoutHandle);
+            notification.timeoutHandle = null;
+        }
         
         // Animación de salida
         element.classList.remove('show');

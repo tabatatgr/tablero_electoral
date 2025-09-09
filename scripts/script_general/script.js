@@ -3,10 +3,48 @@ console.log('Loading Electoral Dashboard...');
 
 //  Helper para notificaciones seguras
 function safeNotification(method, ...args) {
+    // Intentar llamar inmediatamente si el sistema está listo
     if (window.notifications && window.notifications.isReady && typeof window.notifications[method] === 'function') {
-        return window.notifications[method](...args);
+        try {
+            return window.notifications[method](...args);
+        } catch (err) {
+            console.warn('[safeNotification] Error al ejecutar método inmediato:', err);
+            return null;
+        }
     }
-    return null;
+
+    // Si no está listo, hacer reintentos con backoff corto (evita condiciones de carrera)
+    const maxAttempts = 12; // hasta ~1.2s
+    const attemptDelay = 100; // ms
+
+    let attempt = 0;
+    const tryLater = () => {
+        attempt++;
+        if (window.notifications && window.notifications.isReady && typeof window.notifications[method] === 'function') {
+            try {
+                return window.notifications[method](...args);
+            } catch (err) {
+                console.warn('[safeNotification] Error al ejecutar método en retry:', err);
+                return null;
+            }
+        }
+        if (attempt < maxAttempts) {
+            setTimeout(tryLater, attemptDelay);
+        } else {
+            // Al agotar reintentos, hacer un último intento directo si existe la API
+            if (window.notifications && typeof window.notifications[method] === 'function') {
+                try {
+                    return window.notifications[method](...args);
+                } catch (err) {
+                    console.warn('[safeNotification] Último intento falló:', err);
+                }
+            }
+        }
+    };
+
+    // Lanzar el primer retry asincrónico
+    setTimeout(tryLater, attemptDelay);
+    return null; // No siempre podremos devolver un ID síncrono
 }
 
 //  Variables para control de notificaciones - SIMPLIFICADO
@@ -397,9 +435,15 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             
             //  MR_SEATS: Enviando escaños mayoría relativa (REDONDEADO A ENTERO)
             if (typeof mr_seats !== 'undefined' && mr_seats !== null) {
-                const mrSeatsRounded = Math.round(mr_seats);
+                let mrSeatsRounded = Math.round(mr_seats);
+                // Aplicar tope por cámara para evitar enviar valores inválidos al backend
+                const mrCap = camara === 'senado' ? 64 : 300;
+                if (mrSeatsRounded > mrCap) {
+                    console.warn('[DEBUG]  mr_seats excede el tope de la cámara:', mrSeatsRounded, '>', mrCap, "- se enviará el tope en su lugar");
+                    mrSeatsRounded = mrCap;
+                }
                 url += `&mr_seats=${mrSeatsRounded}`;
-                console.log('[DEBUG]  Enviando mr_seats:', mr_seats, '→', mrSeatsRounded, '(redondeado)');
+                console.log('[DEBUG]  Enviando mr_seats:', mr_seats, '→', mrSeatsRounded, '(redondeado y clamped si hacía falta)');
             }
             
             //  RP_SEATS: Enviando escaños representación proporcional (REDONDEADO A ENTERO)
@@ -703,9 +747,18 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
                 indicadores[0].setAttribute('valor', data.kpis.total_escanos || 0);
                 
-                console.log('[DEBUG]  KPI 1 - mae_votos_vs_escanos:', data.kpis.mae_votos_vs_escanos || 0);
+                // Preferir ratio promedio proporcionado por el backend; si no existe, fallback a MAE
+                const backendRatio = data.kpis.ratio_promedio ?? data.kpis.ratio_promedio_ponderado_por_votos ?? data.kpis.ratio_promedio_unweighted ?? null;
                 indicadores[1].setAttribute('data-key', `${kpiKey}_2`);
-                indicadores[1].setAttribute('valor', (data.kpis.mae_votos_vs_escanos || 0).toFixed(2));
+                if (backendRatio != null) {
+                    console.log('[DEBUG]  KPI 1 - ratio_promedio (backend):', backendRatio);
+                    indicadores[1].setAttribute('valor', Number(backendRatio).toFixed(3));
+                    indicadores[1].setAttribute('fuente', 'backend.ratio_promedio');
+                } else {
+                    console.log('[DEBUG]  KPI 1 - mae_votos_vs_escanos (fallback):', data.kpis.mae_votos_vs_escanos || 0);
+                    indicadores[1].setAttribute('valor', (data.kpis.mae_votos_vs_escanos || 0).toFixed(2));
+                    indicadores[1].setAttribute('fuente', 'backend.mae_votos_vs_escanos');
+                }
                 
                 console.log('[DEBUG]  KPI 2 - gallagher:', data.kpis.gallagher || 0);
                 indicadores[2].setAttribute('data-key', `${kpiKey}_3`);
@@ -768,7 +821,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 window.notifications.success(
                     'Listo',
                     'Simulación actualizada',
-                    5000, // Auto-hide 5 segundos
+                    20000, // Auto-hide 20 segundos
                     'user-calculation' // Usar mismo ID para reemplazar
                 );
                 
@@ -1212,7 +1265,29 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         let years = camara === 'senado' ? [2018, 2024] : [2018, 2021, 2024];
         const currentOptions = Array.from(yearSelect.options).map(opt => parseInt(opt.value, 10));
         if (JSON.stringify(currentOptions) !== JSON.stringify(years)) {
+            // Preserve current selection if user explicitly chose an year
+            const prevValue = yearSelect.value;
+            const userSelected = yearSelect.dataset && yearSelect.dataset.userSelected === 'true';
             yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            // If the previous value is still valid, restore it
+            if (prevValue && years.includes(parseInt(prevValue, 10))) {
+                yearSelect.value = prevValue;
+            } else if (userSelected) {
+                // If user had selected a year that is no longer in the options, keep the closest newer/older logic
+                // but prefer to keep the previous textual value if possible
+                const parsedPrev = parseInt(prevValue, 10);
+                if (!isNaN(parsedPrev)) {
+                    // If parsedPrev not in years, try to pick the nearest year
+                    let nearest = years.reduce((a, b) => Math.abs(b - parsedPrev) < Math.abs(a - parsedPrev) ? b : a);
+                    yearSelect.value = String(nearest);
+                } else {
+                    // Fallback to the first year
+                    yearSelect.value = String(years[0]);
+                }
+            } else {
+                // No user selection, default to first available
+                yearSelect.value = String(years[0]);
+            }
         }
     }
     // Año
@@ -1229,7 +1304,9 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         anio = parseInt(yearSelect.value, 10);
         
         // Si las coaliciones están activadas y estamos en el año por defecto, cambiar a 2024
-        if (coalicionesActivadas && (anio === 2018 || !yearSelect.value)) {
+        // If coalitions are active, suggest 2024 only when the user did not explicitly select an year
+        const userSelected = yearSelect.dataset && yearSelect.dataset.userSelected === 'true';
+        if (!userSelected && coalicionesActivadas && (anio === 2018 || !yearSelect.value)) {
             if (camara === 'diputados') {
                 anio = 2024;
                 yearSelect.value = '2024';
@@ -1436,12 +1513,24 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         
         // CORRECCIÓN: Ajustar mr_seats y rp_seats según el sistema electoral
         if (sistema === 'mr') {
-            // Sistema mayoría relativa pura: todos los escaños van a MR
-            mr_seats = escanos_totales;
-            rp_seats = 0;
-            console.log('[DEBUG]  SISTEMA MR: mr_seats ajustado a', mr_seats, ', rp_seats a', rp_seats);
+            // Sistema mayoría relativa pura: por defecto todos los escaños van a MR,
+            // pero RESPETAR el valor si fue proporcionado explícitamente por el caller/UI.
+            const chamberCap = camara === 'senado' ? 64 : 300;
+            if (typeof mr_seats === 'undefined' || mr_seats === null) {
+                mr_seats = escanos_totales;
+                console.log('[DEBUG]  SISTEMA MR: mr_seats no proporcionado → usando escanos_totales:', mr_seats);
+            } else {
+                // Si el usuario pasó un mr_seats menor, respetarlo (pero redondear y clamar)
+                mr_seats = Math.round(Number(mr_seats) || 0);
+                console.log('[DEBUG]  SISTEMA MR: mr_seats proporcionado por UI:', mr_seats);
+            }
+            // Aplicar límites: nunca superar escanos_totales ni el tope de la cámara
+            mr_seats = Math.min(mr_seats, escanos_totales, chamberCap);
+            // rp_seats es lo que quede (siempre >= 0)
+            rp_seats = Math.max(0, Math.round(Number(escanos_totales || 0)) - Math.round(Number(mr_seats || 0)));
+            console.log('[DEBUG]  SISTEMA MR: mr_seats final:', mr_seats, ', rp_seats final:', rp_seats);
         } else if (sistema === 'rp') {
-            // Sistema representación proporcional pura: todos los escaños van a RP  
+            // Sistema representación proporcional pura: todos los escaños van a RP
             mr_seats = 0;
             rp_seats = escanos_totales;
             console.log('[DEBUG]  SISTEMA RP: mr_seats ajustado a', mr_seats, ', rp_seats a', rp_seats);
