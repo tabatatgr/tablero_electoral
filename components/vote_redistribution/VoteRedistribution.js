@@ -60,22 +60,35 @@ class VoteRedistribution {
         this.setError(null);
 
         try {
+            // Construir configActual a partir de this.config pero SIN FORZAR valores
+            // Si la UI o quien llama ya pasó mr_seats/rp_seats/escanos_totales, respetarlos.
             let configActual = { ...this.config };
-            
-            if (this.config.camara === 'senadores' || this.config.camara === 'senado') {
-                configActual = {
-                    ...configActual,
-                    mr_seats: 64,
-                    rp_seats: 64,
-                    escanos_totales: 128
-                };
-            } else {
-                configActual = {
-                    ...configActual,
-                    mr_seats: 300,
-                    rp_seats: 200,
-                    escanos_totales: 500
-                };
+
+            const camaraNormalized = (String(configActual.camara || '').toLowerCase());
+            const isSenado = camaraNormalized === 'senadores' || camaraNormalized === 'senado';
+            const defaultEscanos = isSenado ? 128 : 500;
+            const chamberCap = isSenado ? 64 : 300;
+
+            // Asegurar que escanos_totales esté definido
+            if (typeof configActual.escanos_totales === 'undefined' || configActual.escanos_totales === null) {
+                configActual.escanos_totales = defaultEscanos;
+            }
+
+            // Si mr_seats no está definido, usar escanos_totales dentro del tope de la cámara
+            if (typeof configActual.mr_seats === 'undefined' || configActual.mr_seats === null) {
+                configActual.mr_seats = Math.min(chamberCap, Math.round(Number(configActual.escanos_totales) || defaultEscanos));
+            }
+
+            // Si rp_seats no está definido, derivarlo de escanos_totales y mr_seats
+            if (typeof configActual.rp_seats === 'undefined' || configActual.rp_seats === null) {
+                const total = Math.round(Number(configActual.escanos_totales) || defaultEscanos);
+                configActual.rp_seats = Math.max(0, total - Math.round(Number(configActual.mr_seats) || 0));
+            }
+
+            // Finalmente, asegurar que mr_seats no exceda el tope de la cámara
+            if (Number(configActual.mr_seats) > chamberCap) {
+                console.warn('[VoteRedistribution] mr_seats excede tope de cámara; se clampa a', chamberCap);
+                configActual.mr_seats = chamberCap;
             }
             
             // CORRECCION: Separar parametros entre query string y body segun backend
@@ -92,6 +105,10 @@ class VoteRedistribution {
                 reparto_method: configActual.reparto_method,
                 usar_coaliciones: String(configActual.usar_coaliciones)
             });
+            // Incluir req_id si fue provisto por el caller para evitar responses fuera de orden
+            if (configActual.req_id) {
+                queryParams.set('req_id', String(configActual.req_id));
+            }
             
             // Parametros que van en el body
             const formData = new URLSearchParams({
@@ -146,7 +163,12 @@ class VoteRedistribution {
             }
 
             const data = await res.json();
+            // Adjuntar meta a this.result para que quien consuma VoteRedistribution pueda validar req_id
             this.result = data;
+            if (data && data.meta) {
+                // exponer meta en la instancia para validaciones externas
+                this.lastResponseMeta = data.meta;
+            }
             this.notifyUpdate();
 
         } catch (error) {

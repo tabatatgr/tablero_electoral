@@ -530,10 +530,13 @@ initializeSidebarControls() {
     // Event listener para cambios de modelo - controlar estado de sliders
     const modelSelect = this.querySelector('#model-select');
     if (modelSelect) {
-      modelSelect.addEventListener('change', () => {
+      modelSelect.addEventListener('change', (event) => {
         const isPersonalizado = modelSelect.value === 'personalizado';
-        this.updateSlidersState(isPersonalizado);
-        console.log(`[DEBUG]  Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'}`);
+        // Si el cambio proviene del usuario (isTrusted), NO sincronizamos automáticamente
+        // con valores vigentes para evitar sobreescribir lo que el usuario ya tenía.
+        const syncWithVigente = !(event && event.isTrusted);
+        this.updateSlidersState(isPersonalizado, syncWithVigente);
+        console.log(`[DEBUG]  Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'} (syncWithVigente=${syncWithVigente})`);
 
         // Ajustar topes de sliders según modelo y cámara
         const chamberBtn = this.querySelector('.master-toggle.active');
@@ -551,13 +554,25 @@ initializeSidebarControls() {
             maxMagnitud = 500;
           }
         }
-        if (mrSlider) mrSlider.max = maxMr;
+        if (mrSlider) {
+          // Aplicar tope absoluto según cámara
+          const chamberCap = camara === 'senadores' ? 64 : 300;
+          const capped = Math.min(maxMr, chamberCap);
+          mrSlider.max = capped;
+          // Si el valor actual excede el tope, recortarlo
+          const cur = parseInt(mrSlider.value || '0', 10);
+          if (!isNaN(cur) && cur > capped) {
+            mrSlider.value = capped;
+            if (mrValue) mrValue.textContent = String(capped);
+            handleMrChange(capped);
+          }
+        }
         if (magnitudeSlider) magnitudeSlider.max = maxMagnitud;
       });
       
-      // Establecer estado inicial
-      const initialPersonalizado = modelSelect.value === 'personalizado';
-      this.updateSlidersState(initialPersonalizado);
+  // Establecer estado inicial (sin especificar event → sincronizar por defecto)
+  const initialPersonalizado = modelSelect.value === 'personalizado';
+  this.updateSlidersState(initialPersonalizado, true);
     }
 
     // Sliders de shock por partido - AHORA SON DINÁMICOS
@@ -707,14 +722,31 @@ initializeSidebarControls() {
     };
     
     //  Función para actualizar límites cuando cambia magnitud
-    const updateSliderLimits = () => {
+    //  allowAdjust: si es false, solo actualiza min/max y validación, pero NO reescribe los valores actuales
+    const updateSliderLimits = (allowAdjust = true) => {
       const magnitudTotal = getMagnitudTotal();
       const minValue = Math.max(1, Math.floor(magnitudTotal * 0.1));
       const maxValue = magnitudTotal - minValue;
       
       if (mrSlider) {
-        mrSlider.min = minValue;
-        mrSlider.max = maxValue;
+        // Determinar tope según cámara: 300 para diputados, 64 para senadores
+        const chamberBtnLocal = document.querySelector('.master-toggle.active') || this.querySelector('.master-toggle.active');
+        const camaraLocal = chamberBtnLocal ? chamberBtnLocal.dataset.chamber : 'diputados';
+        const chamberCap = (camaraLocal === 'senadores' || camaraLocal === 'senado') ? 64 : 300;
+
+        const cappedMax = Math.min(maxValue, chamberCap);
+        mrSlider.min = Math.min(minValue, cappedMax);
+        mrSlider.max = cappedMax;
+
+        // Si el valor actual excede el tope, recortarlo
+        const currentMr = parseInt(mrSlider.value || '0', 10);
+        if (!isNaN(currentMr) && currentMr > cappedMax) {
+          mrSlider.value = cappedMax;
+          if (mrValue) mrValue.textContent = String(cappedMax);
+          console.log(`[DEBUG] mrSlider recortado a tope de cámara: ${cappedMax}`);
+          // Propagar cambio
+          handleMrChange(cappedMax);
+        }
       }
       if (rpSlider) {
         rpSlider.min = minValue;
@@ -726,10 +758,16 @@ initializeSidebarControls() {
       const rpActual = parseInt(rpSlider ? rpSlider.value : 64);
       
       if (mrActual + rpActual !== magnitudTotal) {
-        // Auto-ajustar manteniendo proporciones
-        const proporcionMr = mrActual / (mrActual + rpActual);
-        const nuevoMr = Math.round(magnitudTotal * proporcionMr);
-        handleMrChange(nuevoMr);
+        if (allowAdjust) {
+          // Auto-ajustar manteniendo proporciones
+          const proporcionMr = mrActual / (mrActual + rpActual);
+          const nuevoMr = Math.round(magnitudTotal * proporcionMr);
+          handleMrChange(nuevoMr);
+        } else {
+          // No ajustar valores automáticamente, solo actualizar la validación visual
+          updateValidation();
+          console.log('[DEBUG] updateSliderLimits: cambio de magnitud detectado pero allowAdjust=false → no se reescriben valores');
+        }
       }
       
       //  VALIDAR PRIMERA MINORÍA TRAS CAMBIOS DE MAGNITUD
@@ -790,19 +828,42 @@ initializeSidebarControls() {
     // Event listeners para sliders MR/RP - INTEGRADO CON SISTEMA DE REDISTRIBUCIÓN
     if (mrSlider) {
       mrSlider.addEventListener('input', function() {
-        handleMrChange(this.value);
+        // Safety clamp: ensure value never exceeds declared max (cap por cámara)
+        try {
+          const declaredMax = parseInt(this.max || this.getAttribute('max') || '0', 10);
+          let val = parseInt(this.value || '0', 10);
+          if (!isNaN(declaredMax) && val > declaredMax) {
+            val = declaredMax;
+            this.value = String(val);
+            if (mrValue) mrValue.textContent = String(val);
+            console.log(`[DEBUG] mrSlider input recortado al max declarado: ${declaredMax}`);
+          }
+          handleMrChange(val);
+        } catch (err) {
+          // Fallback: si falla, llamar normalmente
+          handleMrChange(this.value);
+        }
         
         // Actualizar configuración del sistema de redistribución
         if (window.voteRedistribution) {
+          // DEBUG: asegurar que el valor leído del slider es el que se envía
+          console.log('[TRACE] ControlSidebar -> setConfig (mr input):', {
+            mr_from_slider: parseInt(this.value),
+            rp_from_slider: parseInt(rpSlider ? rpSlider.value : 64),
+            escanos_from_slider: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
+          });
+          const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+          this.lastRequestId = reqId;
           window.voteRedistribution.setConfig({
+            req_id: reqId,
             mr_seats: parseInt(this.value),
             rp_seats: parseInt(rpSlider ? rpSlider.value : 64),
             escanos_totales: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
           });
         }
       });
-      // Inicializar valor
-      mrValue.textContent = mrSlider.value;
+  // Inicializar valor
+  mrValue.textContent = mrSlider.value;
     }
     
     if (rpSlider) {
@@ -811,7 +872,15 @@ initializeSidebarControls() {
         
         // Actualizar configuración del sistema de redistribución
         if (window.voteRedistribution) {
+          console.log('[TRACE] ControlSidebar -> setConfig (rp input):', {
+            mr_from_slider: parseInt(mrSlider ? mrSlider.value : 64),
+            rp_from_slider: parseInt(this.value),
+            escanos_from_slider: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
+          });
+          const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+          this.lastRequestId = reqId;
           window.voteRedistribution.setConfig({
+            req_id: reqId,
             mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
             rp_seats: parseInt(this.value),
             escanos_totales: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
@@ -825,11 +894,20 @@ initializeSidebarControls() {
     // Event listener para magnitud - INTEGRADO CON SISTEMA DE REDISTRIBUCIÓN
     if (magnitudeSlider) {
       magnitudeSlider.addEventListener('input', function() {
-        updateSliderLimits();
+  // Usuario ajusta magnitud: solo actualizar min/max y validación, NO reescribir valores actuales
+  updateSliderLimits(false);
         
         // Actualizar configuración del sistema de redistribución
         if (window.voteRedistribution) {
+          console.log('[TRACE] ControlSidebar -> setConfig (magnitude input):', {
+            escanos_from_slider: parseInt(this.value),
+            mr_from_slider: parseInt(mrSlider ? mrSlider.value : 64),
+            rp_from_slider: parseInt(rpSlider ? rpSlider.value : 64)
+          });
+          const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+          this.lastRequestId = reqId;
           window.voteRedistribution.setConfig({
+            req_id: reqId,
             escanos_totales: parseInt(this.value),
             mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
             rp_seats: parseInt(rpSlider ? rpSlider.value : 64)
@@ -838,8 +916,8 @@ initializeSidebarControls() {
       });
     }
     
-    // Inicializar todo
-    updateSliderLimits();
+  // Inicializar todo
+  updateSliderLimits(true);
     updateValidation();
 
     // First minority slider
@@ -956,6 +1034,30 @@ initializeSidebarControls() {
                   // MR puro → NO tiene sentido (resultado ya dado distrito por distrito)
                   shouldShowOverrep = false;
                   reason = 'MR puro: resultado ya definido distrito por distrito';
+
+                  // Si el usuario está en modo personalizado, NO forzar el valor de MR a un tope como 300.
+                  // Solo actualizar límites y max sin reescribir el valor actual.
+                  try {
+                    const modelSelect = document.getElementById('model-select');
+                    const isPersonalizado = modelSelect && modelSelect.value === 'personalizado';
+                    if (isPersonalizado) {
+                      console.log('[DEBUG] electoral-rule: MR seleccionado en modo personalizado → actualizar topes sin forzar valores');
+                      // Actualizar límites de sliders sin ajustar valores
+                      updateSliderLimits(false);
+                      // Ajustar max de input-mr si hace falta según magnitud actual
+                      const magnitudeSlider = document.getElementById('input-magnitud');
+                      const mrSliderLocal = document.getElementById('input-mr');
+                      if (magnitudeSlider && mrSliderLocal) {
+                        const camaraBtn = document.querySelector('.master-toggle.active');
+                        const camara = camaraBtn ? camaraBtn.dataset.chamber : 'diputados';
+                        const maxMr = camara === 'senadores' ? 64 : Math.min(300, parseInt(magnitudeSlider.max || 500));
+                        mrSliderLocal.max = maxMr;
+                        console.log(`[DEBUG] input-mr.max ajustado a ${maxMr} sin cambiar su valor actual`);
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('[WARN] No se pudo aplicar ajuste seguro al seleccionar MR:', err);
+                  }
                 } else if (this.value === 'rp') {
                   // RP puro → Verificar si hay umbral
                   const thresholdSwitch = document.getElementById('threshold-switch');
@@ -1190,12 +1292,21 @@ initializeSidebarControls() {
   }
   
   updateUIWithResults(result) {
-    console.log('[DEBUG] ControlSidebar updateUIWithResults:', result);
+  console.log('[DEBUG] ControlSidebar updateUIWithResults:', result);
     
     // El seat chart ya se actualiza automaticamente via VoteRedistribution.updateSeatChart()
     // Solo actualizar KPIs y tabla de resultados si existen
     
     // Actualizar KPIs
+    // Validación por req_id si viene (evita aplicar respuestas fuera de orden)
+    if (result && result.meta && result.meta.req_id && this.lastRequestId && result.meta.req_id !== this.lastRequestId) {
+      console.warn('[WARN] Ignorando resultado con req_id distinto (posible response out-of-order):', result.meta.req_id, '!==', this.lastRequestId);
+      return; // ignorar
+    }
+
+    // Guardar último resultado (solo si no fue ignorado)
+    this.lastResult = result || null;
+
     if (result.kpis) {
       this.updateKPIs(result.kpis);
     }
@@ -1209,20 +1320,125 @@ initializeSidebarControls() {
   }
   
   updateKPIs(kpis) {
-    // Actualizar indicadores en el dashboard
+    // Helper: calcular relación local si backend no la provee (usa campos 'votos' y 'total' cuando existen)
+    function computeLocalRelation(resultados) {
+      if (!Array.isArray(resultados) || resultados.length === 0) return null;
+      const totalVotos = resultados.reduce((s, r) => s + (r.votos || r.votes || 0), 0);
+      const totalEscanos = resultados.reduce((s, r) => s + (r.total || r.seats || 0), 0);
+      if (totalVotos <= 0 || totalEscanos <= 0) return null;
+      const ratios = resultados
+        .filter(r => (r.votos || r.votes || 0) > 0 && (r.total || r.seats || 0) > 0)
+        .map(r => {
+          const votos = r.votos || r.votes || 0;
+          const esc = r.total || r.seats || 0;
+          return ((esc / totalEscanos) / (votos / totalVotos));
+        });
+      if (!ratios.length) return null;
+      ratios.sort((a, b) => a - b);
+      const m = ratios.length;
+      const median = (m % 2 === 1) ? ratios[(m - 1) / 2] : (ratios[m / 2 - 1] + ratios[m / 2]) / 2;
+      return median;
+    }
+
+    // Actualizar indicador de total de escaños si viene
     const totalEscanos = document.querySelector('indicador-box[etiqueta="Total de escaños"]');
-    if (totalEscanos && kpis.total_escanos) {
-      totalEscanos.setAttribute('valor', kpis.total_escanos.toString());
+    if (totalEscanos && kpis && kpis.total_escanos !== undefined && kpis.total_escanos !== null) {
+      totalEscanos.setAttribute('valor', String(kpis.total_escanos));
     }
-    
+
     const relacionVotos = document.querySelector('indicador-box[etiqueta="Relación votos-escaños"]');
-    if (relacionVotos && kpis.ratio_promedio) {
-      relacionVotos.setAttribute('valor', `±${kpis.ratio_promedio.toFixed(1)}%`);
+    if (relacionVotos) {
+      // Prioridad clara solicitada por el cliente
+      // 1) kpis.relacion_votos_escanos
+      // 2) kpis.ratio_promedio_ponderado_por_votos
+      // 3) kpis.ratio_promedio_unweighted
+      // 4) kpis.ratio_promedio
+      // 5) kpis.mae_votos_vs_escanos
+      // 6) calcular localmente
+      let relacion = null;
+      let fuente = null;
+
+      if (kpis) {
+        if (kpis.relacion_votos_escanos != null) {
+          relacion = kpis.relacion_votos_escanos;
+          fuente = 'backend.relacion_votos_escanos';
+        } else if (kpis.ratio_promedio_ponderado_por_votos != null) {
+          relacion = kpis.ratio_promedio_ponderado_por_votos;
+          fuente = 'backend.ratio_promedio_ponderado_por_votos';
+        } else if (kpis.ratio_promedio_unweighted != null) {
+          relacion = kpis.ratio_promedio_unweighted;
+          fuente = 'backend.ratio_promedio_unweighted';
+        } else if (kpis.ratio_promedio != null) {
+          relacion = kpis.ratio_promedio;
+          fuente = 'backend.ratio_promedio';
+        } else if (kpis.mae_votos_vs_escanos != null) {
+          relacion = kpis.mae_votos_vs_escanos;
+          fuente = 'backend.mae_votos_vs_escanos';
+        }
+      }
+
+      // Helper: calcular ratio promedio (media) local si backend no lo provee
+      function computeAverageRelation(resultados) {
+        if (!Array.isArray(resultados) || resultados.length === 0) return null;
+        const totalVotos = resultados.reduce((s, r) => s + (r.votos || r.votes || 0), 0);
+        const totalEscanos = resultados.reduce((s, r) => s + (r.total || r.seats || 0), 0);
+        if (totalVotos <= 0 || totalEscanos <= 0) return null;
+        const ratios = resultados
+          .filter(r => (r.votos || r.votes || 0) > 0 && (r.total || r.seats || 0) > 0)
+          .map(r => {
+            const votos = r.votos || r.votes || 0;
+            const esc = r.total || r.seats || 0;
+            return ((esc / totalEscanos) / (votos / totalVotos));
+          });
+        if (!ratios.length) return null;
+        const sum = ratios.reduce((a,b) => a + b, 0);
+        return sum / ratios.length;
+      }
+
+      // Si no hay relación en kpis, intentar calcular con resultados disponibles (seat-chart o tabla)
+      if (relacion == null && this.lastResult && (this.lastResult.result || this.lastResult.resultados || this.lastResult.seat_chart)) {
+        const posibles = this.lastResult.result || this.lastResult.resultados || this.lastResult.seat_chart;
+        // Intentar primero mediana (ya implementada), luego promedio si procede
+        relacion = computeLocalRelation(posibles);
+        if (relacion != null) {
+          fuente = 'local.median_ratio';
+        } else {
+          const avg = computeAverageRelation(posibles);
+          if (avg != null) {
+            relacion = avg;
+            fuente = 'local.mean_ratio';
+          }
+        }
+      }
+
+      // Formateo y actualización UI
+  if (relacion == null || isNaN(Number(relacion))) {
+        relacionVotos.setAttribute('valor', '—');
+        relacionVotos.setAttribute('fuente', 'n/a');
+        relacionVotos.removeAttribute('tooltip');
+        console.warn('[WARN] updateKPIs: no se pudo obtener relacion votos-escaños (backend ni cálculo local)');
+      } else {
+        const numeric = Number(relacion);
+        relacionVotos.setAttribute('valor', numeric.toFixed(3));
+        relacionVotos.setAttribute('fuente', fuente || 'backend.unknown');
+
+        // Tooltip: si backend marca meta.ratio_informativo en la respuesta, mostrarlo
+        if (this.lastResult && this.lastResult.meta && this.lastResult.meta.ratio_informativo) {
+          relacionVotos.setAttribute('tooltip', this.lastResult.meta.ratio_informativo);
+        } else {
+          // Si no hay tooltip suministrado, eliminar cualquier tooltip previo
+          relacionVotos.removeAttribute('tooltip');
+        }
+      }
     }
-    
+
     const gallagher = document.querySelector('indicador-box[etiqueta="Índice de Gallagher"]');
-    if (gallagher && kpis.gallagher) {
-      gallagher.setAttribute('valor', kpis.gallagher.toFixed(1));
+    if (gallagher && kpis.gallagher !== undefined && kpis.gallagher !== null) {
+      if (typeof kpis.gallagher === 'number' && !isNaN(kpis.gallagher)) {
+        gallagher.setAttribute('valor', kpis.gallagher.toFixed(1));
+      } else {
+        gallagher.setAttribute('valor', 'N/D');
+      }
     }
   }
   
@@ -1594,11 +1810,21 @@ initializeSidebarControls() {
       
       //  Pequeño delay para asegurar que los sliders estén completamente en el DOM
       setTimeout(() => {
-        this.updateSlidersState(isPersonalizado);
-        
-        //  Forzar sincronización adicional si está en modo personalizado
-        if (isPersonalizado) {
-          console.log(`[DEBUG]  Forzando sincronización adicional en modo personalizado`);
+        // Determinar si la regeneración fue iniciada por una acción del usuario
+        const yearSelectEl = document.getElementById('year-select');
+        const userInitiatedLoad = yearSelectEl && yearSelectEl.dataset && yearSelectEl.dataset.userSelected === 'true';
+
+        // Si la carga fue iniciada por el usuario, NO sincronizamos automáticamente
+        // con los valores vigentes para evitar sobrescribir lo que el usuario ya haya ajustado.
+        const shouldSyncWithVigente = !userInitiatedLoad;
+
+        console.log(`[DEBUG] Aplicando estado del modelo después de regenerar sliders: ${isPersonalizado ? 'personalizado' : 'vigente'} (userInitiatedLoad=${userInitiatedLoad}, shouldSyncWithVigente=${shouldSyncWithVigente})`);
+
+        this.updateSlidersState(isPersonalizado, shouldSyncWithVigente);
+
+        // Solo forzar sincronización adicional si está permitido (no fue iniciado por el usuario)
+        if (isPersonalizado && shouldSyncWithVigente) {
+          console.log(`[DEBUG]  Forzando sincronización adicional en modo personalizado (no iniciada por usuario)`);
           this.forceSyncPersonalizedSliders();
         }
       }, 10);
@@ -1677,7 +1903,7 @@ initializeSidebarControls() {
   }
 
   //  Método para actualizar estado de sliders según modelo
-  updateSlidersState(enabled) {
+  updateSlidersState(enabled, syncWithVigente = true) {
     const container = this.querySelector('#dynamic-party-sliders');
     if (!container) return;
     
@@ -1685,41 +1911,40 @@ initializeSidebarControls() {
     const valueBoxes = container.querySelectorAll('.shock-value-box');
     
     if (enabled) {
-      // Modelo personalizado - habilitar sliders Y sincronizar con valores vigentes del año actual
-      console.log(`[DEBUG]  Habilitando modo personalizado - sincronizando valores vigentes`);
-      
+      // Modelo personalizado - habilitar sliders. Opcionalmente sincronizar con valores vigentes del año actual
+      console.log(`[DEBUG]  Habilitando modo personalizado - sincronizando valores vigentes (syncWithVigente=${syncWithVigente})`);
+
       sliders.forEach(slider => {
         slider.disabled = false;
-        
-        //  IMPORTANTE: Sincronizar con valor vigente del año actual
+
+        //  IMPORTANTE: Sincronizar con valor vigente del año actual solo si se solicita
         const partyName = slider.id.replace('shock-', '').toUpperCase();
-        if (this.partidosData && this.partidosData[partyName]) {
+        if (syncWithVigente && this.partidosData && this.partidosData[partyName]) {
           const porcentajeVigente = this.partidosData[partyName].porcentajeVigente;
           slider.value = porcentajeVigente;
           this.partidosData[partyName].porcentajeActual = porcentajeVigente;
-          
           console.log(`[DEBUG]  Slider ${partyName} sincronizado: ${porcentajeVigente}%`);
         }
       });
-      
+
       valueBoxes.forEach(valueBox => {
         valueBox.style.opacity = '1';
-        
-        //  IMPORTANTE: Sincronizar display con valor vigente del año actual
+
+        //  IMPORTANTE: Sincronizar display con valor vigente del año actual solo si se solicita
         const partyName = valueBox.id.replace('shock-value-', '').toUpperCase();
-        if (this.partidosData && this.partidosData[partyName]) {
+        if (syncWithVigente && this.partidosData && this.partidosData[partyName]) {
           const porcentajeVigente = this.partidosData[partyName].porcentajeVigente;
           valueBox.textContent = `${porcentajeVigente.toFixed(1)}%`;
         }
       });
-      
-      //  Sincronizar también con VoteRedistribution
-      if (window.voteRedistribution && this.partidosData) {
+
+      //  Sincronizar también con VoteRedistribution solo si se pidió sincronizar
+      if (syncWithVigente && window.voteRedistribution && this.partidosData) {
         const porcentajesActuales = {};
         Object.keys(this.partidosData).forEach(partido => {
           porcentajesActuales[partido] = this.partidosData[partido].porcentajeVigente; // Usar vigente como baseline
         });
-        
+
         console.log(`[DEBUG]  Sincronizando VoteRedistribution con valores vigentes:`, porcentajesActuales);
         window.voteRedistribution.porcentajes = porcentajesActuales;
         window.voteRedistribution.debouncedFetchResultados();

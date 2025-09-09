@@ -92,10 +92,19 @@ class NotificationSystem {
             timeoutHandle: null
         });
         
-        // Mostrar con animación
+        // Mostrar con animación: asegurar que no tenga la clase 'hidden' y forzar reflow
+        if (notification.classList.contains('hidden')) {
+            notification.classList.remove('hidden');
+        }
+
+        // Forzar reflow para que la transición funcione consistentemente
+        // (leer offsetHeight obliga a que el navegador aplique estilos antes de la transición)
+        // eslint-disable-next-line no-unused-expressions
+        void notification.offsetHeight;
+
         setTimeout(() => {
             notification.classList.add('show');
-        }, 100);
+        }, 50);
         
         // Auto-ocultar si tiene duración (almacenar handle para poder cancelarlo al actualizar)
         if (duration > 0) {
