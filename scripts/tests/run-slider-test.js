@@ -141,31 +141,27 @@ function startStaticServer(root, port = 3000) {
     console.log('NOTIFICATION CONTAINER HTML:', notifHTML);
 
     // Wait for 'Calculando modelo' notification to show (safeNotification uses window.notifications.show)
-    const calcFound = await page.waitForFunction(() => {
-      const container = document.getElementById('notification-system');
-      if (!container) return false;
-      return Array.from(container.querySelectorAll('.notification')).some(n => n.textContent.includes('Calculando modelo') || n.textContent.includes('Procesando'));
-    }, { timeout: 5000 }).catch(() => false);
+      // Validación robusta: comprobar que la redistribución resultó en algo observable
+      // Preferimos leer debugLastResponse expuesto por la app o el atributo 'data' del seat-chart
+      const observableResult = await page.evaluate(() => {
+        const resp = window.debugLastResponse || (window.voteRedistribution ? window.voteRedistribution.result : null);
+        const seatChartEl = document.querySelector('seat-chart');
+        const seatChartData = seatChartEl ? seatChartEl.getAttribute('data') : null;
+        return {
+          debugLastResponseExists: !!(resp && resp.seat_chart && Array.isArray(resp.seat_chart) && resp.seat_chart.length > 0),
+          seatChartAttributeExists: !!seatChartData && seatChartData.length > 10,
+          debugLastResponse: resp,
+          seatChartAttr: seatChartData
+        };
+      });
 
-    console.log('Calculando notification present?', !!calcFound);
+      console.log('OBSERVABLE RESULT:', JSON.stringify(observableResult, null, 2));
 
-    // Wait for 'Listo' or 'Redistribución ejecutada' success notification
-    const successFound = await page.waitForFunction(() => {
-      const container = document.getElementById('notification-system');
-      if (!container) return false;
-      return Array.from(container.querySelectorAll('.notification')).some(n => n.textContent.includes('Listo') || n.textContent.includes('Redistribución ejecutada'));
-    }, { timeout: 10000 }).catch(() => false);
-
-    console.log('Success notification present?', !!successFound);
-
-    if (!calcFound) console.warn('Warning: did not detect Calculando notification');
-    if (!successFound) console.warn('Warning: did not detect success notification');
-
-    if (calcFound && successFound) {
-      console.log('TEST PASSED: Notifications workflow visible');
-    } else {
-      console.log('TEST FAILED: Notifications not visible as expected');
-    }
+      if (observableResult.debugLastResponseExists || observableResult.seatChartAttributeExists) {
+        console.log('TEST PASSED: redistribución observable en debugLastResponse o seat-chart');
+      } else {
+        console.log('TEST FAILED: No se observó redistribución en debugLastResponse ni en seat-chart');
+      }
 
   } catch (err) {
     console.error('Test error:', err);

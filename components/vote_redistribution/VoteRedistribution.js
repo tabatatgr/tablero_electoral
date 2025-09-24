@@ -262,16 +262,12 @@ class VoteRedistribution {
 
                 window.debugLastResponse = data;
 
-                // Si no se detectó ejecución, notificar al usuario para que revise headers/body
-                if (!executed) {
-                    console.warn('[WARN] No se detectó meta.trace indicando redistribución en la respuesta.');
-                    try {
-                        if (window.notifications && window.notifications.isReady) {
-                            window.notifications.warning('No se detectó redistribución', 'La respuesta del backend no contiene `meta.trace` con evidencia de redistribución. Verifica Content-Type y formato del body.', 8000);
-                        } else {
-                            safeNotification && safeNotification('warning', 'No se detectó redistribución', 'La respuesta del backend no contiene meta.trace con evidencia de redistribución. Verifica Content-Type y formato del body.');
-                        }
-                    } catch (err) { /* silent */ }
+                // Si no se detectó ejecución, normalmente mostramos una advertencia.
+                // Sin embargo, si la respuesta indica que es un 'fallback_local' (resultado local
+                // generado por el frontend), suprimir la advertencia para evitar ruido.
+                if (!executed && !(data && data.meta && data.meta.fallback_local)) {
+                    // Mantener solo un warning en consola para debugging; no mostrar notificación
+                    console.warn('[WARN] No se detectó meta.trace indicando redistribución en la respuesta. (suprimida notificación para evitar ruido en la UI)');
                 }
             } catch (err) {
                 console.warn('[debug] Error al analizar meta.trace en la respuesta:', err);
@@ -312,7 +308,12 @@ class VoteRedistribution {
 
                 try {
                     if (window.notifications && window.notifications.isReady) {
-                        window.notifications.warning('Resultado local', 'Se aplicó una asignación local debido a un fallo en la petición al backend.', 6000);
+                        // Mensaje amigable para usuarios finales: evitar mencionar infraestructura técnica
+                        window.notifications.warning(
+                            'Resultado local',
+                            'Se aplicó una asignación local porque no fue posible obtener una respuesta remota. Los resultados mostrados son aproximados.',
+                            7000
+                        );
                     }
                 } catch (e) { /* ignore */ }
 

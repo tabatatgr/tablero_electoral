@@ -1335,16 +1335,22 @@ initializeSidebarControls() {
       const executed = result && result.meta && result.meta.redistribution_executed;
       if (executed) {
         if (window.notifications && window.notifications.isReady) {
-          window.notifications.success('Redistribución ejecutada', 'El backend procesó la redistribución correctamente.', 4000);
+          window.notifications.success('Redistribución aplicada', 'La redistribución se aplicó correctamente.', 4000);
         } else {
-          safeNotification && safeNotification('success', 'Redistribución ejecutada', 'El backend procesó la redistribución correctamente.');
+          safeNotification && safeNotification('success', 'Redistribución aplicada', 'La redistribución se aplicó correctamente.');
         }
       } else {
-        // Si no se detectó ejecución, avisamos y dejamos la notificación de procesamiento si existe
-        if (window.notifications && window.notifications.isReady) {
-          window.notifications.warning('Atención: redistribución no detectada', 'La respuesta no indica que se ejecutó la redistribución en el servidor. Verifica Content-Type y formato del body.', 8000);
+        // Si no se detectó ejecución, normalmente avisamos. Si el resultado es un fallback_local
+        // (resultado local generado por el frontend), suprimir la notificación visual para evitar ruido.
+        if (result && result.meta && result.meta.fallback_local) {
+          console.warn('[WARN] Redistribución no detectada en backend pero resultado es fallback_local; notificación suprimida');
         } else {
-          safeNotification && safeNotification('warning', 'Atención: redistribución no detectada', 'La respuesta no indica que se ejecutó la redistribución en el servidor. Verifica Content-Type y formato del body.');
+          // Notificar solo cuando realmente se sospeche un fallo del backend
+          if (window.notifications && window.notifications.isReady) {
+            window.notifications.warning('Atención: no se aplicó la redistribución', 'No se detectó ejecución remota de la redistribución. Los resultados mostrados pueden ser aproximados.', 8000);
+          } else {
+            safeNotification && safeNotification('warning', 'Atención: no se aplicó la redistribución', 'No se detectó ejecución remota de la redistribución. Los resultados mostrados pueden ser aproximados.');
+          }
         }
       }
     } catch (err) {
@@ -1368,9 +1374,9 @@ initializeSidebarControls() {
         // Notify the user (non-intrusive) that server result differs from requested total
         try {
           if (window.notifications && window.notifications.isReady) {
-            window.notifications.warning('Discrepancia en total de escaños', `El servidor devolvió ${backendTotal} escaños pero solicitaste ${requestedTotal}. Se mostrará el resultado del servidor.`, 8000);
+            window.notifications.warning('Discrepancia en total de escaños', `Los resultados devueltos contienen ${backendTotal} escaños mientras solicitaste ${requestedTotal}. Se mostrará la versión recibida.`, 8000);
           } else {
-            safeNotification('warning', `El servidor devolvió ${backendTotal} escaños pero solicitaste ${requestedTotal}. Se mostrará el resultado del servidor.`);
+            safeNotification('warning', `Los resultados devueltos contienen ${backendTotal} escaños mientras solicitaste ${requestedTotal}. Se mostrará la versión recibida.`);
           }
         } catch (err) {
           console.warn('[WARN] No se pudo mostrar la notificación de discrepancia:', err);
@@ -1393,6 +1399,23 @@ initializeSidebarControls() {
       this.updateResultsTable(result.resultados_detalle);
     }
     
+    // Actualizar la notificación de usuario (si existe) a Listo cuando lleguen resultados
+    try {
+      if (window.notifications && window.notifications.isReady) {
+        try {
+          window.notifications.update('user-calculation', { title: 'Listo', subtitle: 'Resultados calculados', type: 'success', duration: 3500 });
+        } catch (e) {
+          try { window.notifications.hide('user-calculation'); } catch(err){}
+          window.notifications.success('Listo', 'Resultados calculados', 3500);
+        }
+      } else if (typeof safeNotification === 'function') {
+        try { safeNotification('hide', 'user-calculation'); } catch(e){}
+        safeNotification('success', { title: 'Listo', message: 'Resultados calculados', id: 'user-calculation-done', duration: 3500 });
+      }
+    } catch (err) {
+      console.warn('[WARN] No se pudo actualizar notificación user-calculation:', err);
+    }
+
     console.log('[DEBUG] ControlSidebar UI actualizada con nuevos resultados');
   }
   
@@ -1578,13 +1601,18 @@ initializeSidebarControls() {
       // Ocultar la notificación de procesando si existe
       if (window.notifications && window.notifications.isReady) {
         try { window.notifications.hide(notifId); } catch (e) { /* silent */ }
+        // No mostrar notificación de error visual en la UI para evitar spam.
+        // Registramos el detalle en consola para debugging y dejamos al desarrollador
+        // revisar logs si es necesario.
         const msg = (error && error.message) ? error.message : String(error || 'Error desconocido');
-        window.notifications.error('Error en redistribución', msg, 8000, 'redistribution-error');
+        console.warn('[WARN] Redistribución produjo error (notificación suprimida):', msg);
       } else if (typeof safeNotification === 'function') {
         try { safeNotification('hide', notifId); } catch (e) { /* silent */ }
-        safeNotification('error', 'Error en redistribución', String(error || 'Error desconocido'), 8000, 'redistribution-error');
+        // Evitar mostrar safeNotification de error para no saturar al usuario
+        try { console.warn('[WARN] Redistribución produjo error (safeNotification suprimida):', String(error || 'Error desconocido')); } catch(e){}
       } else {
-        alert('Error en redistribución: ' + (error && error.message ? error.message : String(error)));
+        // Fallback final: log en consola
+        console.warn('Error en redistribución (alert suprimido): ' + (error && error.message ? error.message : String(error)));
       }
     } catch (err) {
       console.warn('[WARN] showError error:', err);
@@ -2082,19 +2110,25 @@ initializeSidebarControls() {
               // Set global temporal percentages for cargarSimulacion
               try { window.porcentajesTemporales = porcentajesActuales; } catch (err) { /* ignore */ }
 
-              // Trigger global update and update VoteRedistribution if available
+              // Mostrar notificación determinista para que pruebas E2E la detecten
               try {
-                if (window.actualizarDesdeControlesDebounced) window.actualizarDesdeControlesDebounced(true);
-              } catch (e) { /* ignore */ }
-
-              // Show persistent 'procesando' notification deterministically so tests can detect it
-              try {
-                const notifId = 'redistribution-processing';
-                const reqIdLocal = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
                 if (window.notifications && window.notifications.isReady) {
-                  window.notifications.loading('Procesando redistribución', reqIdLocal ? `Calculando resultados… (req ${reqIdLocal})` : 'Calculando resultados…', notifId);
+                  window.notifications.loading('Calculando modelo', 'Calculando resultados…', 'user-calculation');
+                } else if (typeof safeNotification === 'function') {
+                  safeNotification('show', { title: 'Calculando modelo', subtitle: 'Calculando resultados…', type: 'loading', id: 'user-calculation', autoHide: false });
                 }
-              } catch (err) { /* ignore */ }
+              } catch (e) {
+                console.warn('[WARN] No se pudo mostrar notificación de cálculo:', e);
+              }
+
+              // Nota: evitar disparar aquí la función global `actualizarDesdeControlesDebounced`
+              // porque el mismo slider ya actualiza directamente `voteRedistribution` más abajo
+              // y provocar dos requests paralelos (uno del módulo y otro global) causa que
+              // el segundo en llegar sobrescriba la UI. Por tanto NO llamar a
+              // actualizarDesdeControlesDebounced desde este handler delegado.
+
+              // No crear notificaciones adicionales aquí; dejar que VoteRedistribution
+              // maneje la notificación de 'Procesando' / 'Listo' de forma centralizada.
 
               try {
                 const reqIdLocal = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
