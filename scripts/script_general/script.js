@@ -552,15 +552,17 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         if (porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) {
             console.log('[DEBUG] 🗳️ REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
             
-            const formData = new URLSearchParams();
-            formData.append('porcentajes_partidos', JSON.stringify(porcentajes_redistribucion));
-            formData.append('partidos_fijos', JSON.stringify([]));
-            formData.append('overrides_pool', JSON.stringify({}));
-            
-            fetchOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            fetchOptions.body = formData;
-            
-            console.log('[DEBUG] Body incluido para redistribución de votos');
+            // Enviar como JSON para asegurar que el backend reconozca 'porcentajes_partidos'
+            const jsonBody = {
+                porcentajes_partidos: porcentajes_redistribucion,
+                partidos_fijos: {},
+                overrides_pool: {}
+            };
+
+            fetchOptions.headers['Content-Type'] = 'application/json';
+            fetchOptions.body = JSON.stringify(jsonBody);
+
+            console.log('[DEBUG] Body JSON incluido para redistribución de votos:', jsonBody);
         } else {
             console.log('[DEBUG] Sin redistribución - POST solo con query parameters');
         }

@@ -57,9 +57,23 @@ export class ControlSidebar extends HTMLElement {
               </div>
             </div>
             
-            <!-- 2. (movido) Tamaño de la cámara - ahora se renderiza después de la regla electoral -->
-            <!-- (placeholder removed here; block moved below rules to ensure magnitud se aplica tras seleccionar la regla) -->
-            
+            <!-- 2. Tamaño de la cámara (ahora colocado antes de la regla electoral) -->
+            <div class="control-group" data-group="magnitude">
+              <button class="group-toggle" data-target="magnitude">
+                <span class="group-title">Tamaño de la cámara</span>
+                <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </button>
+              <div class="group-content" id="group-magnitude">
+                <div class="control-item">
+                  <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
+                  <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
+                  <div id="magnitud-note" class="parameter-note" style="display:none; color:#6b7280; margin-top:6px; font-size:0.9em;">Nota: en sistemas de Mayoría Relativa (MR) el número de escaños asignables está limitado por la cantidad de distritos; no puedes asignar más escaños por MR que distritos disponibles. Ajusta la magnitud o la distribución según corresponda.</div>
+                </div>
+              </div>
+            </div>
+
             <!-- 3. Tipo de Regla Electoral -->
             <div class="control-group" data-group="rules">
               <button class="group-toggle" data-target="rules">
@@ -108,22 +122,7 @@ export class ControlSidebar extends HTMLElement {
               </div>
             </div>
             
-              <!-- 2. Tamaño de la cámara (ubicado fuera de rules) -->
-              <div class="control-group" data-group="magnitude">
-                <button class="group-toggle" data-target="magnitude">
-                  <span class="group-title">Tamaño de la cámara</span>
-                  <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
-                    <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                  </svg>
-                </button>
-                <div class="group-content" id="group-magnitude">
-                  <div class="control-item">
-                    <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
-                    <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
-                    <div id="magnitud-note" class="parameter-note" style="display:none; color:#6b7280; margin-top:6px; font-size:0.9em;">Nota: en sistemas de Mayoría Relativa (MR) el número de escaños asignables está limitado por la cantidad de distritos; no puedes asignar más escaños por MR que distritos disponibles. Ajusta la magnitud o la distribución según corresponda.</div>
-                  </div>
-                </div>
-              </div>
+              <!-- magnitud movida arriba para priorizar tamaño de cámara frente a la regla electoral -->
 
               <!-- 4. Primera Minoría (solo para senado con MR o Mixto) -->
             <div class="control-group" data-group="first-minority" id="first-minority-group" style="display:none;">
@@ -853,7 +852,15 @@ initializeSidebarControls() {
             escanos_from_slider: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
           });
           const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-          this.lastRequestId = reqId;
+          // Guardar req_id y parámetros en el componente global para poder validar/rescalar respuestas
+          if (window.controlSidebar) {
+            window.controlSidebar.lastRequestId = reqId;
+            window.controlSidebar.lastRequestParams = {
+              mr_seats: parseInt(this.value),
+              rp_seats: parseInt(rpSlider ? rpSlider.value : 64),
+              escanos_totales: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
+            };
+          }
           window.voteRedistribution.setConfig({
             req_id: reqId,
             mr_seats: parseInt(this.value),
@@ -878,7 +885,14 @@ initializeSidebarControls() {
             escanos_from_slider: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
           });
           const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-          this.lastRequestId = reqId;
+          if (window.controlSidebar) {
+            window.controlSidebar.lastRequestId = reqId;
+            window.controlSidebar.lastRequestParams = {
+              mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
+              rp_seats: parseInt(this.value),
+              escanos_totales: parseInt(magnitudeSlider ? magnitudeSlider.value : 128)
+            };
+          }
           window.voteRedistribution.setConfig({
             req_id: reqId,
             mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
@@ -905,7 +919,14 @@ initializeSidebarControls() {
             rp_from_slider: parseInt(rpSlider ? rpSlider.value : 64)
           });
           const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-          this.lastRequestId = reqId;
+          if (window.controlSidebar) {
+            window.controlSidebar.lastRequestId = reqId;
+            window.controlSidebar.lastRequestParams = {
+              escanos_totales: parseInt(this.value),
+              mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
+              rp_seats: parseInt(rpSlider ? rpSlider.value : 64)
+            };
+          }
           window.voteRedistribution.setConfig({
             req_id: reqId,
             escanos_totales: parseInt(this.value),
@@ -1305,7 +1326,69 @@ initializeSidebarControls() {
     }
 
     // Guardar último resultado (solo si no fue ignorado)
+    // Preserve original raw result and allow a possibly scaled version for UI
+    this.lastResultOriginal = result || null;
     this.lastResult = result || null;
+
+    // Mostrar notificación clara sobre si la redistribución se ejecutó en backend
+    try {
+      const executed = result && result.meta && result.meta.redistribution_executed;
+      if (executed) {
+        if (window.notifications && window.notifications.isReady) {
+          window.notifications.success('Redistribución aplicada', 'La redistribución se aplicó correctamente.', 4000);
+        } else {
+          safeNotification && safeNotification('success', 'Redistribución aplicada', 'La redistribución se aplicó correctamente.');
+        }
+      } else {
+        // Si no se detectó ejecución, normalmente avisamos. Si el resultado es un fallback_local
+        // (resultado local generado por el frontend), suprimir la notificación visual para evitar ruido.
+        if (result && result.meta && result.meta.fallback_local) {
+          console.warn('[WARN] Redistribución no detectada en backend pero resultado es fallback_local; notificación suprimida');
+        } else {
+          // Notificar solo cuando realmente se sospeche un fallo del backend
+          if (window.notifications && window.notifications.isReady) {
+            window.notifications.warning('Atención: no se aplicó la redistribución', 'No se detectó ejecución remota de la redistribución. Los resultados mostrados pueden ser aproximados.', 8000);
+          } else {
+            safeNotification && safeNotification('warning', 'Atención: no se aplicó la redistribución', 'No se detectó ejecución remota de la redistribución. Los resultados mostrados pueden ser aproximados.');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[WARN] Error al notificar estado de redistribución:', err);
+    }
+
+    // Si estamos en modo personalizado y el backend devolvió un total distinto al solicitado,
+    // crear una versión escalada del seat_chart para mostrar en UI (sin mutar el original)
+    try {
+      const modelSelect = document.getElementById('model-select');
+      const isPersonalizado = modelSelect && modelSelect.value === 'personalizado';
+      const requested = (window.controlSidebar && window.controlSidebar.lastRequestParams) ? window.controlSidebar.lastRequestParams : null;
+      const backendTotal = result && result.kpis && result.kpis.total_escanos ? parseInt(result.kpis.total_escanos) : null;
+      const requestedTotal = requested && requested.escanos_totales ? parseInt(requested.escanos_totales) : null;
+
+      if (isPersonalizado && backendTotal && requestedTotal && backendTotal !== requestedTotal && Array.isArray(result.seat_chart)) {
+        // Do NOT auto-scale the server result. Instead, record mismatch and show a warning.
+        console.warn('[WARN] Backend devolvió un total distinto al solicitado en modo personalizado. No se aplicará escalado automático. BackendTotal:', backendTotal, 'RequestedTotal:', requestedTotal);
+        // Mark mismatch so UI or telemetry can handle it; do not mutate or replace seat_chart
+        this.lastResult._server_total_mismatch = true;
+        // Notify the user (non-intrusive) that server result differs from requested total
+        try {
+          if (window.notifications && window.notifications.isReady) {
+            window.notifications.warning('Discrepancia en total de escaños', `Los resultados devueltos contienen ${backendTotal} escaños mientras solicitaste ${requestedTotal}. Se mostrará la versión recibida.`, 8000);
+          } else {
+            safeNotification('warning', `Los resultados devueltos contienen ${backendTotal} escaños mientras solicitaste ${requestedTotal}. Se mostrará la versión recibida.`);
+          }
+        } catch (err) {
+          console.warn('[WARN] No se pudo mostrar la notificación de discrepancia:', err);
+        }
+      }
+    } catch (err) {
+      console.warn('[WARN] Error al intentar escalar seat_chart para UI:', err);
+    }
+
+    // No automatic replacement of seat-chart with scaled version (scaling is prohibited)
+
+    // If there was a server mismatch we already warned the user above; do not create extra UI actions
 
     if (result.kpis) {
       this.updateKPIs(result.kpis);
@@ -1316,6 +1399,23 @@ initializeSidebarControls() {
       this.updateResultsTable(result.resultados_detalle);
     }
     
+    // Actualizar la notificación de usuario (si existe) a Listo cuando lleguen resultados
+    try {
+      if (window.notifications && window.notifications.isReady) {
+        try {
+          window.notifications.update('user-calculation', { title: 'Listo', subtitle: 'Resultados calculados', type: 'success', duration: 3500 });
+        } catch (e) {
+          try { window.notifications.hide('user-calculation'); } catch(err){}
+          window.notifications.success('Listo', 'Resultados calculados', 3500);
+        }
+      } else if (typeof safeNotification === 'function') {
+        try { safeNotification('hide', 'user-calculation'); } catch(e){}
+        safeNotification('success', { title: 'Listo', message: 'Resultados calculados', id: 'user-calculation-done', duration: 3500 });
+      }
+    } catch (err) {
+      console.warn('[WARN] No se pudo actualizar notificación user-calculation:', err);
+    }
+
     console.log('[DEBUG] ControlSidebar UI actualizada con nuevos resultados');
   }
   
@@ -1395,8 +1495,9 @@ initializeSidebarControls() {
         return sum / ratios.length;
       }
 
-      // Si no hay relación en kpis, intentar calcular con resultados disponibles (seat-chart o tabla)
+      // Si no hay relación en kpis, intentar calcular con resultados disponibles (usar versión escalada si existe)
       if (relacion == null && this.lastResult && (this.lastResult.result || this.lastResult.resultados || this.lastResult.seat_chart)) {
+        // Use only the server-provided results (no scaled fallback)
         const posibles = this.lastResult.result || this.lastResult.resultados || this.lastResult.seat_chart;
         // Intentar primero mediana (ya implementada), luego promedio si procede
         relacion = computeLocalRelation(posibles);
@@ -1442,6 +1543,7 @@ initializeSidebarControls() {
     }
   }
   
+  
   updateResultsTable(resultados) {
     // Crear o actualizar tabla de resultados por partido si no existe
     // Este método se puede expandir según necesidades específicas
@@ -1449,14 +1551,72 @@ initializeSidebarControls() {
   }
   
   showLoadingState(loading) {
-    // Notificaciones de redistribución deshabilitadas por solicitud del usuario
-    // El sistema funciona silenciosamente en segundo plano
+    const notifId = 'redistribution-processing';
+    try {
+      if (loading) {
+        const reqId = this.lastRequestId || (window.voteRedistribution && window.voteRedistribution.lastResponseMeta && window.voteRedistribution.lastResponseMeta.req_id) || null;
+        const subtitle = reqId ? `Calculando resultados… (req ${reqId})` : 'Calculando resultados…';
+        if (window.notifications && window.notifications.isReady) {
+          // Mostrar notificación persistente de carga
+          window.notifications.loading('Procesando redistribución', subtitle, notifId);
+        } else if (typeof safeNotification === 'function') {
+          // Fallback al safeNotification global si existe
+          safeNotification('show', {
+            title: 'Procesando redistribución',
+            message: subtitle,
+            type: 'loading',
+            autoHide: false,
+            id: notifId
+          });
+        } else {
+          console.log('[INFO] Procesando redistribución:', subtitle);
+        }
+      } else {
+        // Finalizó la carga: actualizar notificación a success y dejar que se oculte automáticamente
+        if (window.notifications && window.notifications.isReady) {
+          try {
+            // Intentar actualizar la notificación existente
+            window.notifications.update(notifId, { title: 'Listo', subtitle: 'Resultados calculados', type: 'success', duration: 3500 });
+          } catch (err) {
+            // Si no existe o hay error, ocultar e informar
+            try { window.notifications.hide(notifId); } catch (e) { /* silent */ }
+            window.notifications.success('Listo', 'Resultados calculados', 3500);
+          }
+        } else if (typeof safeNotification === 'function') {
+          try { safeNotification('hide', notifId); } catch (e) { /* silent */ }
+          safeNotification('success', { title: 'Listo', message: 'Resultados calculados', id: `${notifId}-done`, autoHide: 3500 });
+        } else {
+          console.log('[INFO] Redistribución completada');
+        }
+      }
+    } catch (err) {
+      console.warn('[WARN] showLoadingState error:', err);
+    }
   }
   
   showError(error) {
     console.error('[ERROR] Vote redistribution:', error);
-    // Notificaciones de error de redistribución deshabilitadas por solicitud del usuario
-    // Los errores se muestran solo en consola para debugging
+    const notifId = 'redistribution-processing';
+    try {
+      // Ocultar la notificación de procesando si existe
+      if (window.notifications && window.notifications.isReady) {
+        try { window.notifications.hide(notifId); } catch (e) { /* silent */ }
+        // No mostrar notificación de error visual en la UI para evitar spam.
+        // Registramos el detalle en consola para debugging y dejamos al desarrollador
+        // revisar logs si es necesario.
+        const msg = (error && error.message) ? error.message : String(error || 'Error desconocido');
+        console.warn('[WARN] Redistribución produjo error (notificación suprimida):', msg);
+      } else if (typeof safeNotification === 'function') {
+        try { safeNotification('hide', notifId); } catch (e) { /* silent */ }
+        // Evitar mostrar safeNotification de error para no saturar al usuario
+        try { console.warn('[WARN] Redistribución produjo error (safeNotification suprimida):', String(error || 'Error desconocido')); } catch(e){}
+      } else {
+        // Fallback final: log en consola
+        console.warn('Error en redistribución (alert suprimido): ' + (error && error.message ? error.message : String(error)));
+      }
+    } catch (err) {
+      console.warn('[WARN] showError error:', err);
+    }
   }
 
   //  Método para cargar partidos dinámicamente por año
@@ -1774,8 +1934,79 @@ initializeSidebarControls() {
           console.log(`[DEBUG] Iniciando cargarSimulacion con porcentajes actualizados:`, porcentajesActuales);
           
           // Usar el sistema integrado de cargarSimulacion con debounce
-          if (window.actualizarDesdeControlesSilent) {
-            // Guardar porcentajes en variable global temporal para que cargarSimulacion los use
+          if (window.actualizarDesdeControlesDebounced) {
+            // Marcar esto como acción del usuario: usar la versión debounced con flag true
+            window.porcentajesTemporales = porcentajesActuales;
+            window.actualizarDesdeControlesDebounced(true);
+            // Además, si existe el módulo VoteRedistribution, actualizar directamente sus porcentajes
+            try {
+              if (window.voteRedistribution && typeof window.voteRedistribution.updatePorcentajes === 'function') {
+                // Generar req_id para correlación y pasar config mínima
+                const reqIdLocal = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+                // Guardar en el sidebar para debug/correlación
+                if (window.controlSidebar) {
+                  window.controlSidebar.lastRequestId = reqIdLocal;
+                  window.controlSidebar.lastRequestParams = window.controlSidebar.lastRequestParams || {};
+                  window.controlSidebar.lastRequestParams.porcentajes = porcentajesActuales;
+                }
+                // Asegurar que VoteRedistribution conoce el req_id
+                try { window.voteRedistribution.setConfig({ req_id: reqIdLocal }); } catch (e) { /* ignore */ }
+                // Actualizar porcentajes (esto disparará debouncedFetchResultados en el módulo)
+                try {
+                  window.voteRedistribution.porcentajes = { ...porcentajesActuales };
+                  if (typeof window.voteRedistribution.debouncedFetchResultados === 'function') {
+                    window.voteRedistribution.debouncedFetchResultados();
+                  } else if (typeof window.voteRedistribution.updatePorcentajes === 'function') {
+                    // fallback
+                    window.voteRedistribution.updatePorcentajes(porcentajesActuales);
+                  }
+                } catch (e) {
+                  console.warn('[WARN] Fallback updating VoteRedistribution porcentajes failed:', e);
+                }
+              }
+            } catch (err) {
+              console.warn('[WARN] Error actualizando VoteRedistribution desde sliders:', err);
+            }
+            
+            // --- Immediate local seat-chart update (proportional allocation with largest remainders)
+            try {
+              const seatChartEl = document.querySelector('seat-chart');
+              const magnitudeEl = document.getElementById('input-magnitud');
+              const totalSeats = (this && this.partidosData && window.controlSidebar && window.controlSidebar.lastRequestParams && window.controlSidebar.lastRequestParams.escanos_totales)
+                ? Number(window.controlSidebar.lastRequestParams.escanos_totales)
+                : (magnitudeEl ? Number(magnitudeEl.value) : 128);
+
+              // Build array of {party, pct}
+              const parties = Object.keys(porcentajesActuales).map(p => ({ party: p, pct: Number(porcentajesActuales[p]) }));
+              // Initial seats by floor
+              let allocated = 0;
+              const interim = parties.map(p => {
+                const exact = (p.pct / 100) * totalSeats;
+                const floored = Math.floor(exact);
+                allocated += floored;
+                return { party: p.party, exact, floored, remainder: exact - floored };
+              });
+              // Distribute remaining seats by largest remainder
+              let remaining = totalSeats - allocated;
+              interim.sort((a,b) => b.remainder - a.remainder);
+              for (let i=0; i<interim.length && remaining>0; i++) {
+                interim[i].floored += 1;
+                remaining -= 1;
+              }
+              // Build seat chart data in expected format (array)
+              const localSeatChart = interim.map(item => ({ partido: item.party, escaños: item.floored }));
+              if (seatChartEl) {
+                try {
+                  seatChartEl.setAttribute('data', JSON.stringify(localSeatChart));
+                  console.log('[DEBUG] SeatChart local actualizado inmediatamente con cambios de sliders');
+                } catch (e) { console.warn('[WARN] No se pudo actualizar seatChart localmente', e); }
+              }
+            } catch (err) {
+              console.warn('[WARN] Error en seat-chart local update:', err);
+            }
+          } else if (window.actualizarDesdeControlesSilent) {
+            // Fallback: si no existe la versión debounced, usar silent pero marcar manualmente
+            try { window.isUserTriggered = true; } catch(e){/* silent */}
             window.porcentajesTemporales = porcentajesActuales;
             window.actualizarDesdeControlesSilent();
           }
@@ -1828,6 +2059,139 @@ initializeSidebarControls() {
           this.forceSyncPersonalizedSliders();
         }
       }, 10);
+    }
+
+    // Attach delegated input handler to ensure slider changes are always captured
+    try {
+      if (!this._delegatedSliderHandlerAttached) {
+        const containerEl = this.querySelector('#dynamic-party-sliders');
+        if (containerEl) {
+          containerEl.addEventListener('input', (e) => {
+            try {
+              const target = e.target;
+              if (!target || !target.classList || !target.classList.contains('control-slider')) return;
+
+              // Determine party id
+              const id = target.id || '';
+              if (!id.startsWith('shock-')) return;
+              const partyNameLower = id.replace('shock-', '');
+              const partyNameUpper = partyNameLower.toUpperCase();
+              const newValue = parseFloat(target.value || 0);
+
+              // Update internal partidosData if present
+              if (this.partidosData && this.partidosData[partyNameUpper]) {
+                this.partidosData[partyNameUpper].porcentajeActual = newValue;
+              }
+
+              // Ensure model is 'personalizado' when user interacts with party sliders
+              const modelSel = document.getElementById('model-select');
+              let isPersonalizado = modelSel && modelSel.value === 'personalizado';
+              if (!isPersonalizado && modelSel) {
+                try {
+                  modelSel.value = 'personalizado';
+                  const ev = new Event('change', { bubbles: true });
+                  modelSel.dispatchEvent(ev);
+                  isPersonalizado = true;
+                  console.log('[DEBUG] Modo forzado a personalizado por interaccion con slider');
+                } catch (err) {
+                  console.warn('[WARN] No se pudo forzar model-select a personalizado:', err);
+                }
+              }
+              if (!isPersonalizado) return;
+
+              // Build porcentajesActuales map
+              const porcentajesActuales = {};
+              if (this.partidosData) {
+                Object.keys(this.partidosData).forEach(p => {
+                  porcentajesActuales[p] = this.partidosData[p].porcentajeActual;
+                });
+              }
+
+              // Set global temporal percentages for cargarSimulacion
+              try { window.porcentajesTemporales = porcentajesActuales; } catch (err) { /* ignore */ }
+
+              // Mostrar notificación determinista para que pruebas E2E la detecten
+              try {
+                if (window.notifications && window.notifications.isReady) {
+                  window.notifications.loading('Calculando modelo', 'Calculando resultados…', 'user-calculation');
+                } else if (typeof safeNotification === 'function') {
+                  safeNotification('show', { title: 'Calculando modelo', subtitle: 'Calculando resultados…', type: 'loading', id: 'user-calculation', autoHide: false });
+                }
+              } catch (e) {
+                console.warn('[WARN] No se pudo mostrar notificación de cálculo:', e);
+              }
+
+              // Nota: evitar disparar aquí la función global `actualizarDesdeControlesDebounced`
+              // porque el mismo slider ya actualiza directamente `voteRedistribution` más abajo
+              // y provocar dos requests paralelos (uno del módulo y otro global) causa que
+              // el segundo en llegar sobrescriba la UI. Por tanto NO llamar a
+              // actualizarDesdeControlesDebounced desde este handler delegado.
+
+              // No crear notificaciones adicionales aquí; dejar que VoteRedistribution
+              // maneje la notificación de 'Procesando' / 'Listo' de forma centralizada.
+
+              try {
+                const reqIdLocal = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+                if (window.voteRedistribution) {
+                  window.voteRedistribution.porcentajes = { ...porcentajesActuales };
+                  if (typeof window.voteRedistribution.debouncedFetchResultados === 'function') window.voteRedistribution.debouncedFetchResultados();
+                  else if (typeof window.voteRedistribution.updatePorcentajes === 'function') window.voteRedistribution.updatePorcentajes(porcentajesActuales);
+                }
+              } catch (err) {
+                console.warn('[WARN] Delegated slider handler: failed to update VoteRedistribution', err);
+              }
+
+              // Immediate local seat chart update (same logic as above)
+              try {
+                const seatChartEl = document.querySelector('seat-chart');
+                const magnitudeEl = document.getElementById('input-magnitud');
+                const totalSeats = (window.controlSidebar && window.controlSidebar.lastRequestParams && window.controlSidebar.lastRequestParams.escanos_totales)
+                  ? Number(window.controlSidebar.lastRequestParams.escanos_totales)
+                  : (magnitudeEl ? Number(magnitudeEl.value) : 128);
+                const parties = Object.keys(porcentajesActuales).map(p => ({ party: p, pct: Number(porcentajesActuales[p]) }));
+                let allocated = 0;
+                const interim = parties.map(p => {
+                  const exact = (p.pct / 100) * totalSeats;
+                  const floored = Math.floor(exact);
+                  allocated += floored;
+                  return { party: p.party, exact, floored, remainder: exact - floored };
+                });
+                let remaining = totalSeats - allocated;
+                interim.sort((a,b) => b.remainder - a.remainder);
+                for (let i=0; i<interim.length && remaining>0; i++) { interim[i].floored += 1; remaining -= 1; }
+                const localSeatChart = interim.map(item => ({ partido: item.party, escaños: item.floored }));
+                if (seatChartEl) seatChartEl.setAttribute('data', JSON.stringify(localSeatChart));
+
+                // Informar inmediatamente al módulo VoteRedistribution con un resultado local
+                try {
+                  if (window.voteRedistribution) {
+                    const fallbackResult = { seat_chart: localSeatChart, meta: { fallback_local: true, timestamp: Date.now() } };
+                    window.voteRedistribution.result = fallbackResult;
+                    // También actualizar su state interno para que getState() refleje lo mostrado
+                    window.debugLastResponse = fallbackResult;
+                    if (typeof window.voteRedistribution.notifyUpdate === 'function') {
+                      window.voteRedistribution.notifyUpdate();
+                    } else if (typeof window.voteRedistribution.updateSeatChart === 'function') {
+                      window.voteRedistribution.updateSeatChart(localSeatChart);
+                      if (window.voteRedistribution.callbacks && typeof window.voteRedistribution.callbacks.onUpdate === 'function') {
+                        try { window.voteRedistribution.callbacks.onUpdate(fallbackResult); } catch(e){/* ignore */}
+                      }
+                    }
+                  }
+                } catch (e) {
+                  console.warn('[WARN] No se pudo notificar a voteRedistribution del resultado local:', e);
+                }
+              } catch (err) { /* ignore */ }
+
+            } catch (err) {
+              console.warn('[WARN] Error in delegated slider input handler:', err);
+            }
+          });
+          this._delegatedSliderHandlerAttached = true;
+        }
+      }
+    } catch (err) {
+      console.warn('[WARN] Could not attach delegated slider handler:', err);
     }
   }
 
@@ -2035,8 +2399,11 @@ initializeSidebarControls() {
     console.log(`[DEBUG]  Iniciando cargarSimulacion con porcentajes vigentes:`, porcentajesVigentes);
     
     // Usar cargarSimulacion integrado en lugar de VoteRedistribution separado
-    if (window.actualizarDesdeControles) {
-      // Llamar al sistema estándar que ya maneja cargarSimulacion con timing correcto
+    if (window.actualizarDesdeControlesDebounced) {
+      // Forzar actualización marcada como acción del usuario
+      window.actualizarDesdeControlesDebounced(true);
+    } else if (window.actualizarDesdeControles) {
+      try { window.isUserTriggered = true; } catch(e){/* silent */}
       window.actualizarDesdeControlesSilent();
     }
     

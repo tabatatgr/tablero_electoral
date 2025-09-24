@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "dev": "npx serve . -p 3000",
+    "test:slider": "node ./scripts/tests/run-slider-test.js",
     "build": "echo 'Build script'",
     "start": "npx serve . -p 3000"
   },
   "dependencies": {},
   "devDependencies": {
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "playwright": "^1.40.0"
   }
 }

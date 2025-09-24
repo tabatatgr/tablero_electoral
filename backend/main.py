@@ -410,6 +410,39 @@ def obtener_partidos_por_anio(anio: int, camara: str = "diputados"):
 			headers={"Access-Control-Allow-Origin": "*"}
 		)
 
+
+# Endpoint temporal para depuración: echo de headers y body
+from fastapi import Request
+
+
+@app.api_route('/debug/echo', methods=['GET', 'POST'])
+async def debug_echo(request: Request):
+	try:
+		headers = {}
+		for k, v in request.headers.items():
+			if k.lower() == 'authorization' or 'auth' in k.lower():
+				headers[k] = '***MASKED***'
+			else:
+				headers[k] = v
+
+		raw_body = None
+		try:
+			raw_body = await request.json()
+		except Exception:
+			try:
+				raw_body = (await request.body()).decode('utf-8', errors='replace')
+			except Exception:
+				raw_body = None
+
+		return JSONResponse(content={
+			'headers': headers,
+			'body': raw_body,
+			'method': request.method,
+			'url': str(request.url)
+		}, headers={"Access-Control-Allow-Origin": "*"}, status_code=200)
+	except Exception as e:
+		return JSONResponse(content={"error": str(e)}, status_code=500, headers={"Access-Control-Allow-Origin": "*"})
+
 if __name__ == "__main__":
 	import uvicorn
 	port = int(os.environ.get("PORT", 8000))  # Usar variable PORT o 8000 por defecto
