@@ -550,7 +550,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         
         // 🆕 REDISTRIBUCIÓN DE VOTOS: Si hay porcentajes, enviar en body
         if (porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) {
-            console.log('[DEBUG] 🗳️ REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
+            console.log('[DEBUG]  REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
             
             // Enviar como JSON para asegurar que el backend reconozca 'porcentajes_partidos'
             const jsonBody = {
@@ -589,8 +589,8 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             try {
                 const errorData = await resp.text();
                 console.error('[DEBUG] Error del backend:', errorData);
-                console.error('[DEBUG] 🚨 ERROR ESPECÍFICO PARA CÁMARA:', camara);
-                console.error('[DEBUG] 🚨 PARÁMETROS QUE CAUSARON ERROR:', {
+                console.error('[DEBUG] ERROR ESPECÍFICO PARA CÁMARA:', camara);
+                console.error('[DEBUG] PARÁMETROS QUE CAUSARON ERROR:', {
                     anio, camara, modelo, magnitud, umbral, sobrerrepresentacion,
                     urlCompleta: url
                 });
