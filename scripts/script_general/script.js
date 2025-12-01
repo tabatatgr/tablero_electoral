@@ -137,8 +137,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (modelSelect && modelSelect.value === 'personalizado') {
                 actualizarDesdeControlesDebounced(); // Regla electoral NO activa "Calculando modelo"
             }
+            
+            // 🆕 Actualizar visibilidad de Primera Minoría según sistema electoral
+            updateFirstMinorityVisibility();
         });
     });
+    
+    // 🆕 Función para controlar visibilidad de Primera Minoría según sistema electoral y cámara
+    function updateFirstMinorityVisibility() {
+        const firstMinorityGroup = document.getElementById('first-minority-group');
+        if (!firstMinorityGroup) return;
+        
+        const currentChamber = getCurrentChamber();
+        const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+        const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        
+        // PM visible en ambas cámaras cuando el sistema es MR o Mixto
+        const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+        
+        firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+        
+        console.log(`[DEBUG] Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} - Cámara: ${currentChamber}, Sistema: ${electoralValue}`);
+    }
     // Slider de umbral: dispara actualización para cualquier modelo en senado
     const thresholdInput = document.getElementById('threshold-slider');
     if (thresholdInput) {
