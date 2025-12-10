@@ -745,6 +745,23 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 seatChart.dispatchEvent(new CustomEvent('force-update', { 
                     detail: { requestId, contentHash, timestamp } 
                 }));
+                
+                // 🆕 ACTUALIZAR TABLA DE RESULTADOS (mismo flujo que seat-chart)
+                requestAnimationFrame(() => {
+                    console.log('[DEBUG] 📊 Actualizando tabla de resultados desde script.js');
+                    console.log('[DEBUG] 🔍 data.seat_chart RAW del backend:', JSON.stringify(data.seat_chart, null, 2));
+                    const sidebar = document.querySelector('control-sidebar');
+                    if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                        const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
+                        const config = {
+                            sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
+                            pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
+                        };
+                        sidebar.updateResultsTable(resultadosTabla, config);
+                    } else {
+                        console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
+                    }
+                });
             } else {
                 console.error('[DEBUG]  NO SE ENCONTRÓ el elemento seat-chart en el DOM!');
             }
@@ -937,6 +954,23 @@ async function cargarSeatChart(anio, camara, modelo) {
             seatChart.dispatchEvent(new CustomEvent('force-update', { 
                 detail: { requestId, contentHash, timestamp, source: 'fallback' } 
             }));
+            
+            // 🆕 ACTUALIZAR TABLA DE RESULTADOS (fallback)
+            requestAnimationFrame(() => {
+                console.log('[DEBUG] 📊 Actualizando tabla de resultados desde fallback');
+                console.log('[DEBUG] 🔍 seatArray RAW (fallback):', JSON.stringify(seatArray, null, 2));
+                const sidebar = document.querySelector('control-sidebar');
+                if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                    const resultadosTabla = sidebar.transformSeatChartToTable(seatArray);
+                    const config = {
+                        sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
+                        pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
+                    };
+                    sidebar.updateResultsTable(resultadosTabla, config);
+                } else {
+                    console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
+                }
+            });
         } else {
             console.warn('[DEBUG] seat-chart: No hay datos válidos para mostrar');
         }
@@ -1839,6 +1873,21 @@ window.electoralDebugger = {
                 seatChart.setAttribute('data', JSON.stringify(data.seat_chart));
                 seatChart.setAttribute('data-key', 'brutal_test_' + Date.now());
                 console.log(' SeatChart actualizado brutalmente');
+                
+                // 🆕 ACTUALIZAR TABLA DE RESULTADOS (brutal test)
+                requestAnimationFrame(() => {
+                    console.log('[DEBUG] 📊 Actualizando tabla de resultados desde brutal test');
+                    console.log('[DEBUG] 🔍 data.seat_chart RAW (brutal test):', JSON.stringify(data.seat_chart, null, 2));
+                    const sidebar = document.querySelector('control-sidebar');
+                    if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                        const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
+                        const config = {
+                            sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
+                            pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
+                        };
+                        sidebar.updateResultsTable(resultadosTabla, config);
+                    }
+                });
             }
         })
         .catch(err => {
