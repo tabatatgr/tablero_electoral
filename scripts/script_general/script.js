@@ -137,8 +137,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (modelSelect && modelSelect.value === 'personalizado') {
                 actualizarDesdeControlesDebounced(); // Regla electoral NO activa "Calculando modelo"
             }
+            
+            // 🆕 Actualizar visibilidad de Primera Minoría según sistema electoral
+            updateFirstMinorityVisibility();
         });
     });
+    
+    // 🆕 Función para controlar visibilidad de Primera Minoría según sistema electoral y cámara
+    function updateFirstMinorityVisibility() {
+        const firstMinorityGroup = document.getElementById('first-minority-group');
+        if (!firstMinorityGroup) return;
+        
+        const currentChamber = getCurrentChamber();
+        const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+        const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        
+        // PM visible en ambas cámaras cuando el sistema es MR o Mixto
+        const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+        
+        firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+        
+        console.log(`[DEBUG] Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} - Cámara: ${currentChamber}, Sistema: ${electoralValue}`);
+    }
     // Slider de umbral: dispara actualización para cualquier modelo en senado
     const thresholdInput = document.getElementById('threshold-slider');
     if (thresholdInput) {
@@ -550,7 +570,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         
         // 🆕 REDISTRIBUCIÓN DE VOTOS: Si hay porcentajes, enviar en body
         if (porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) {
-            console.log('[DEBUG] 🗳️ REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
+            console.log('[DEBUG]  REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
             
             // Enviar como JSON para asegurar que el backend reconozca 'porcentajes_partidos'
             const jsonBody = {
@@ -589,8 +609,8 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             try {
                 const errorData = await resp.text();
                 console.error('[DEBUG] Error del backend:', errorData);
-                console.error('[DEBUG] 🚨 ERROR ESPECÍFICO PARA CÁMARA:', camara);
-                console.error('[DEBUG] 🚨 PARÁMETROS QUE CAUSARON ERROR:', {
+                console.error('[DEBUG] ERROR ESPECÍFICO PARA CÁMARA:', camara);
+                console.error('[DEBUG] PARÁMETROS QUE CAUSARON ERROR:', {
                     anio, camara, modelo, magnitud, umbral, sobrerrepresentacion,
                     urlCompleta: url
                 });

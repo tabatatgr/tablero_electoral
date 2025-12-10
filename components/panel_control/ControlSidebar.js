@@ -416,11 +416,21 @@ initializeSidebarControls() {
         const firstMinorityGroup = document.getElementById('first-minority-group');
         
         if (selectedChamber === 'diputados') {
-          // Show overrepresentation and seat cap for deputies
+          // Show overrepresentation, seat cap AND first minority for deputies
           if (overrepGroup) overrepGroup.style.display = 'block';
           if (seatCapGroup) seatCapGroup.style.display = 'block';
-          if (firstMinorityGroup) firstMinorityGroup.style.display = 'none';
-          console.log(' Switched to Diputados - showing overrepresentation controls');
+          
+          // 🆕 PRIMERA MINORÍA TAMBIÉN DISPONIBLE PARA DIPUTADOS
+          if (firstMinorityGroup) {
+            const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+            const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+            const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+            
+            firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+            
+            console.log(` Switched to Diputados - Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} (Sistema: ${electoralValue})`);
+          }
+          console.log(' Switched to Diputados - showing overrepresentation controls & PM');
         } else if (selectedChamber === 'senadores') {
           // Hide deputy-specific controls
           if (overrepGroup) overrepGroup.style.display = 'none';
@@ -1144,7 +1154,17 @@ initializeSidebarControls() {
     if (selectedChamber === 'diputados') {
       if (overrepGroup) overrepGroup.style.display = 'block';
       if (seatCapGroup) seatCapGroup.style.display = 'block';
-      if (firstMinorityGroup) firstMinorityGroup.style.display = 'none';
+      
+      // 🆕 PRIMERA MINORÍA TAMBIÉN DISPONIBLE PARA DIPUTADOS (igual que senado)
+      if (firstMinorityGroup) {
+        const selectedElectoralRule = this.querySelector('input[name="electoral-rule"]:checked');
+        const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        const shouldShowFirstMinority = electoralValue === 'mr' || electoralValue === 'mixto';
+        
+        firstMinorityGroup.style.display = shouldShowFirstMinority ? 'block' : 'none';
+        
+        console.log(` Diputados - Primera Minoría ${shouldShowFirstMinority ? 'MOSTRADA' : 'OCULTADA'} (Sistema: ${electoralValue})`);
+      }
       
       // Aplicar lógica constitucional para sobrerrepresentación
       this.updateOverrepresentationVisibility();
@@ -1153,7 +1173,7 @@ initializeSidebarControls() {
       if (overrepGroup) overrepGroup.style.display = 'none';
       if (seatCapGroup) seatCapGroup.style.display = 'none';
       
-      // Primera minoría solo visible en senado Y con sistema MR o Mixto
+      // Primera minoría también visible en senado con sistema MR o Mixto
       if (firstMinorityGroup) {
         const selectedElectoralRule = this.querySelector('input[name="electoral-rule"]:checked');
         const electoralValue = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
