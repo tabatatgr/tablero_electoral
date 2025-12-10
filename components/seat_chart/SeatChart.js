@@ -136,20 +136,7 @@ class SeatChart extends HTMLElement {
         seatIndex++;
       }
     }
-    // Legend
-    let legend = `<div class="legend-title">Simbología</div>
-  <div style='font-size:13px;color:#5F7272;margin-bottom:6px;'>El porcentaje mostrado indica el porcentaje de escaños que obtiene cada partido.</div>`
-      + data.map(p => `
-      <div class="legend-item">
-        <div class="legend-left">
-          <span class="legend-dot" style="background:${p.color}"></span>
-          <span class="legend-name">${p.party}</span>
-        </div>
-        <div class="legend-right">
-          ${p.seats} escaños (${p.percent}%)
-        </div>
-      </div>
-    `).join('');
+    // Layout vertical: seat-chart arriba (centrado) + tabla abajo
     this.innerHTML = `
       <div class="seat-chart-container">
         <div class="seat-chart-svg" style="display: flex; align-items: center; justify-content: center;">
@@ -157,8 +144,10 @@ class SeatChart extends HTMLElement {
             ${seatElements.join('')}
           </svg>
         </div>
-        <div class="seat-chart-legend">
-          ${legend}
+        <div class="seat-chart-table">
+          <div id="results-table-container">
+            <!-- La tabla se insertará aquí dinámicamente desde ControlSidebar -->
+          </div>
         </div>
       </div>
     `;

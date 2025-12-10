@@ -1,0 +1,243 @@
+/* ========================================
+   TABLA DE RESULTADOS INTELIGENTE
+   Muestra desglose MR/PM/RP según sistema
+   ======================================== */
+
+/* Wrapper que contiene el título + tabla */
+.results-table-wrapper {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Título integrado en la tabla */
+.results-table-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 16px;
+  font-family: 'Noto Sans', sans-serif;
+  text-align: center;
+  padding: 0;
+  border: none; /* Sin borde feo */
+}
+
+/* Contenedor de la tabla (para scroll horizontal si es necesario) */
+.results-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  margin-top: 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06); /* Sombra más sutil */
+  overflow: hidden;
+  border: 1px solid #F3F4F6; /* Borde muy sutil */
+}
+
+/* HEADER - Diseño minimalista blanco con separación */
+.results-table thead th {
+  background: #FFFFFF; /* Fondo blanco puro */
+  color: #374151; /* Texto gris oscuro */
+  font-weight: 600;
+  text-align: right; /* Todos alineados a la derecha */
+  padding: 12px 20px; /* Más padding para separar columnas */
+  border-bottom: 2px solid #E5E7EB;
+  border-right: 1px solid #F3F4F6; /* Separador de columnas */
+  white-space: nowrap;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.results-table thead th:first-child {
+  text-align: left; /* Solo el Partido a la izquierda */
+}
+
+.results-table thead th:last-child {
+  border-right: none; /* Sin borde en la última columna */
+}
+
+/* Sin estilos especiales para col-total - todo igual */
+
+/* PORCENTAJE DE ESCAÑOS (en gris, entre paréntesis) */
+.percent-escanos {
+  color: #9CA3AF; /* Gris para notas */
+  font-size: 13px;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* NOTA AL PIE - DEBAJO DE LA TABLA */
+.results-table-footnote {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #6B7280; /* Gris medio */
+  text-align: left;
+  font-style: italic;
+  margin-top: 8px; /* Separación de la tabla */
+}
+
+/* BODY - Blanco puro con números alineados */
+.results-table tbody tr {
+  border-bottom: 1px solid #F3F4F6;
+  transition: background-color 0.2s ease;
+  background: #FFFFFF; /* Fondo blanco puro */
+}
+
+.results-table tbody tr:hover {
+  background-color: #FAFAFA; /* Hover muy sutil */
+}
+
+.results-table tbody td {
+  padding: 12px 20px; /* Más padding para separar columnas */
+  color: #374151;
+  border-right: 1px solid #F3F4F6; /* Separador de columnas */
+}
+
+.results-table tbody td:last-child {
+  border-right: none; /* Sin borde en la última columna */
+}
+
+.results-table tbody td.col-mr,
+.results-table tbody td.col-pm,
+.results-table tbody td.col-rp,
+.results-table tbody td.col-total {
+  text-align: right; /* Todos los números alineados a la derecha */
+  font-variant-numeric: tabular-nums;
+  color: #374151; /* Mismo color que el texto normal */
+  font-weight: 500;
+}
+
+/* Sin estilos especiales para col-total - todo blanco */
+
+/* PARTIDO CELL */
+.partido-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.partido-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%; /* Círculo perfecto como las bolitas del seat chart */
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Sombra sutil como en el seat chart */
+}
+
+.partido-nombre {
+  font-weight: 500;
+}
+
+/* FOOTER (TOTALES) - Números alineados */
+.results-table tfoot tr {
+  background: #FFFFFF; /* Fondo blanco */
+  border-top: 2px solid #E5E7EB;
+}
+
+.results-table tfoot td {
+  padding: 12px 20px; /* Más padding para separar columnas */
+  font-weight: 600;
+  color: #374151;
+  text-align: right; /* Todos alineados a la derecha */
+  border-right: 1px solid #F3F4F6; /* Separador de columnas */
+}
+
+.results-table tfoot td:first-child {
+  text-align: left; /* Solo "TOTAL" a la izquierda */
+}
+
+.results-table tfoot td:last-child {
+  border-right: none; /* Sin borde en la última columna */
+}
+
+/* Sin estilos especiales para col-total - todo blanco */
+
+/* OCULTAR COLUMNAS SEGÚN SISTEMA */
+.results-table th[data-system-column].hidden,
+.results-table td[data-system-column].hidden {
+  display: none;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .results-table-container {
+    padding: 16px;
+    margin: 16px 0;
+  }
+  
+  .results-table {
+    font-size: 13px;
+  }
+  
+  .results-table thead th,
+  .results-table tbody td,
+  .results-table tfoot td {
+    padding: 8px 12px;
+  }
+  
+  .partido-color {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .results-table {
+    font-size: 12px;
+  }
+  
+  .results-table thead th,
+  .results-table tbody td,
+  .results-table tfoot td {
+    padding: 6px 8px;
+  }
+  
+  .partido-cell {
+    gap: 6px;
+  }
+}
+
+/* ESTADOS ESPECIALES */
+.results-table-container.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.results-table-container.empty {
+  display: none;
+}
+
+/* ANIMACIÓN DE CARGA */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.results-table tbody tr {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.results-table tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.results-table tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.results-table tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.results-table tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.results-table tbody tr:nth-child(5) { animation-delay: 0.25s; }
+.results-table tbody tr:nth-child(6) { animation-delay: 0.3s; }
+.results-table tbody tr:nth-child(7) { animation-delay: 0.35s; }
+.results-table tbody tr:nth-child(8) { animation-delay: 0.4s; }

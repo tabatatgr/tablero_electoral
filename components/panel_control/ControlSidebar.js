@@ -1414,9 +1414,21 @@ initializeSidebarControls() {
       this.updateKPIs(result.kpis);
     }
     
-    // Actualizar tabla de resultados detallados si existe
-    if (result.resultados_detalle) {
-      this.updateResultsTable(result.resultados_detalle);
+    // 🆕 ACTUALIZAR TABLA DE RESULTADOS INTELIGENTE
+    // Usar requestAnimationFrame para asegurar que el SeatChart se haya renderizado
+    if (result.resultados_detalle || result.seat_chart) {
+      const resultadosTabla = result.resultados_detalle || this.transformSeatChartToTable(result.seat_chart);
+      
+      const config = {
+        sistema: this.getActiveSystem(),
+        pm_activo: this.isPMActive()
+      };
+      
+      // Esperar al próximo frame para que el SeatChart haya actualizado el DOM
+      requestAnimationFrame(() => {
+        console.log('[DEBUG] 🎯 Actualizando tabla después de render del SeatChart');
+        this.updateResultsTable(resultadosTabla, config);
+      });
     }
     
     // Actualizar la notificación de usuario (si existe) a Listo cuando lleguen resultados
@@ -1564,10 +1576,361 @@ initializeSidebarControls() {
   }
   
   
-  updateResultsTable(resultados) {
-    // Crear o actualizar tabla de resultados por partido si no existe
-    // Este método se puede expandir según necesidades específicas
-    console.log('[DEBUG] Resultados por partido:', resultados);
+  updateResultsTable(resultados, config = {}) {
+    console.log('[DEBUG] 📊 Actualizando tabla de resultados:', resultados);
+    console.log('[DEBUG] 📊 Config:', config);
+    
+    // Función para inyectar la tabla
+    const injectTable = () => {
+      const container = document.getElementById('results-table-container');
+      
+      console.log('[DEBUG] 📊 Contenedor encontrado:', !!container, container);
+      
+      if (!container) {
+        console.error('[ERROR] ❌ Contenedor #results-table-container NO ENCONTRADO en el DOM');
+        console.log('[DEBUG] Seat chart element:', document.querySelector('seat-chart'));
+        return false;
+      }
+      
+      // Si no hay datos, limpiar contenedor
+      if (!resultados || resultados.length === 0) {
+        console.warn('[WARN] No hay datos para mostrar en la tabla');
+        container.innerHTML = '<p style="text-align:center;color:#9CA3AF;padding:20px;">No hay datos disponibles</p>';
+        return true;
+      }
+      
+      console.log('[DEBUG] ✅ Hay datos para mostrar, generando tabla...');
+      
+      // 🔍 DETECTAR SI HAY DESGLOSE MR/PM/RP
+      const tieneDesglose = resultados.some(r => r.mr > 0 || r.pm > 0 || r.rp > 0);
+      console.log('[DEBUG] 🔍 ¿Tiene desglose MR/PM/RP?', tieneDesglose);
+      
+      // 1️⃣ DETERMINAR QUÉ COLUMNAS MOSTRAR
+      const sistema = config.sistema || this.getActiveSystem();
+      const pmActivo = config.pm_activo || this.isPMActive();
+      
+      let columnsConfig;
+      
+      if (!tieneDesglose) {
+        // 🚫 Sin desglose: Solo mostrar Partido y Total
+        console.log('[DEBUG] 🚫 Backend no envía desglose, mostrando solo Partido y Total');
+        columnsConfig = {
+          partido: true,
+          mr: false,
+          pm: false,
+          rp: false,
+          total: true
+        };
+      } else {
+        // ✅ Con desglose: Mostrar según sistema electoral
+        columnsConfig = this.getTableColumnsConfig(sistema, pmActivo);
+      }
+      
+      // 2️⃣ GENERAR HEADER
+      const thead = this.generateTableHeader(columnsConfig);
+      
+      // 3️⃣ GENERAR BODY
+      const tbody = this.generateTableBody(resultados, columnsConfig);
+      
+      // 4️⃣ GENERAR FOOTER (TOTALES)
+      const tfoot = this.generateTableFooter(resultados, columnsConfig);
+      
+      // 5️⃣ CREAR TABLA COMPLETA CON TÍTULO INTEGRADO + NOTA AL PIE FUERA
+      const tableHTML = `
+        <div class="results-table-wrapper">
+          <div class="results-table-title">Resultados por Partido</div>
+          <table id="results-table" class="results-table">
+            ${thead}
+            ${tbody}
+            ${tfoot}
+          </table>
+          <div class="results-table-footnote">*Porcentaje de escaños</div>
+        </div>
+      `;
+      
+      container.innerHTML = tableHTML;
+      
+      console.log('[DEBUG] ✅ Tabla actualizada con config:', columnsConfig);
+      return true;
+    };
+    
+    // Intentar inyectar inmediatamente (por si el contenedor ya existe)
+    if (!injectTable()) {
+      // Si falla, usar requestAnimationFrame + setTimeout para máxima compatibilidad
+      console.log('[DEBUG] ⏳ Primer intento falló, esperando próximo frame...');
+      requestAnimationFrame(() => {
+        if (!injectTable()) {
+          console.log('[DEBUG] ⏳ Segundo intento falló, esperando 200ms adicionales...');
+          setTimeout(() => {
+            if (!injectTable()) {
+              console.error('[ERROR] ❌ No se pudo inyectar la tabla después de múltiples intentos');
+            }
+          }, 200);
+        }
+      });
+    }
+  }
+  
+  // Determinar configuración de columnas según sistema
+  getTableColumnsConfig(sistema, pmActivo) {
+    const config = {
+      partido: true,  // Siempre visible
+      mr: false,
+      pm: false,
+      rp: false,
+      total: true     // Siempre visible
+    };
+    
+    if (sistema === 'mixto') {
+      config.mr = true;
+      config.rp = true;
+      config.pm = pmActivo;
+    } else if (sistema === 'mr') {
+      config.mr = true;
+      config.pm = pmActivo;
+    } else if (sistema === 'rp') {
+      config.rp = true;
+    }
+    
+    return config;
+  }
+  
+  // Generar header dinámico
+  generateTableHeader(columnsConfig) {
+    let html = '<thead><tr>';
+    html += '<th class="col-partido">Partido</th>';
+    
+    if (columnsConfig.mr) {
+      html += '<th class="col-mr" data-system-column="mr">MR</th>';
+    }
+    
+    if (columnsConfig.pm) {
+      html += '<th class="col-pm" data-system-column="pm">PM</th>';
+    }
+    
+    if (columnsConfig.rp) {
+      html += '<th class="col-rp" data-system-column="rp">RP</th>';
+    }
+    
+    html += '<th class="col-total">Total*</th>'; // ← Asterisco agregado
+    html += '</tr></thead>';
+    
+    return html;
+  }
+  
+  // Generar filas de partidos
+  generateTableBody(resultados, columnsConfig) {
+    let html = '<tbody>';
+    
+    // Calcular total de escaños para porcentajes
+    const totalEscanos = resultados.reduce((sum, p) => sum + (p.total || 0), 0);
+    
+    // Ordenar por total de escaños (mayor a menor)
+    const sorted = [...resultados].sort((a, b) => (b.total || 0) - (a.total || 0));
+    
+    sorted.forEach(partido => {
+      const color = this.getPartyColor(partido.partido);
+      
+      html += `<tr data-partido="${partido.partido}">`;
+      
+      // Columna Partido
+      html += `
+        <td class="partido-cell">
+          <div class="partido-color" style="background-color: ${color};"></div>
+          <span class="partido-nombre">${partido.partido}</span>
+        </td>
+      `;
+      
+      // Columna MR
+      if (columnsConfig.mr) {
+        const mrValue = partido.mr || 0;
+        html += `<td class="col-mr" data-system-column="mr">${mrValue}</td>`;
+      }
+      
+      // Columna PM
+      if (columnsConfig.pm) {
+        const pmValue = partido.pm || 0;
+        html += `<td class="col-pm" data-system-column="pm">${pmValue}</td>`;
+      }
+      
+      // Columna RP
+      if (columnsConfig.rp) {
+        const rpValue = partido.rp || 0;
+        html += `<td class="col-rp" data-system-column="rp">${rpValue}</td>`;
+      }
+      
+      // Columna Total con porcentaje
+      const total = partido.total || 0;
+      const percentEscanos = totalEscanos > 0 ? ((total / totalEscanos) * 100).toFixed(1) : 0;
+      
+      html += `<td class="col-total">
+        <strong>${total}</strong> 
+        <span class="percent-escanos">(${percentEscanos}%)</span>
+      </td>`;
+      
+      html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    return html;
+  }
+  
+  // Generar footer con totales
+  generateTableFooter(resultados, columnsConfig) {
+    let html = '<tfoot><tr class="totals-row">';
+    
+    html += '<td class="partido-cell"><strong>TOTAL</strong></td>';
+    
+    // Total MR
+    if (columnsConfig.mr) {
+      const totalMR = resultados.reduce((sum, p) => sum + (p.mr || 0), 0);
+      html += `<td class="col-mr" data-system-column="mr"><strong>${totalMR}</strong></td>`;
+    }
+    
+    // Total PM
+    if (columnsConfig.pm) {
+      const totalPM = resultados.reduce((sum, p) => sum + (p.pm || 0), 0);
+      html += `<td class="col-pm" data-system-column="pm"><strong>${totalPM}</strong></td>`;
+    }
+    
+    // Total RP
+    if (columnsConfig.rp) {
+      const totalRP = resultados.reduce((sum, p) => sum + (p.rp || 0), 0);
+      html += `<td class="col-rp" data-system-column="rp"><strong>${totalRP}</strong></td>`;
+    }
+    
+    // Total General con 100%
+    const totalGeneral = resultados.reduce((sum, p) => sum + (p.total || 0), 0);
+    html += `<td class="col-total">
+      <strong>${totalGeneral}</strong> 
+      <span class="percent-escanos">(100%)</span>
+    </td>`;
+    
+    html += '</tr></tfoot>';
+    
+    return html;
+  }
+  
+  // Helpers
+  getActiveSystem() {
+    const selectedRadio = document.querySelector('input[name="electoral-rule"]:checked');
+    return selectedRadio ? selectedRadio.value : 'mixto';
+  }
+  
+  isPMActive() {
+    const pmSwitch = document.getElementById('first-minority-switch');
+    return pmSwitch && pmSwitch.getAttribute('data-switch') === 'On';
+  }
+  
+  getPartyColor(partido) {
+    // 1️⃣ PRIMERO: Intentar obtener desde el cache actualizado (más reciente)
+    if (this._cachedColors && this._cachedColors[partido]) {
+      console.log(`[DEBUG] 🎨 Color de ${partido} desde CACHE: ${this._cachedColors[partido]}`);
+      return this._cachedColors[partido];
+    }
+    
+    // 2️⃣ Intentar obtener color desde el último seat_chart (viene del backend)
+    if (this.lastResult && this.lastResult.seat_chart) {
+      const partidoEnSeatChart = this.lastResult.seat_chart.find(
+        p => (p.partido || p.party) === partido
+      );
+      if (partidoEnSeatChart && partidoEnSeatChart.color) {
+        console.log(`[DEBUG] 🎨 Color de ${partido} desde lastResult.seat_chart: ${partidoEnSeatChart.color}`);
+        return partidoEnSeatChart.color;
+      }
+    }
+    
+    // 3️⃣ Intentar obtener desde debugLastResponse (fallback)
+    if (this.debugLastResponse && this.debugLastResponse.seat_chart) {
+      const partidoEnDebug = this.debugLastResponse.seat_chart.find(
+        p => (p.partido || p.party) === partido
+      );
+      if (partidoEnDebug && partidoEnDebug.color) {
+        console.log(`[DEBUG] 🎨 Color de ${partido} desde debugLastResponse: ${partidoEnDebug.color}`);
+        return partidoEnDebug.color;
+      }
+    }
+    
+    // 4️⃣ Buscar en el seat-chart del DOM (último recurso antes de fallback)
+    const seatChartElement = document.querySelector('seat-chart');
+    if (seatChartElement && seatChartElement._data) {
+      const partidoEnDOM = seatChartElement._data.find(
+        p => (p.partido || p.party) === partido
+      );
+      if (partidoEnDOM && partidoEnDOM.color) {
+        console.log(`[DEBUG] 🎨 Color de ${partido} desde seat-chart DOM: ${partidoEnDOM.color}`);
+        return partidoEnDOM.color;
+      }
+    }
+    
+    // 5️⃣ Colores de fallback (solo si no viene del backend)
+    const coloresFallback = {
+      'MORENA': '#8B2231',
+      'PAN': '#003DA5',
+      'PRI': '#E31921',
+      'MC': '#F58025',
+      'PVEM': '#1E9F00',
+      'PT': '#D52B1E',
+      'PRD': '#FFD700',
+      'PES': '#5E1D89',
+      'RSP': '#00A19B',
+      'FXM': '#8B4513'
+    };
+    
+    const colorFinal = coloresFallback[partido] || '#6B7280';
+    console.log(`[DEBUG] 🎨 Color de ${partido} desde fallback: ${colorFinal}`);
+    return colorFinal;
+  }
+  
+  // Transformar seat_chart a formato tabla
+  transformSeatChartToTable(seatChart) {
+    console.log('[DEBUG] 🔄 Transformando seat_chart a tabla:', seatChart);
+    
+    if (!Array.isArray(seatChart)) {
+      console.warn('[WARN] seat_chart no es un array:', typeof seatChart);
+      return [];
+    }
+    
+    // 🆕 GUARDAR COLORES DEL BACKEND en cache temporal
+    if (!this._cachedColors) {
+      this._cachedColors = {};
+    }
+    
+    const transformed = seatChart.map(item => {
+      const partidoNombre = item.partido || item.party || 'Sin nombre';
+      
+      // 🔍 DEBUG: Ver TODAS las propiedades del item del backend
+      console.log(`[DEBUG] 📦 Item completo de ${partidoNombre}:`, JSON.stringify(item, null, 2));
+      console.log(`[DEBUG] 🔢 Propiedades disponibles:`, Object.keys(item));
+      
+      // Guardar el color en el cache
+      if (item.color) {
+        this._cachedColors[partidoNombre] = item.color;
+        console.log(`[DEBUG] 🎨 Guardando color de ${partidoNombre}: ${item.color}`);
+      }
+      
+      // 🔍 Intentar múltiples nombres de propiedades
+      const mr = item.mr || item.MR || item.mayoría_relativa || item['mayoría relativa'] || 0;
+      const pm = item.pm || item.PM || item.plurinominales || item.plurinominal || 0;
+      const rp = item.rp || item.RP || item.representación_proporcional || item['representación proporcional'] || 0;
+      const total = item.escaños || item.seats || item.total || item.escanos || 0;
+      const percent = item.percent || item.porcentaje || 0; // ← Guardar porcentaje del backend
+      
+      console.log(`[DEBUG] 📊 ${partidoNombre}: MR=${mr}, PM=${pm}, RP=${rp}, Total=${total}, Percent=${percent}%`);
+      
+      return {
+        partido: partidoNombre,
+        mr: mr,
+        pm: pm,
+        rp: rp,
+        total: total,
+        percent: percent // ← Incluir porcentaje
+      };
+    });
+    
+    console.log('[DEBUG] ✅ Datos transformados:', transformed);
+    console.log('[DEBUG] 🎨 Cache de colores actualizado:', this._cachedColors);
+    return transformed;
   }
   
   showLoadingState(loading) {
