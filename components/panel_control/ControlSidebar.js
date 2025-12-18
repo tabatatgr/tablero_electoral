@@ -69,7 +69,6 @@ export class ControlSidebar extends HTMLElement {
                 <div class="control-item">
                   <label class="control-label">Total de escaños: <span id="input-magnitud-value">128</span></label>
                   <input type="range" class="control-slider" id="input-magnitud" min="1" max="700" step="1" value="128">
-                  <div id="magnitud-note" class="parameter-note" style="display:none; color:#6b7280; margin-top:6px; font-size:0.9em;">Nota: en sistemas de Mayoría Relativa (MR) el número de escaños asignables está limitado por la cantidad de distritos; no puedes asignar más escaños por MR que distritos disponibles. Ajusta la magnitud o la distribución según corresponda.</div>
                 </div>
               </div>
             </div>
@@ -448,6 +447,15 @@ initializeSidebarControls() {
           }
         }
         
+        //  ACTUALIZAR LÍMITES DE PM AL CAMBIAR CÁMARA
+        // Necesitamos esperar a que updateFirstMinorityLimits esté definida
+        setTimeout(() => {
+          if (typeof updateFirstMinorityLimits === 'function') {
+            updateFirstMinorityLimits();
+            console.log(`[PM LIMITS] Límites actualizados tras cambio de cámara a ${selectedChamber}`);
+          }
+        }, 100);
+        
         //  LLAMAR ACTUALIZACIÓN CUANDO CAMBIE CÁMARA
         if (typeof window.actualizarDesdeControles === 'function') {
           window.actualizarDesdeControles();
@@ -594,6 +602,14 @@ initializeSidebarControls() {
     if (magnitudeSlider && magnitudeValue) {
       magnitudeSlider.addEventListener('input', function() {
         magnitudeValue.textContent = this.value;
+        
+        //  ACTUALIZAR LÍMITES DE PM AL CAMBIAR MAGNITUD
+        setTimeout(() => {
+          if (typeof updateFirstMinorityLimits === 'function') {
+            updateFirstMinorityLimits();
+            console.log(`[PM LIMITS] Límites actualizados tras cambio de magnitud: ${this.value}`);
+          }
+        }, 100);
       });
       magnitudeValue.textContent = magnitudeSlider.value;
     }
@@ -736,6 +752,7 @@ initializeSidebarControls() {
       const magnitudTotal = getMagnitudTotal();
       const minValue = Math.max(1, Math.floor(magnitudTotal * 0.1));
       const maxValue = magnitudTotal - minValue;
+      console.log(`[MAGNITUD DEBUG] updateSliderLimits llamado - Magnitud: ${magnitudTotal}, allowAdjust: ${allowAdjust}`);
       
       if (mrSlider) {
         // Determinar tope según cámara: 300 para diputados, 64 para senadores
@@ -771,20 +788,68 @@ initializeSidebarControls() {
           // Auto-ajustar manteniendo proporciones
           const proporcionMr = mrActual / (mrActual + rpActual);
           const nuevoMr = Math.round(magnitudTotal * proporcionMr);
+          console.log(`[MAGNITUD DEBUG] Auto-ajustando MR/RP - Magnitud: ${magnitudTotal}, MR: ${mrActual}→${nuevoMr}, RP: ${rpActual}→${magnitudTotal - nuevoMr}`);
           handleMrChange(nuevoMr);
         } else {
           // No ajustar valores automáticamente, solo actualizar la validación visual
           updateValidation();
-          console.log('[DEBUG] updateSliderLimits: cambio de magnitud detectado pero allowAdjust=false → no se reescriben valores');
+          console.log(`[MAGNITUD DEBUG] No auto-ajustando - Magnitud: ${magnitudTotal}, MR: ${mrActual}, RP: ${rpActual} (allowAdjust=false)`);
         }
+      } else {
+        console.log(`[MAGNITUD DEBUG] MR+RP ya suma magnitud total (${magnitudTotal}) - sin cambios`);
       }
       
       //  VALIDAR PRIMERA MINORÍA TRAS CAMBIOS DE MAGNITUD
       updateFirstMinorityLimits();
     };
     
-    //  Función para validar límites de Primera Minoría
-    const updateFirstMinorityLimits = () => {
+    //  Función para obtener límites de PM desde el backend
+    const fetchPMLimitsFromBackend = async () => {
+      try {
+        const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
+        const magnitudTotal = getMagnitudTotal();
+        
+        // Determinar sistema según distribución MR/RP
+        let sistema = 'mixto';
+        if (mrActual === magnitudTotal) {
+          sistema = 'mr';
+        } else if (mrActual === 0) {
+          sistema = 'rp';
+        }
+        
+        const url = `https://back-electoral.onrender.com/calcular-limites-pm?sistema=${sistema}&escanos_totales=${magnitudTotal}&mr_seats=${mrActual}`;
+        console.log(`[PM LIMITS] Consultando backend: ${url}`);
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Backend error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`[PM LIMITS] Respuesta backend:`, data);
+        
+        return {
+          max_pm: data.max_pm || 0,
+          valido: data.valido !== false,
+          descripcion: data.descripcion || '',
+          sistema: sistema
+        };
+      } catch (error) {
+        console.error(`[PM LIMITS] Error consultando backend:`, error);
+        // Fallback: cálculo local si backend falla
+        const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
+        const magnitudTotal = getMagnitudTotal();
+        return {
+          max_pm: Math.min(mrActual, magnitudTotal),
+          valido: mrActual > 0,
+          descripcion: 'Calculado localmente (backend no disponible)',
+          sistema: mrActual === magnitudTotal ? 'mr' : (mrActual === 0 ? 'rp' : 'mixto')
+        };
+      }
+    };
+    
+    //  Función para validar límites de Primera Minoría con backend
+    const updateFirstMinorityLimits = async () => {
       const firstMinoritySlider = document.getElementById('input-first-minority');
       const firstMinorityValue = document.getElementById('input-first-minority-value');
       const firstMinorityWarning = document.getElementById('first-minority-warning');
@@ -793,9 +858,28 @@ initializeSidebarControls() {
         const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
         const magnitudTotal = getMagnitudTotal();
         
-        // El máximo de primera minoría no puede superar escaños MR
-        const maxFirstMinority = Math.min(mrActual, magnitudTotal);
+        // Obtener límites desde el backend
+        const limits = await fetchPMLimitsFromBackend();
+        const maxFirstMinority = limits.max_pm;
+        
+        // Actualizar max del slider
         firstMinoritySlider.max = maxFirstMinority;
+        
+        // Deshabilitar slider si PM no es válido para este sistema
+        if (!limits.valido || maxFirstMinority === 0) {
+          firstMinoritySlider.disabled = true;
+          firstMinoritySlider.value = 0;
+          firstMinorityValue.textContent = '0';
+          if (firstMinorityWarning) {
+            firstMinorityWarning.innerHTML = `PM no disponible en sistema ${limits.sistema.toUpperCase()}`;
+            firstMinorityWarning.style.display = 'block';
+            firstMinorityWarning.style.color = '#EF4444';
+          }
+          console.log(`[PM LIMITS] Primera Minoría deshabilitada: ${limits.descripcion}`);
+          return;
+        } else {
+          firstMinoritySlider.disabled = false;
+        }
         
         // Si el valor actual supera el nuevo límite, ajustarlo
         const currentFirstMinority = parseInt(firstMinoritySlider.value);
@@ -818,19 +902,21 @@ initializeSidebarControls() {
           const percentageOfMr = mrActual > 0 ? Math.round((finalFirstMinority / mrActual) * 100) : 0;
           
           if (finalFirstMinority >= maxFirstMinority * 0.8 && maxFirstMinority > 0) {
-            firstMinorityWarning.innerHTML = `Límite: máx ${maxFirstMinority} escaños (MR disponibles)`;
+            firstMinorityWarning.innerHTML = `Límite: máx ${maxFirstMinority} escaños - ${limits.descripcion}`;
             firstMinorityWarning.style.display = 'block';
             firstMinorityWarning.style.color = '#f59e0b';
           } else if (finalFirstMinority > 0) {
-            firstMinorityWarning.innerHTML = `${percentageOfMr}% de escaños MR (${finalFirstMinority}/${mrActual})`;
+            firstMinorityWarning.innerHTML = `${percentageOfMr}% de escaños MR (${finalFirstMinority}/${mrActual}) - ${limits.sistema}`;
             firstMinorityWarning.style.display = 'block';
             firstMinorityWarning.style.color = '#6B7280';
           } else {
-            firstMinorityWarning.style.display = 'none';
+            firstMinorityWarning.innerHTML = `${limits.descripcion}`;
+            firstMinorityWarning.style.display = 'block';
+            firstMinorityWarning.style.color = '#9CA3AF';
           }
         }
         
-        console.log(` Primera Minoría - Límite actualizado: max ${maxFirstMinority} (MR: ${mrActual}, Total: ${magnitudTotal})`);
+        console.log(`[PM LIMITS] Límite actualizado: max ${maxFirstMinority} | Sistema: ${limits.sistema} | ${limits.descripcion}`);
       }
     };
     
@@ -1030,9 +1116,8 @@ initializeSidebarControls() {
                 mixtoInputs.style.display = this.value === 'mixto' ? 'block' : 'none';
               }
               
-              // Controlar visibilidad de Primera Minoría y nota de magnitud según sistema electoral
+              // Controlar visibilidad de Primera Minoría según sistema electoral
               const firstMinorityGroup = document.getElementById('first-minority-group');
-              const magnitudNote = document.getElementById('magnitud-note');
               const showForMrOrMixto = this.value === 'mr' || this.value === 'mixto';
               if (firstMinorityGroup) {
                 firstMinorityGroup.style.display = showForMrOrMixto ? 'block' : 'none';
@@ -1045,10 +1130,14 @@ initializeSidebarControls() {
                     console.log(' Primera Minoría desactivada automáticamente');
                   }
                 }
-              }
-              // Mostrar nota explicativa de magnitud sólo si MR o Mixto
-              if (magnitudNote) {
-                magnitudNote.style.display = showForMrOrMixto ? 'block' : 'none';
+                
+                //  ACTUALIZAR LÍMITES DE PM AL CAMBIAR SISTEMA ELECTORAL
+                setTimeout(() => {
+                  if (typeof updateFirstMinorityLimits === 'function') {
+                    updateFirstMinorityLimits();
+                    console.log(`[PM LIMITS] Límites actualizados tras cambio de sistema electoral: ${this.value}`);
+                  }
+                }, 100);
               }
               
               // Controlar visibilidad de Sobrerrepresentación según sistema electoral
@@ -1253,13 +1342,19 @@ initializeSidebarControls() {
             const camara = activeChamber.getAttribute('data-chamber');
             
             if (isActive) {
-              // Coaliciones activadas: cambiar a 2024
-              yearSelect.value = '2024';
-              console.log('[DEBUG]  Coaliciones activadas: cambiando a año 2024 para', camara);
+              // Coaliciones activadas: sugerir 2024 si está en año sin coaliciones
+              // Pero respetar la elección del usuario
+              const currentYear = parseInt(yearSelect.value);
+              if (currentYear < 2024) {
+                yearSelect.value = '2024';
+                console.log('[DEBUG]  Coaliciones activadas: cambiando a año 2024 (año previo no tenía coaliciones)');
+              } else {
+                console.log('[DEBUG]  Coaliciones activadas: manteniendo año actual', currentYear);
+              }
             } else {
-              // Coaliciones desactivadas: cambiar a 2018
-              yearSelect.value = '2018';
-              console.log('[DEBUG]  Coaliciones desactivadas: cambiando a año 2018 para', camara);
+              // Coaliciones desactivadas: RESPETAR elección del usuario
+              // No forzar cambio de año automáticamente
+              console.log('[DEBUG]  Coaliciones desactivadas: manteniendo año', yearSelect.value);
             }
             
             // Trigger change event para actualizar la simulación
