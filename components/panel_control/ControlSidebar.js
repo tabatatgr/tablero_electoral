@@ -807,18 +807,26 @@ initializeSidebarControls() {
     const fetchPMLimitsFromBackend = async () => {
       try {
         const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
+        const rpActual = parseInt(rpSlider ? rpSlider.value : 64);
         const magnitudTotal = getMagnitudTotal();
         
-        // Determinar sistema según distribución MR/RP
-        let sistema = 'mixto';
-        if (mrActual === magnitudTotal) {
-          sistema = 'mr';
-        } else if (mrActual === 0) {
-          sistema = 'rp';
+        // Determinar sistema según RADIO BUTTON seleccionado (más confiable)
+        const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+        let sistema = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        
+        // Si no hay radio button, inferir desde distribución MR/RP
+        if (!selectedElectoralRule) {
+          if (mrActual === magnitudTotal) {
+            sistema = 'mr';
+          } else if (mrActual === 0 || rpActual === magnitudTotal) {
+            sistema = 'rp';
+          } else {
+            sistema = 'mixto';
+          }
         }
         
         const url = `https://back-electoral.onrender.com/calcular-limites-pm?sistema=${sistema}&escanos_totales=${magnitudTotal}&mr_seats=${mrActual}`;
-        console.log(`[PM LIMITS] Consultando backend: ${url}`);
+        console.log(`[PM LIMITS] Consultando backend: ${url} (sistema detectado: ${sistema})`);
         
         const response = await fetch(url);
         if (!response.ok) {
@@ -839,11 +847,26 @@ initializeSidebarControls() {
         // Fallback: cálculo local si backend falla
         const mrActual = parseInt(mrSlider ? mrSlider.value : 64);
         const magnitudTotal = getMagnitudTotal();
+        
+        // Determinar sistema para fallback
+        const selectedElectoralRule = document.querySelector('input[name="electoral-rule"]:checked');
+        let sistema = selectedElectoralRule ? selectedElectoralRule.value : 'mixto';
+        
+        // Calcular max_pm según sistema
+        let max_pm_fallback = 0;
+        if (sistema === 'mr') {
+          max_pm_fallback = magnitudTotal; // En MR puro, PM puede ser hasta el total
+        } else if (sistema === 'mixto') {
+          max_pm_fallback = mrActual; // En mixto, PM limitado por MR
+        } else {
+          max_pm_fallback = 0; // En RP, PM no válido
+        }
+        
         return {
-          max_pm: Math.min(mrActual, magnitudTotal),
-          valido: mrActual > 0,
+          max_pm: max_pm_fallback,
+          valido: sistema !== 'rp',
           descripcion: 'Calculado localmente (backend no disponible)',
-          sistema: mrActual === magnitudTotal ? 'mr' : (mrActual === 0 ? 'rp' : 'mixto')
+          sistema: sistema
         };
       }
     };
