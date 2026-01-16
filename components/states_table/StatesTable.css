@@ -1,0 +1,200 @@
+/* ========================================
+   TABLA DE DISTRITOS POR ESTADO
+   Muestra distribución geográfica de distritos MR
+   ======================================== */
+
+/* Wrapper que contiene el título + tabla */
+.states-table-wrapper {
+  width: 100%;
+  margin: 24px 0 0 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Título de la tabla */
+.states-table-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 16px;
+  font-family: 'Noto Sans', sans-serif;
+  text-align: center;
+  padding: 0;
+  border: none;
+}
+
+/* Contenedor de la tabla (para scroll horizontal) */
+.states-table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.states-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  margin-top: 16px;
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  border: 1px solid #F3F4F6;
+}
+
+/* HEADER - Diseño minimalista blanco */
+.states-table thead th {
+  background: #FFFFFF;
+  color: #374151;
+  font-weight: 600;
+  text-align: center; /* Estados y partidos centrados */
+  padding: 12px 20px;
+  border-bottom: 2px solid #E5E7EB;
+  border-right: 1px solid #F3F4F6;
+  white-space: nowrap;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.states-table thead th:first-child {
+  text-align: left; /* Solo el Estado a la izquierda */
+}
+
+.states-table thead th:last-child {
+  border-right: none;
+}
+
+/* Columna de Total Distritos con fondo sutil */
+.states-table thead th.col-total-distritos {
+  background: #F9FAFB;
+  font-weight: 700;
+}
+
+/* BODY - Blanco puro con números centrados */
+.states-table tbody tr {
+  border-bottom: 1px solid #F3F4F6;
+  transition: background-color 0.2s ease;
+  background: #FFFFFF;
+}
+
+.states-table tbody tr:hover {
+  background-color: #FAFAFA;
+}
+
+.states-table tbody td {
+  padding: 10px 16px;
+  color: #374151;
+  text-align: center; /* Números centrados */
+  border-right: 1px solid #F3F4F6;
+  font-variant-numeric: tabular-nums;
+}
+
+.states-table tbody td:first-child {
+  text-align: left; /* Solo el nombre del estado a la izquierda */
+  font-weight: 500;
+}
+
+.states-table tbody td:last-child {
+  border-right: none;
+}
+
+/* Columna de Total Distritos */
+.states-table tbody td.col-total-distritos {
+  background: #F9FAFB;
+  font-weight: 600;
+}
+
+/* Celdas vacías (sin distritos) */
+.states-table tbody td.empty-cell {
+  color: #D1D5DB;
+}
+
+/* FOOTER (TOTALES) - Números centrados */
+.states-table tfoot tr {
+  background: #FFFFFF;
+  border-top: 2px solid #E5E7EB;
+}
+
+.states-table tfoot td {
+  padding: 12px 20px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center; /* Totales centrados */
+  border-right: 1px solid #F3F4F6;
+}
+
+.states-table tfoot td:first-child {
+  text-align: left; /* Solo "TOTAL" a la izquierda */
+}
+
+.states-table tfoot td:last-child {
+  border-right: none;
+}
+
+.states-table tfoot td.col-total-distritos {
+  background: #F9FAFB;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .states-table-container {
+    padding: 0;
+    margin: 16px 0;
+  }
+  
+  .states-table {
+    font-size: 13px;
+  }
+  
+  .states-table thead th,
+  .states-table tbody td,
+  .states-table tfoot td {
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .states-table {
+    font-size: 12px;
+  }
+  
+  .states-table thead th,
+  .states-table tbody td,
+  .states-table tfoot td {
+    padding: 6px 8px;
+  }
+}
+
+/* ESTADOS ESPECIALES */
+.states-table-wrapper.hidden {
+  display: none;
+}
+
+/* ANIMACIÓN DE CARGA */
+@keyframes fadeInStates {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.states-table tbody tr {
+  animation: fadeInStates 0.3s ease-out;
+}
+
+.states-table tbody tr:nth-child(1) { animation-delay: 0.02s; }
+.states-table tbody tr:nth-child(2) { animation-delay: 0.04s; }
+.states-table tbody tr:nth-child(3) { animation-delay: 0.06s; }
+.states-table tbody tr:nth-child(4) { animation-delay: 0.08s; }
+.states-table tbody tr:nth-child(5) { animation-delay: 0.10s; }
+.states-table tbody tr:nth-child(6) { animation-delay: 0.12s; }
+.states-table tbody tr:nth-child(7) { animation-delay: 0.14s; }
+.states-table tbody tr:nth-child(8) { animation-delay: 0.16s; }
+.states-table tbody tr:nth-child(9) { animation-delay: 0.18s; }
+.states-table tbody tr:nth-child(10) { animation-delay: 0.20s; }

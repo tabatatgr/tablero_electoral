@@ -349,6 +349,35 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
   outline-offset: 2px;
 }
 
+/* 🆕 Toggle pequeño (inline) */
+.toggle-switch-small {
+  width: 36px;
+  height: 20px;
+  display: inline-block;
+  position: relative;
+  background: var(--toggle-bg, #e5e7eb);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.toggle-switch-small.active {
+  background: var(--Green-500, #1e5b4f);
+}
+.switch-handle-small {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+}
+.toggle-switch-small.active .switch-handle-small {
+  transform: translateX(16px);
+}
+
 /* Radio buttons */
 .radio-group {
   display: flex;
@@ -691,4 +720,127 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
   margin-right: 16px;
   line-height: 1.3;
   padding: 0;
+}
+
+/* ========================================
+   🆕 SECCIÓN MAYORÍAS
+   ======================================== */
+
+/* Botón principal de cálculo */
+.btn-primary {
+  width: 100%;
+  padding: 12px 16px;
+  background: #059669; /* Verde oscuro para mayoría */
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+}
+
+.btn-primary:hover {
+  background: #047857; /* Verde más oscuro en hover */
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+}
+
+.btn-primary:disabled {
+  background: #D1D5DB;
+  color: #9CA3AF;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Card de resultado de mayoría */
+.mayoria-resultado-card {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.mayoria-resultado-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.mayoria-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #D1FAE5; /* Verde muy claro */
+  color: #047857; /* Verde oscuro */
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+.mayoria-badge.no-viable {
+  background: #FEE2E2; /* Rojo claro */
+  color: #991B1B; /* Rojo oscuro */
+}
+
+.mayoria-resultado-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mayoria-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6B7280;
+  font-weight: 400;
+}
+
+.stat-value {
+  font-size: 14px;
+  color: #1F2937;
+  font-weight: 600;
+  font-family: 'Noto Sans', sans-serif;
+}
+
+/* Indicador de carga en el botón */
+.btn-primary.loading {
+  pointer-events: none;
+}
+
+.btn-primary.loading::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

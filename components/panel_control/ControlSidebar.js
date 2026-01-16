@@ -280,11 +280,65 @@ export class ControlSidebar extends HTMLElement {
                 </svg>
               </button>
               <div class="group-content" id="group-shocks">
+                <!-- Toggle para editar distribución de votos -->
+                <div class="control-description">
+                  ¿Editar distribución de votos manualmente?
+                </div>
                 <div class="control-item">
+                  <div class="toggle-switch">
+                    <div class="switch" id="custom-votes-switch" data-switch="Off" role="switch" aria-checked="false">
+                      <div class="switch-handle"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="parameter-note" style="margin-top:8px; color:#9CA3AF;">
+                  Activa esto para definir porcentajes de votos personalizados por partido
+                </div>
+                
+                <div class="control-item" style="margin-top:16px;">
                   <div class="party-shock-inputs" id="dynamic-party-sliders">
                     <!-- Los sliders se generarán dinámicamente aquí -->
                   </div>
-                  <div class="parameter-note">Simula cambios en el porcentaje de votos por partido</div>
+                  <div class="parameter-note" id="default-shocks-note">Simula cambios en el porcentaje de votos por partido</div>
+                  <div class="parameter-note" id="custom-votes-note" style="display:none; color:#F59E0B; font-weight:500;">
+                    ⚠️ Modo edición activado: Los porcentajes deben sumar 100%
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 🆕 Ajuste de Distritos por Partido -->
+            <div class="control-group" data-group="mr-districts">
+              <button class="group-toggle" data-target="mr-districts">
+                <span class="group-title">Ajuste de Distritos por Partido</span>
+                <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </button>
+              <div class="group-content" id="group-mr-districts">
+                <!-- Toggle para editar distribución de distritos MR -->
+                <div class="control-description">
+                  ¿Editar distribución de distritos MR manualmente?
+                </div>
+                <div class="control-item">
+                  <div class="toggle-switch">
+                    <div class="switch" id="mr-distribution-switch" data-switch="Off" role="switch" aria-checked="false">
+                      <div class="switch-handle"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="parameter-note" style="margin-top:8px; color:#9CA3AF;">
+                  Activa esto para asignar manualmente los distritos de mayoría relativa ganados por cada partido
+                </div>
+                
+                <div class="control-item" style="margin-top:16px;">
+                  <div class="party-shock-inputs" id="dynamic-mr-district-sliders">
+                    <!-- Los sliders de distritos se generarán dinámicamente aquí -->
+                  </div>
+                  <div class="parameter-note" id="default-mr-note">Asigna manualmente los distritos MR ganados por partido</div>
+                  <div class="parameter-note" id="custom-mr-note" style="display:none; color:#F59E0B; font-weight:500;">
+                    ⚠️ Modo edición activado: Total asignado <span id="mr-assigned-display" style="font-weight:700;">0</span> de <span id="mr-total-display" style="font-weight:700;">300</span> distritos MR
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,6 +359,93 @@ export class ControlSidebar extends HTMLElement {
                   <div class="toggle-switch">
                     <div class="switch active" id="coalition-switch" data-switch="On" role="switch" aria-checked="true">
                       <div class="switch-handle"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 🆕 11. Mayorías (Calculadora de Mayoría Forzada) -->
+            <div class="control-group" data-group="mayorias">
+              <button class="group-toggle" data-target="mayorias">
+                <span class="group-title">Mayorías</span>
+                <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
+                  <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                </svg>
+              </button>
+              <div class="group-content" id="group-mayorias">
+                
+                <!-- Toggle ON/OFF -->
+                <div class="control-item">
+                  <label class="control-label">¿Activar cálculo de mayorías?</label>
+                  <div class="toggle-switch">
+                    <div class="switch" id="mayorias-switch" data-switch="Off" role="switch" aria-checked="false">
+                      <div class="switch-handle"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Controles (solo visibles cuando está ON) -->
+                <div id="mayorias-controls" style="display:none;">
+                  <!-- Tipo de mayoría -->
+                  <div class="control-item">
+                    <label class="control-label">Tipo de mayoría:</label>
+                    <div class="radio-group">
+                      <div class="radio-item">
+                        <input class="radio" type="radio" id="mayoria-simple" name="tipo-mayoria" value="simple" checked>
+                        <label class="radio-label" for="mayoria-simple">
+                          Mayoría Simple
+                          <div class="radio-sublabel">>50% de escaños</div>
+                        </label>
+                      </div>
+                      <div class="radio-item">
+                        <input class="radio" type="radio" id="mayoria-calificada" name="tipo-mayoria" value="calificada">
+                        <label class="radio-label" for="mayoria-calificada">
+                          Mayoría Calificada
+                          <div class="radio-sublabel">≥2/3 de escaños (66.67%)</div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Selección de partido/coalición -->
+                  <div class="control-item">
+                    <label class="control-label">Partido o coalición:</label>
+                    <select class="control-select" id="mayoria-partido-select">
+                      <option value="" disabled selected>Selecciona un partido...</option>
+                      <option value="MORENA">MORENA</option>
+                      <option value="PAN">PAN</option>
+                      <option value="PRI">PRI</option>
+                      <option value="PRD">PRD</option>
+                      <option value="PT">PT</option>
+                      <option value="PVEM">PVEM</option>
+                      <option value="MC">MC</option>
+                      <option value="coalicion" disabled>──────────</option>
+                      <option value="MORENA+PT+PVEM">MORENA + PT + PVEM</option>
+                      <option value="PAN+PRI+PRD">PAN + PRI + PRD</option>
+                    </select>
+                  </div>
+                  
+                  <!-- Resultado del cálculo (oculto inicialmente) -->
+                  <div class="control-item" id="mayoria-resultado" style="display:none;">
+                    <div class="mayoria-resultado-card">
+                      <div class="mayoria-resultado-header">
+                        <span class="mayoria-badge">🟢 Mayoría Alcanzable</span>
+                      </div>
+                      <div class="mayoria-resultado-body">
+                        <div class="mayoria-stat">
+                          <span class="stat-label">Escaños necesarios:</span>
+                          <span class="stat-value" id="escanos-necesarios">—</span>
+                        </div>
+                        <div class="mayoria-stat">
+                          <span class="stat-label">Votos requeridos:</span>
+                          <span class="stat-value" id="votos-requeridos">—</span>
+                        </div>
+                        <div class="mayoria-stat">
+                          <span class="stat-label">Estados/Distritos a ganar:</span>
+                          <span class="stat-value" id="territorios-ganar">—</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -603,6 +744,36 @@ initializeSidebarControls() {
       magnitudeSlider.addEventListener('input', function() {
         magnitudeValue.textContent = this.value;
         
+        // 🆕 AUTO-AJUSTAR MR Y RP al 50/50 cuando cambie magnitud
+        const magnitudTotal = parseInt(this.value);
+        const mitad = Math.floor(magnitudTotal / 2);
+        const otra_mitad = magnitudTotal - mitad; // Para manejar números impares
+        
+        const mrSlider = document.querySelector('#input-mr');
+        const mrValue = document.querySelector('#input-mr-value');
+        const rpSlider = document.querySelector('#input-rp');
+        const rpValue = document.querySelector('#input-rp-value');
+        
+        if (mrSlider && rpSlider && mrValue && rpValue) {
+          mrSlider.value = mitad;
+          mrValue.textContent = mitad;
+          rpSlider.value = otra_mitad;
+          rpValue.textContent = otra_mitad;
+          
+          console.log(`[MAGNITUD] 🔄 Auto-ajuste 50/50: MR=${mitad}, RP=${otra_mitad} (Total=${magnitudTotal})`);
+        }
+        
+        // 🆕 ACTUALIZAR MENSAJE DE VALIDACIÓN INMEDIATAMENTE
+        if (typeof updateValidation === 'function') {
+          updateValidation();
+          console.log(`[MAGNITUD] ✅ Validación actualizada: ${mitad} + ${otra_mitad} = ${magnitudTotal}`);
+        }
+        
+        // Actualizar límites (sin reescribir valores ya que los acabamos de setear)
+        if (typeof updateSliderLimits === 'function') {
+          updateSliderLimits(false);
+        }
+        
         //  ACTUALIZAR LÍMITES DE PM AL CAMBIAR MAGNITUD
         setTimeout(() => {
           if (typeof updateFirstMinorityLimits === 'function') {
@@ -610,6 +781,30 @@ initializeSidebarControls() {
             console.log(`[PM LIMITS] Límites actualizados tras cambio de magnitud: ${this.value}`);
           }
         }, 100);
+        
+        // Actualizar configuración del sistema de redistribución
+        if (window.voteRedistribution) {
+          console.log('[TRACE] ControlSidebar -> setConfig (magnitude input):', {
+            escanos_from_slider: parseInt(this.value),
+            mr_from_slider: mitad,
+            rp_from_slider: otra_mitad
+          });
+          const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+          if (window.controlSidebar) {
+            window.controlSidebar.lastRequestId = reqId;
+            window.controlSidebar.lastRequestParams = {
+              escanos_totales: parseInt(this.value),
+              mr_seats: mitad,
+              rp_seats: otra_mitad
+            };
+          }
+          window.voteRedistribution.setConfig({
+            req_id: reqId,
+            escanos_totales: parseInt(this.value),
+            mr_seats: mitad,
+            rp_seats: otra_mitad
+          });
+        }
       });
       magnitudeValue.textContent = magnitudeSlider.value;
     }
@@ -647,6 +842,14 @@ initializeSidebarControls() {
     const rpValue = this.querySelector('#input-rp-value');
     const validationDiv = this.querySelector('#mixto-validation');
     
+    console.log('[DEBUG] 🔍 Sliders encontrados:', {
+      mrSlider: !!mrSlider,
+      mrValue: !!mrValue,
+      rpSlider: !!rpSlider,
+      rpValue: !!rpValue,
+      validationDiv: !!validationDiv
+    });
+    
     let ultimoModificado = 'mr'; // Track cual slider modificó el usuario
     
     //  Función para obtener magnitud total actual
@@ -676,6 +879,12 @@ initializeSidebarControls() {
       
       //  ACTUALIZAR LÍMITES DE PRIMERA MINORÍA CUANDO CAMBIE MR
       updateFirstMinorityLimits();
+      
+      // 🆕 ACTUALIZAR TOTAL DE DISTRITOS MR EN LA NOTA DE DISTRIBUCIÓN
+      const mrTotalDisplay = document.getElementById('mr-total-display');
+      if (mrTotalDisplay) {
+        mrTotalDisplay.textContent = mrLimitado;
+      }
       
       console.log(` Slider MR: ${nuevoMrNum} → ${mrLimitado}, RP auto-ajustado: ${nuevoRp}`);
       
@@ -825,8 +1034,12 @@ initializeSidebarControls() {
           }
         }
         
-        const url = `https://back-electoral.onrender.com/calcular-limites-pm?sistema=${sistema}&escanos_totales=${magnitudTotal}&mr_seats=${mrActual}`;
-        console.log(`[PM LIMITS] Consultando backend: ${url} (sistema detectado: ${sistema})`);
+        // 🆕 OBTENER CÁMARA ACTUAL
+        const chamberSelect = document.getElementById('chamber-select');
+        const camara = chamberSelect ? chamberSelect.value : 'diputados';
+        
+        const url = `https://back-electoral.onrender.com/calcular-limites-pm?sistema=${sistema}&escanos_totales=${magnitudTotal}&mr_seats=${mrActual}&camara=${camara}`;
+        console.log(`[PM LIMITS] Consultando backend: ${url} (sistema: ${sistema}, cámara: ${camara})`);
         
         const response = await fetch(url);
         if (!response.ok) {
@@ -919,23 +1132,18 @@ initializeSidebarControls() {
           }
         }
         
-        // Mostrar información de límites
+        // Mostrar SOLO información de cantidad PM/MR (sin advertencias)
         if (firstMinorityWarning) {
           const finalFirstMinority = parseInt(firstMinoritySlider.value);
           const percentageOfMr = mrActual > 0 ? Math.round((finalFirstMinority / mrActual) * 100) : 0;
           
-          if (finalFirstMinority >= maxFirstMinority * 0.8 && maxFirstMinority > 0) {
-            firstMinorityWarning.innerHTML = `Límite: máx ${maxFirstMinority} escaños - ${limits.descripcion}`;
+          // Solo mostrar si PM > 0, sino ocultar
+          if (finalFirstMinority > 0 && mrActual > 0) {
+            firstMinorityWarning.innerHTML = `${percentageOfMr}% de MR (${finalFirstMinority}/${mrActual})`;
             firstMinorityWarning.style.display = 'block';
-            firstMinorityWarning.style.color = '#f59e0b';
-          } else if (finalFirstMinority > 0) {
-            firstMinorityWarning.innerHTML = `${percentageOfMr}% de escaños MR (${finalFirstMinority}/${mrActual}) - ${limits.sistema}`;
-            firstMinorityWarning.style.display = 'block';
-            firstMinorityWarning.style.color = '#6B7280';
+            firstMinorityWarning.style.color = '#6B7280'; // Color gris neutro
           } else {
-            firstMinorityWarning.innerHTML = `${limits.descripcion}`;
-            firstMinorityWarning.style.display = 'block';
-            firstMinorityWarning.style.color = '#9CA3AF';
+            firstMinorityWarning.style.display = 'none'; // Ocultar cuando PM = 0
           }
         }
         
@@ -945,7 +1153,9 @@ initializeSidebarControls() {
     
     // Event listeners para sliders MR/RP - INTEGRADO CON SISTEMA DE REDISTRIBUCIÓN
     if (mrSlider) {
+      console.log('[DEBUG] 🎚️ Registrando event listener para MR slider');
       mrSlider.addEventListener('input', function() {
+        console.log('[DEBUG] 🎚️ MR slider movido a:', this.value);
         // Safety clamp: ensure value never exceeds declared max (cap por cámara)
         try {
           const declaredMax = parseInt(this.max || this.getAttribute('max') || '0', 10);
@@ -993,7 +1203,9 @@ initializeSidebarControls() {
     }
     
     if (rpSlider) {
+      console.log('[DEBUG] 🎚️ Registrando event listener para RP slider');
       rpSlider.addEventListener('input', function() {
+        console.log('[DEBUG] 🎚️ RP slider movido a:', this.value);
         handleRpChange(this.value);
         
         // Actualizar configuración del sistema de redistribución
@@ -1022,38 +1234,6 @@ initializeSidebarControls() {
       });
       // Inicializar valor
       rpValue.textContent = rpSlider.value;
-    }
-    
-    // Event listener para magnitud - INTEGRADO CON SISTEMA DE REDISTRIBUCIÓN
-    if (magnitudeSlider) {
-      magnitudeSlider.addEventListener('input', function() {
-  // Usuario ajusta magnitud: solo actualizar min/max y validación, NO reescribir valores actuales
-  updateSliderLimits(false);
-        
-        // Actualizar configuración del sistema de redistribución
-        if (window.voteRedistribution) {
-          console.log('[TRACE] ControlSidebar -> setConfig (magnitude input):', {
-            escanos_from_slider: parseInt(this.value),
-            mr_from_slider: parseInt(mrSlider ? mrSlider.value : 64),
-            rp_from_slider: parseInt(rpSlider ? rpSlider.value : 64)
-          });
-          const reqId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-          if (window.controlSidebar) {
-            window.controlSidebar.lastRequestId = reqId;
-            window.controlSidebar.lastRequestParams = {
-              escanos_totales: parseInt(this.value),
-              mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
-              rp_seats: parseInt(rpSlider ? rpSlider.value : 64)
-            };
-          }
-          window.voteRedistribution.setConfig({
-            req_id: reqId,
-            escanos_totales: parseInt(this.value),
-            mr_seats: parseInt(mrSlider ? mrSlider.value : 64),
-            rp_seats: parseInt(rpSlider ? rpSlider.value : 64)
-          });
-        }
-      });
     }
     
   // Inicializar todo
@@ -1113,6 +1293,73 @@ initializeSidebarControls() {
           const inputGroup = document.getElementById('first-minority-input-group');
           if (inputGroup) {
             inputGroup.style.display = isActive ? 'block' : 'none';
+          }
+        }
+        
+        // Custom votes switch - cambiar modo de sliders de partidos
+        if (switchId === 'custom-votes-switch') {
+          const defaultNote = document.getElementById('default-shocks-note');
+          const customNote = document.getElementById('custom-votes-note');
+          
+          if (defaultNote && customNote) {
+            defaultNote.style.display = isActive ? 'none' : 'block';
+            customNote.style.display = isActive ? 'block' : 'none';
+          }
+          
+          console.log(`[CUSTOM VOTES] Modo edición de votos: ${isActive ? 'ACTIVADO' : 'DESACTIVADO'}`);
+          
+          // Actualizar simulación cuando cambia el modo
+          if (typeof window.actualizarDesdeControles === 'function') {
+            setTimeout(() => window.actualizarDesdeControles(), 100);
+          }
+        }
+        
+        // 🆕 MR Distribution switch - mostrar/ocultar y generar sliders
+        if (switchId === 'mr-distribution-switch') {
+          const defaultNote = document.getElementById('default-mr-note');
+          const customNote = document.getElementById('custom-mr-note');
+          const sliderContainer = document.getElementById('dynamic-mr-district-sliders');
+          
+          console.log(`[MR DISTRIBUTION] Distribución manual de distritos MR: ${isActive ? 'ACTIVADA ✅' : 'DESACTIVADA ❌'}`);
+          
+          if (isActive) {
+            // Mostrar nota de modo edición, ocultar nota default
+            if (defaultNote) defaultNote.style.display = 'none';
+            if (customNote) customNote.style.display = 'block';
+            
+            // Generar sliders
+            const sidebar = document.querySelector('control-sidebar');
+            if (sidebar && typeof sidebar.generateMRDistributionSliders === 'function') {
+              sidebar.generateMRDistributionSliders();
+            }
+          } else {
+            // Mostrar nota default, ocultar nota de edición
+            if (defaultNote) defaultNote.style.display = 'block';
+            if (customNote) customNote.style.display = 'none';
+            
+            // Limpiar sliders
+            if (sliderContainer) {
+              sliderContainer.innerHTML = '';
+            }
+            
+            // Limpiar datos
+            console.log('[MR DISTRIBUTION] 🧹 Limpiando distribución manual...');
+            
+            const sidebar = document.querySelector('control-sidebar');
+            if (sidebar) {
+              sidebar.mrDistributionData = null;
+            }
+            
+            // Limpiar variable global
+            window.mrDistributionManual = null;
+            
+            // Recalcular con datos normales
+            if (typeof window.actualizarDesdeControles === 'function') {
+              setTimeout(() => {
+                window.actualizarDesdeControles();
+                console.log('[MR DISTRIBUTION] ✅ Sistema recalculado con distribución automática');
+              }, 100);
+            }
           }
         }
       });
@@ -1397,6 +1644,117 @@ initializeSidebarControls() {
       });
     }
     
+    // 🆕 Event listeners para mayorías automáticas
+    const mayoriasSwitch = this.querySelector('#mayorias-switch');
+    const mayoriasControls = document.getElementById('mayorias-controls');
+    
+    if (mayoriasSwitch) {
+      // Toggle para mostrar/ocultar controles
+      mayoriasSwitch.addEventListener('click', () => {
+        setTimeout(() => {
+          const isActive = mayoriasSwitch.classList.contains('active');
+          if (mayoriasControls) {
+            mayoriasControls.style.display = isActive ? 'block' : 'none';
+          }
+          
+          // Si se activa, calcular inmediatamente
+          if (isActive) {
+            this.calcularMayoriaAutomatica();
+          } else {
+            // 🔄 Si se desactiva, limpiar datos de mayoría forzada
+            console.log('[MAYORÍAS] ❌ Toggle desactivado - limpiando datos de mayoría forzada');
+            window.mayoriaForzadaData = null;
+            
+            // Ocultar resultado visual
+            const resultadoDiv = document.getElementById('mayoria-resultado');
+            if (resultadoDiv) {
+              resultadoDiv.style.display = 'none';
+            }
+            
+            // 🔄 Actualizar sistema para volver a datos normales
+            if (typeof window.actualizarDesdeControles === 'function') {
+              console.log('[MAYORÍAS] 🔄 Recalculando con datos normales...');
+              setTimeout(() => {
+                window.actualizarDesdeControles();
+                
+                if (window.notifications && window.notifications.isReady) {
+                  window.notifications.info(
+                    'Mayoría forzada desactivada',
+                    'Mostrando resultados normales',
+                    3000
+                  );
+                }
+              }, 100);
+            }
+          }
+        }, 10);
+      });
+    }
+    
+    // Event listeners para recalcular cuando cambien los controles
+    const tipoMayoriaRadios = this.querySelectorAll('input[name="tipo-mayoria"]');
+    tipoMayoriaRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        if (mayoriasSwitch && mayoriasSwitch.classList.contains('active')) {
+          this.calcularMayoriaAutomatica();
+        }
+      });
+    });
+    
+    const partidoSelect = this.querySelector('#mayoria-partido-select');
+    if (partidoSelect) {
+      partidoSelect.addEventListener('change', () => {
+        if (mayoriasSwitch && mayoriasSwitch.classList.contains('active')) {
+          this.calcularMayoriaAutomatica();
+        }
+      });
+    }
+    
+    // 🆕 Event listeners para recalcular cuando cambien parámetros globales
+    // Cambio de cámara (Diputados ↔ Senadores)
+    const masterToggles = this.querySelectorAll('.master-toggle');
+    masterToggles.forEach(toggle => {
+      toggle.addEventListener('click', () => {
+        setTimeout(() => {
+          if (mayoriasSwitch && mayoriasSwitch.classList.contains('active')) {
+            const partidoSelect = this.querySelector('#mayoria-partido-select');
+            if (partidoSelect && partidoSelect.value) {
+              console.log('[MAYORÍAS] 🔄 Cambio de cámara detectado, recalculando...');
+              this.calcularMayoriaAutomatica();
+            }
+          }
+        }, 100); // Pequeño delay para que el toggle se actualice
+      });
+    });
+    
+    // Cambio de año
+    const yearSelect = this.querySelector('#year-select');
+    if (yearSelect) {
+      yearSelect.addEventListener('change', () => {
+        if (mayoriasSwitch && mayoriasSwitch.classList.contains('active')) {
+          const partidoSelect = this.querySelector('#mayoria-partido-select');
+          if (partidoSelect && partidoSelect.value) {
+            console.log('[MAYORÍAS] 🔄 Cambio de año detectado, recalculando...');
+            this.calcularMayoriaAutomatica();
+          }
+        }
+      });
+    }
+    
+    // Cambio de modelo/plan
+    const modelSelect = this.querySelector('#model-select');
+    if (modelSelect) {
+      modelSelect.addEventListener('change', () => {
+        if (mayoriasSwitch && mayoriasSwitch.classList.contains('active')) {
+          const partidoSelect = this.querySelector('#mayoria-partido-select');
+          if (partidoSelect && partidoSelect.value) {
+            console.log('[MAYORÍAS] 🔄 Cambio de modelo detectado, recalculando...');
+            this.calcularMayoriaAutomatica();
+          }
+        }
+      });
+    }
+    
     // INICIALIZACIÓN DEL SISTEMA DE REDISTRIBUCIÓN
     this.initializeVoteRedistribution();
     
@@ -1546,6 +1904,9 @@ initializeSidebarControls() {
       requestAnimationFrame(() => {
         console.log('[DEBUG] 🎯 Actualizando tabla después de render del SeatChart');
         this.updateResultsTable(resultadosTabla, config);
+        
+        // 🆕 Actualizar tabla de distritos por estado
+        this.updateStatesTable();
       });
     }
     
@@ -1753,7 +2114,31 @@ initializeSidebarControls() {
       // 4️⃣ GENERAR FOOTER (TOTALES)
       const tfoot = this.generateTableFooter(resultados, columnsConfig);
       
-      // 5️⃣ CREAR TABLA COMPLETA CON TÍTULO INTEGRADO + NOTA AL PIE FUERA
+      // 🆕 5️⃣ GENERAR LEYENDA DE MAYORÍAS
+      const totalEscanos = resultados.reduce((sum, p) => sum + (p.total || 0), 0);
+      const umbralSimple = Math.floor(totalEscanos / 2) + 1;
+      const umbralCalificada = Math.ceil(totalEscanos * (2/3));
+      
+      const mayoriaLegend = `
+        <div class="mayoria-legend">
+          <div class="mayoria-legend-item">
+            <div class="mayoria-legend-badge calificada"></div>
+            <span class="mayoria-legend-text">Mayoría Calificada</span>
+            <span class="mayoria-legend-umbral">(≥${umbralCalificada})</span>
+          </div>
+          <div class="mayoria-legend-item">
+            <div class="mayoria-legend-badge simple"></div>
+            <span class="mayoria-legend-text">Mayoría Simple</span>
+            <span class="mayoria-legend-umbral">(>${umbralSimple-1})</span>
+          </div>
+          <div class="mayoria-legend-item">
+            <div class="mayoria-legend-badge sin-mayoria"></div>
+            <span class="mayoria-legend-text">Sin mayoría</span>
+          </div>
+        </div>
+      `;
+      
+      // 6️⃣ CREAR TABLA COMPLETA CON TÍTULO INTEGRADO + NOTA AL PIE + LEYENDA
       const tableHTML = `
         <div class="results-table-wrapper">
           <div class="results-table-title">Resultados por Partido</div>
@@ -1763,6 +2148,7 @@ initializeSidebarControls() {
             ${tfoot}
           </table>
           <div class="results-table-footnote">*Porcentaje de escaños</div>
+          ${mayoriaLegend}
         </div>
       `;
       
@@ -1792,11 +2178,12 @@ initializeSidebarControls() {
   // Determinar configuración de columnas según sistema
   getTableColumnsConfig(sistema, pmActivo) {
     const config = {
-      partido: true,  // Siempre visible
+      partido: true,    // Siempre visible
       mr: false,
       pm: false,
       rp: false,
-      total: true     // Siempre visible
+      coalicion: true,  // 🆕 Columna de coalición
+      total: true       // Siempre visible
     };
     
     if (sistema === 'mixto') {
@@ -1830,24 +2217,46 @@ initializeSidebarControls() {
       html += '<th class="col-rp" data-system-column="rp">RP</th>';
     }
     
-    html += '<th class="col-total">Total*</th>'; // ← Asterisco agregado
+    if (columnsConfig.coalicion) {
+      html += '<th class="col-coalicion" data-system-column="coalicion">Coalición</th>';
+    }
+    
+    html += '<th class="col-total">Total*</th>';
     html += '</tr></thead>';
     
     return html;
   }
   
   // Generar filas de partidos
-  generateTableBody(resultados, columnsConfig) {
+  generateTableBody(resultados, columnsConfig, mayorias = null) {
     let html = '<tbody>';
     
     // Calcular total de escaños para porcentajes
     const totalEscanos = resultados.reduce((sum, p) => sum + (p.total || 0), 0);
+    
+    // Determinar umbrales según total de escaños
+    const umbralSimple = Math.floor(totalEscanos / 2) + 1;
+    const umbralCalificada = Math.ceil(totalEscanos * (2/3));
     
     // Ordenar por total de escaños (mayor a menor)
     const sorted = [...resultados].sort((a, b) => (b.total || 0) - (a.total || 0));
     
     sorted.forEach(partido => {
       const color = this.getPartyColor(partido.partido);
+      const total = partido.total || 0;
+      const percentEscanos = totalEscanos > 0 ? ((total / totalEscanos) * 100).toFixed(1) : 0;
+      
+      // Determinar si tiene mayoría y su tipo
+      let mayoriaClass = '';
+      let mayoriaTooltip = '';
+      
+      if (total >= umbralCalificada) {
+        mayoriaClass = 'mayoria-calificada';
+        mayoriaTooltip = `Mayoría Calificada (${total}/${umbralCalificada} necesarios)`;
+      } else if (total >= umbralSimple) {
+        mayoriaClass = 'mayoria-simple';
+        mayoriaTooltip = `Mayoría Simple (${total}/${umbralSimple} necesarios)`;
+      }
       
       html += `<tr data-partido="${partido.partido}">`;
       
@@ -1877,11 +2286,16 @@ initializeSidebarControls() {
         html += `<td class="col-rp" data-system-column="rp">${rpValue}</td>`;
       }
       
-      // Columna Total con porcentaje
-      const total = partido.total || 0;
-      const percentEscanos = totalEscanos > 0 ? ((total / totalEscanos) * 100).toFixed(1) : 0;
+      // 🆕 Columna Coalición
+      if (columnsConfig.coalicion) {
+        const esCoalicion = partido.es_coalicion || false;
+        const iconoCoalicion = esCoalicion ? '✓' : '—';
+        const colorCoalicion = esCoalicion ? '#10B981' : '#D1D5DB';
+        html += `<td class="col-coalicion" data-system-column="coalicion" style="color: ${colorCoalicion}; text-align: center;">${iconoCoalicion}</td>`;
+      }
       
-      html += `<td class="col-total">
+      // Columna Total con porcentaje y COLOR DE MAYORÍA
+      html += `<td class="col-total ${mayoriaClass}" title="${mayoriaTooltip}">
         <strong>${total}</strong> 
         <span class="percent-escanos">(${percentEscanos}%)</span>
       </td>`;
@@ -1915,6 +2329,11 @@ initializeSidebarControls() {
     if (columnsConfig.rp) {
       const totalRP = resultados.reduce((sum, p) => sum + (p.rp || 0), 0);
       html += `<td class="col-rp" data-system-column="rp"><strong>${totalRP}</strong></td>`;
+    }
+    
+    // 🆕 Columna Coalición (vacía en totales)
+    if (columnsConfig.coalicion) {
+      html += `<td class="col-coalicion" data-system-column="coalicion">—</td>`;
     }
     
     // Total General con 100%
@@ -2014,6 +2433,11 @@ initializeSidebarControls() {
       this._cachedColors = {};
     }
     
+    // 🔍 DETECTAR SISTEMA ACTIVO PARA MAPEO INTELIGENTE
+    const sistemaActivo = this.getActiveSystem();
+    const pmActivo = this.isPMActive();
+    console.log(`[DEBUG] 🎯 Sistema activo: ${sistemaActivo}, PM activo: ${pmActivo}`);
+    
     const transformed = seatChart.map(item => {
       const partidoNombre = item.partido || item.party || 'Sin nombre';
       
@@ -2027,12 +2451,55 @@ initializeSidebarControls() {
         console.log(`[DEBUG] 🎨 Guardando color de ${partidoNombre}: ${item.color}`);
       }
       
-      // 🔍 Intentar múltiples nombres de propiedades
-      const mr = item.mr || item.MR || item.mayoría_relativa || item['mayoría relativa'] || 0;
-      const pm = item.pm || item.PM || item.plurinominales || item.plurinominal || 0;
-      const rp = item.rp || item.RP || item.representación_proporcional || item['representación proporcional'] || 0;
+      // 🔍 Obtener el total de escaños (siempre necesario)
       const total = item.escaños || item.seats || item.total || item.escanos || 0;
-      const percent = item.percent || item.porcentaje || 0; // ← Guardar porcentaje del backend
+      const percent = item.percent || item.porcentaje || 0;
+      
+      let mr = 0, pm = 0, rp = 0;
+      
+      // 🆕 MAPEO INTELIGENTE SEGÚN SISTEMA
+      if (sistemaActivo === 'mixto') {
+        // Sistema mixto: debe tener MR y RP explícitos
+        mr = item.mr || item.MR || item.mayoría_relativa || item['mayoría relativa'] || 0;
+        rp = item.rp || item.RP || item.representación_proporcional || item['representación proporcional'] || 0;
+        if (pmActivo) {
+          pm = item.pm || item.PM || item.plurinominales || item.plurinominal || 0;
+        }
+      } else if (sistemaActivo === 'mr') {
+        // 🚨 SISTEMA MR PURO: El backend puede enviar escaños en diferentes propiedades
+        // ESTRATEGIA DE FALLBACK:
+        // 1. Intentar item.mr primero
+        // 2. Si no existe, intentar item.rp (por si el backend envió mal)
+        // 3. Si no existe, usar total
+        const mrFromBackend = item.mr || item.MR || item.mayoría_relativa || item['mayoría relativa'];
+        const rpFromBackend = item.rp || item.RP || item.representación_proporcional || item['representación proporcional'];
+        
+        if (mrFromBackend) {
+          mr = mrFromBackend;
+        } else if (rpFromBackend && rpFromBackend > 0) {
+          // 🚨 ADVERTENCIA: El backend envió datos en 'rp' cuando el sistema es MR
+          console.warn(`[WARN] 🔴 Backend envió datos en 'rp' (${rpFromBackend}) para sistema MR - usando como 'mr' para ${partidoNombre}`);
+          mr = rpFromBackend;
+        } else {
+          // Último recurso: usar total
+          mr = total;
+        }
+        
+        if (pmActivo) {
+          // PM activo: intentar obtener PM del backend
+          pm = item.pm || item.PM || item.plurinominales || item.plurinominal || 0;
+        }
+        
+        // RP debe ser 0 en sistema MR puro
+        rp = 0;
+        
+        console.log(`[DEBUG] 🔴 MR PURO - ${partidoNombre}: MR=${mr} (de item.mr=${item.mr}, item.rp=${item.rp}, total=${total}), PM=${pm}, RP=${rp}`);
+      } else if (sistemaActivo === 'rp') {
+        // Sistema RP puro: solo RP
+        rp = item.rp || item.RP || item.representación_proporcional || item['representación proporcional'] || total;
+        mr = 0;
+        pm = 0;
+      }
       
       console.log(`[DEBUG] 📊 ${partidoNombre}: MR=${mr}, PM=${pm}, RP=${rp}, Total=${total}, Percent=${percent}%`);
       
@@ -2042,13 +2509,154 @@ initializeSidebarControls() {
         pm: pm,
         rp: rp,
         total: total,
-        percent: percent // ← Incluir porcentaje
+        percent: percent
       };
     });
     
     console.log('[DEBUG] ✅ Datos transformados:', transformed);
     console.log('[DEBUG] 🎨 Cache de colores actualizado:', this._cachedColors);
     return transformed;
+  }
+  
+  // 🆕 TABLA DE DISTRITOS POR ESTADO
+  updateStatesTable() {
+    console.log('[DEBUG] 🗺️ Actualizando tabla de distritos por estado...');
+    console.log('[DEBUG] 🔍 this.lastResult:', this.lastResult);
+    
+    const container = document.getElementById('states-table-container');
+    console.log('[DEBUG] 🔍 Container encontrado:', !!container);
+    
+    if (!container) {
+      console.warn('[WARN] ❌ No se encontró el contenedor states-table-container');
+      return;
+    }
+    
+    // Verificar si hay datos de distribución geográfica
+    if (!this.lastResult) {
+      console.log('[DEBUG] ❌ No hay lastResult');
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      return;
+    }
+    
+    console.log('[DEBUG] 🔍 this.lastResult.meta:', this.lastResult.meta);
+    
+    if (!this.lastResult.meta) {
+      console.log('[DEBUG] ❌ No hay meta en lastResult, ocultando tabla');
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      return;
+    }
+    
+    const mrPorEstado = this.lastResult.meta.mr_por_estado;
+    const distritosPorEstado = this.lastResult.meta.distritos_por_estado;
+    
+    console.log('[DEBUG] 🔍 mr_por_estado:', mrPorEstado);
+    console.log('[DEBUG] 🔍 distritos_por_estado:', distritosPorEstado);
+    
+    if (!mrPorEstado || !distritosPorEstado) {
+      console.log('[DEBUG] ❌ No hay datos de distribución geográfica en meta');
+      console.log('[DEBUG] 💡 El backend debe enviar meta.mr_por_estado y meta.distritos_por_estado');
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      return;
+    }
+    
+    console.log('[DEBUG] ✅ Datos de estados disponibles:', { mrPorEstado, distritosPorEstado });
+    
+    // Obtener lista de partidos únicos
+    const partidosSet = new Set();
+    Object.values(mrPorEstado).forEach(estadoData => {
+      Object.keys(estadoData).forEach(partido => {
+        if (estadoData[partido] > 0) {
+          partidosSet.add(partido);
+        }
+      });
+    });
+    const partidos = Array.from(partidosSet).sort();
+    
+    console.log('[DEBUG] 🎯 Partidos con distritos:', partidos);
+    
+    // Generar HTML de la tabla
+    const tableHTML = this.generateStatesTableHTML(mrPorEstado, distritosPorEstado, partidos);
+    
+    container.innerHTML = tableHTML;
+    container.classList.remove('hidden');
+    
+    console.log('[DEBUG] ✅ Tabla de estados actualizada en el DOM');
+  }
+  
+  generateStatesTableHTML(mrPorEstado, distritosPorEstado, partidos) {
+    // Header
+    let thead = '<thead><tr>';
+    thead += '<th>Estado</th>';
+    thead += '<th class="col-total-distritos">Total Distritos</th>';
+    
+    partidos.forEach(partido => {
+      thead += `<th>${partido}</th>`;
+    });
+    
+    thead += '</tr></thead>';
+    
+    // Body (ordenar estados alfabéticamente)
+    const estados = Object.keys(mrPorEstado).sort();
+    let tbody = '<tbody>';
+    
+    estados.forEach(estado => {
+      tbody += '<tr>';
+      
+      // Nombre del estado
+      tbody += `<td>${estado}</td>`;
+      
+      // Total de distritos
+      const totalDistritos = distritosPorEstado[estado] || 0;
+      tbody += `<td class="col-total-distritos">${totalDistritos}</td>`;
+      
+      // Distritos por partido
+      partidos.forEach(partido => {
+        const distritos = mrPorEstado[estado][partido] || 0;
+        const cellClass = distritos === 0 ? 'empty-cell' : '';
+        const cellValue = distritos === 0 ? '—' : distritos;
+        tbody += `<td class="${cellClass}">${cellValue}</td>`;
+      });
+      
+      tbody += '</tr>';
+    });
+    
+    tbody += '</tbody>';
+    
+    // Footer (totales)
+    let tfoot = '<tfoot><tr>';
+    tfoot += '<td><strong>TOTAL</strong></td>';
+    
+    // Total de distritos general
+    const totalDistritosGeneral = Object.values(distritosPorEstado).reduce((sum, val) => sum + val, 0);
+    tfoot += `<td class="col-total-distritos"><strong>${totalDistritosGeneral}</strong></td>`;
+    
+    // Totales por partido
+    partidos.forEach(partido => {
+      let totalPartido = 0;
+      Object.values(mrPorEstado).forEach(estadoData => {
+        totalPartido += estadoData[partido] || 0;
+      });
+      tfoot += `<td><strong>${totalPartido}</strong></td>`;
+    });
+    
+    tfoot += '</tr></tfoot>';
+    
+    // Tabla completa
+    return `
+      <div class="states-table-wrapper">
+        <div class="states-table-title">Distritos MR por Estado</div>
+        <div class="states-table-container">
+          <table class="states-table">
+            ${thead}
+            ${tbody}
+            ${tfoot}
+          </table>
+        </div>
+      </div>
+    `;
   }
   
   showLoadingState(loading) {
@@ -2093,6 +2701,252 @@ initializeSidebarControls() {
     } catch (err) {
       console.warn('[WARN] showLoadingState error:', err);
     }
+  }
+  
+  // 🆕 Calcular Mayoría Automáticamente (sin botón)
+  async calcularMayoriaAutomatica() {
+    console.log('[MAYORÍAS] 🔍 calcularMayoriaAutomatica() llamada');
+    
+    // Verificar que el toggle esté activo
+    const mayoriasSwitch = document.getElementById('mayorias-switch');
+    if (!mayoriasSwitch) {
+      console.error('[MAYORÍAS] ❌ No se encontró el elemento mayorias-switch');
+      return;
+    }
+    
+    const isActive = mayoriasSwitch.classList.contains('active');
+    console.log('[MAYORÍAS] Toggle activo:', isActive);
+    
+    if (!isActive) {
+      console.log('[MAYORÍAS] ⏸ Toggle desactivado, no se calculará');
+      return;
+    }
+    
+    // Llamar a la función principal
+    console.log('[MAYORÍAS] ✅ Toggle activo, llamando a calcularMayoriaForzada()');
+    await this.calcularMayoriaForzada();
+  }
+  
+  // 🆕 Calcular Mayoría Forzada
+  async calcularMayoriaForzada() {
+    console.log('[MAYORÍAS] 🎯 Calculando mayoría forzada...');
+    
+    // Obtener valores de los controles
+    const tipoMayoria = document.querySelector('input[name="tipo-mayoria"]:checked')?.value || 'simple';
+    const partidoSelect = document.getElementById('mayoria-partido-select');
+    const partido = partidoSelect?.value;
+    const activeChamber = this.querySelector('.master-toggle.active');
+    const camara = activeChamber ? activeChamber.dataset.chamber : 'diputados';
+    const yearSelect = document.getElementById('year-select');
+    const anio = yearSelect ? parseInt(yearSelect.value) : 2024;
+    const modelSelect = document.getElementById('model-select');
+    const plan = modelSelect ? modelSelect.value : 'vigente';
+    
+    // 🆕 Obtener parámetros de configuración personalizada
+    const magnitudSlider = document.getElementById('input-magnitud');
+    const mrSlider = document.getElementById('input-mr');
+    const rpSlider = document.getElementById('input-rp');
+    const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
+    const topesSwitch = document.getElementById('topes-switch');
+    
+    const escanosTotales = magnitudSlider ? parseInt(magnitudSlider.value) : 500;
+    const mrSeats = mrSlider ? parseInt(mrSlider.value) : 300;
+    const rpSeats = rpSlider ? parseInt(rpSlider.value) : 200;
+    const sistema = electoralRuleRadio ? electoralRuleRadio.value : 'mixto';
+    let aplicarTopes = topesSwitch ? topesSwitch.classList.contains('active') : true;  // ← CAMBIAR a 'let' en lugar de 'const'
+    
+    console.log('[MAYORÍAS] 📋 Parámetros:', { 
+      partido, tipoMayoria, camara, anio, plan,
+      escanosTotales, mrSeats, rpSeats, sistema, aplicarTopes
+    });
+    
+    // Validar que se haya seleccionado un partido
+    if (!partido) {
+      console.log('[MAYORÍAS] ⏸ No hay partido seleccionado, esperando selección...');
+      return;
+    }
+    
+    // 🔍 AUTO-DESACTIVAR TOPES: Mayoría calificada para partido individual
+    if (tipoMayoria === 'calificada' && aplicarTopes) {
+      // Verificar si es un partido individual (no coalición)
+      const esCoalicion = partido.includes('+') || partido.includes('_');
+      
+      if (!esCoalicion) {
+        const umbralCalificada = Math.ceil(escanosTotales * 2 / 3);
+        const topeMaximo = Math.floor(escanosTotales * 0.6);
+        
+        console.log('[MAYORÍAS] 🔍 Mayoría calificada detectada:', {
+          partido,
+          umbralCalificada,
+          topeMaximo,
+          requiereDesactivarTopes: umbralCalificada > topeMaximo
+        });
+        
+        if (umbralCalificada > topeMaximo) {
+          console.warn('[MAYORÍAS] 🔓 Desactivando topes automáticamente para permitir mayoría calificada');
+          
+          // Actualizar variable SIEMPRE
+          aplicarTopes = false;
+          console.log('[MAYORÍAS] 📋 Variable aplicarTopes actualizada a:', aplicarTopes);
+          
+          // Desactivar el toggle visualmente
+          if (topesSwitch) {
+            topesSwitch.classList.remove('active');
+            topesSwitch.setAttribute('aria-checked', 'false');
+            topesSwitch.dataset.switch = 'Off';
+            console.log('[MAYORÍAS] ✅ Toggle de topes desactivado visualmente');
+          }
+          
+          // Notificar al usuario
+          if (window.notifications && window.notifications.isReady) {
+            window.notifications.info(
+              'Topes desactivados automáticamente',
+              `Para permitir mayoría calificada de ${partido}, se desactivaron los topes constitucionales (la mayoría calificada requiere ${umbralCalificada} escaños, el tope permite máximo ${topeMaximo}).`,
+              8000
+            );
+          }
+        }
+      }
+    }
+    
+    try {
+      // ✅ URL BASE SIN SLASH FINAL (según instrucciones)
+      const API_URL = 'https://back-electoral.onrender.com';
+      
+      // Determinar endpoint según cámara (con UNDERSCORES)
+      // ✅ DIPUTADOS: /calcular/mayoria_forzada (SIN sufijo _diputados)
+      // ✅ SENADO: /calcular/mayoria_forzada_senado (CON sufijo _senado)
+      const endpoint = camara === 'senadores' || camara === 'senado' 
+        ? 'calcular/mayoria_forzada_senado' 
+        : 'calcular/mayoria_forzada';  // ⬅️ CORREGIDO: sin _diputados
+      
+      // Construir URL con parámetros (GET)
+      // ✅ Incluir 'anio' en AMBOS endpoints (diputados y senado)
+      console.log('[MAYORÍAS] 🔧 Construyendo parámetros - aplicarTopes final:', aplicarTopes);
+      
+      const params = new URLSearchParams({
+        partido: partido,
+        tipo_mayoria: tipoMayoria,  // ✅ Con UNDERSCORE
+        plan: plan,
+        aplicar_topes: aplicarTopes.toString(),  // ← Debe usar el valor modificado
+        anio: anio.toString()  // ✅ AGREGADO para ambos endpoints
+      });
+      
+      // 🆕 Agregar parámetros de configuración personalizada
+      // Estos son necesarios para que el backend pueda recalcular con el modelo personalizado
+      if (plan === 'personalizado' || !['vigente', 'reforma_2024'].includes(plan)) {
+        params.append('escanos_totales', escanosTotales.toString());
+        params.append('mr_seats', mrSeats.toString());
+        params.append('rp_seats', rpSeats.toString());
+        params.append('sistema', sistema);
+        
+        console.log('[MAYORÍAS] 🔧 Plan personalizado detectado, enviando configuración:', {
+          escanos_totales: escanosTotales,
+          mr_seats: mrSeats,
+          rp_seats: rpSeats,
+          sistema: sistema
+        });
+      }
+      
+      const url = `${API_URL}/${endpoint}?${params}`;
+      console.log('[MAYORÍAS] 📡 URL completa:', url);
+      console.log('[MAYORÍAS] 🔍 Endpoint:', endpoint);
+      console.log('[MAYORÍAS] 🔍 Parámetros:', Object.fromEntries(params));
+      
+      // Hacer petición al backend (GET)
+      console.log('[MAYORÍAS] 🚀 Haciendo fetch...');
+      const response = await fetch(url);
+      
+      console.log('[MAYORÍAS] 📬 Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[MAYORÍAS] ❌ Error response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('[MAYORÍAS] ✅ Data recibida:', data);
+      
+      // 🔄 Actualizar tabla y seat chart en lugar de solo mostrar resumen
+      this.aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara);
+      
+    } catch (error) {
+      console.error('[MAYORÍAS] ❌ Error completo:', error);
+      console.error('[MAYORÍAS] ❌ Error stack:', error.stack);
+      
+      // Mostrar error al usuario
+      if (window.notifications && window.notifications.isReady) {
+        window.notifications.error(
+          'Error al calcular mayoría',
+          error.message || 'No se pudo conectar con el servidor',
+          5000
+        );
+      }
+      
+      // Ocultar resultado si estaba visible
+      const resultadoDiv = document.getElementById('mayoria-resultado');
+      if (resultadoDiv) {
+        resultadoDiv.style.display = 'none';
+      }
+    }
+  }
+  
+  // 🆕 Aplicar Mayoría Forzada al Sistema (actualiza tabla y seat chart)
+  aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara) {
+    console.log('[MAYORÍAS] 🔄 Aplicando mayoría forzada al sistema...', { data, partido, camara });
+    
+    // Extraer datos según cámara
+    const escanosNecesarios = data.senadores_necesarios || data.diputados_necesarios || data.escanos_necesarios || 0;
+    const escanosObtenidos = data.senadores_obtenidos || data.diputados_obtenidos || data.escanos_obtenidos || 0;
+    const mrAsignados = data.mr_asignados || data.mr_senadores || 0;
+    const rpAsignados = data.rp_asignados || data.rp_senadores || 0;
+    const pmAsignados = data.pm_senadores || 0; // Solo para senado
+    
+    console.log('[MAYORÍAS] � Datos extraídos:', {
+      escanosNecesarios,
+      escanosObtenidos,
+      mrAsignados,
+      rpAsignados,
+      pmAsignados
+    });
+    
+    // 🎯 OPCIÓN 1: Guardar datos en window para que script.js los use
+    window.mayoriaForzadaData = {
+      activa: true,
+      partido: partido,
+      tipo: tipoMayoria,
+      camara: camara,
+      escanos_necesarios: escanosNecesarios,
+      escanos_obtenidos: escanosObtenidos,
+      mr_asignados: mrAsignados,
+      rp_asignados: rpAsignados,
+      pm_asignados: pmAsignados,
+      viable: data.viable !== false,
+      votos_porcentaje: data.votos_porcentaje || 0,
+      territorios_ganados: data.estados_ganados || data.distritos_ganados || 0,
+      data_completa: data
+    };
+    
+    console.log('[MAYORÍAS] 💾 Datos guardados en window.mayoriaForzadaData:', window.mayoriaForzadaData);
+    
+    // 🔄 Disparar actualización del sistema (tabla + seat chart)
+    if (typeof window.actualizarDesdeControles === 'function') {
+      console.log('[MAYORÍAS] 🚀 Llamando a actualizarDesdeControles()...');
+      setTimeout(() => {
+        window.actualizarDesdeControles();
+        console.log('[MAYORÍAS] ✅ Sistema actualizado (tabla y seat chart)');
+      }, 100);
+    } else {
+      console.error('[MAYORÍAS] ❌ window.actualizarDesdeControles no disponible');
+    }
+  }
+  
+  // ⚠️ DEPRECATED: Función antigua que mostraba solo resumen
+  // Se mantiene por compatibilidad pero ya no se usa
+  mostrarResultadoMayoria(data, tipoMayoria, partido, camara) {
+    console.log('[MAYORÍAS] ⚠️ mostrarResultadoMayoria() está deprecated, usar aplicarMayoriaForzadaAlSistema()');
+    this.aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara);
   }
   
   showError(error) {
@@ -2398,7 +3252,9 @@ initializeSidebarControls() {
       const valueBox = sliderGroup.querySelector(`#shock-value-${partyName}`);
       
       if (slider && valueBox) {
+        console.log(`[DEBUG] 🎚️ Event listener añadido para slider de ${partyLabel}`);
         slider.addEventListener('input', (event) => {
+          console.log(`[DEBUG] 🎚️ Slider de ${partyLabel} movido a: ${event.target.value}%`);
           const newValue = parseFloat(event.target.value);
           const partyNameUpper = partyName.toUpperCase();
           
@@ -2412,14 +3268,18 @@ initializeSidebarControls() {
           const modelSelect = document.getElementById('model-select');
           const isPersonalizado = modelSelect && modelSelect.value === 'personalizado';
           
+          console.log(`[DEBUG] 🔍 Validación modo: modelSelect=${!!modelSelect}, valor='${modelSelect?.value}', isPersonalizado=${isPersonalizado}`);
+          
           if (!isPersonalizado) {
-            console.log(`[DEBUG] Redistribución desactivada - Modelo: ${modelSelect ? modelSelect.value : 'desconocido'}`);
+            console.log(`[DEBUG] ⚠️ Redistribución desactivada - Modelo: ${modelSelect ? modelSelect.value : 'desconocido'} - Slider revertido`);
             // Si no es personalizado, revertir al valor vigente
             slider.value = this.partidosData[partyNameUpper].porcentajeVigente;
             valueBox.textContent = `${this.partidosData[partyNameUpper].porcentajeVigente.toFixed(1)}%`;
             this.partidosData[partyNameUpper].porcentajeActual = this.partidosData[partyNameUpper].porcentajeVigente;
             return;
           }
+          
+          console.log(`[DEBUG] ✅ Modo personalizado activo - Procesando cambio de ${partyLabel}`);
           
           //  Implementar normalización automática
           this.normalizeSliders(partyNameUpper, newValue);
@@ -2765,6 +3625,197 @@ initializeSidebarControls() {
     // Verificar que la suma sea exactamente 100%
     const totalSum = Object.values(this.partidosData).reduce((sum, data) => sum + data.porcentajeActual, 0);
     console.log(`[DEBUG]  Normalización completada - Suma total: ${totalSum.toFixed(2)}%`);
+  }
+
+  // 🆕 Método para generar sliders de distribución de distritos MR
+  generateMRDistributionSliders() {
+    console.log('[MR DISTRIBUTION] 🎯 Generando sliders de distribución de distritos MR...');
+    
+    const container = this.querySelector('#dynamic-mr-district-sliders');
+    if (!container) {
+      console.error('[MR DISTRIBUTION] ❌ Contenedor no encontrado');
+      return;
+    }
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Obtener total de distritos MR disponibles
+    const mrSlider = this.querySelector('#input-mr');
+    const totalMR = mrSlider ? parseInt(mrSlider.value) : 300;
+    
+    console.log(`[MR DISTRIBUTION] 📊 Total de distritos MR disponibles: ${totalMR}`);
+    
+    // Actualizar display
+    const mrTotalDisplay = document.getElementById('mr-total-display');
+    if (mrTotalDisplay) {
+      mrTotalDisplay.textContent = totalMR;
+    }
+    
+    // Obtener lista de partidos desde partidosData
+    if (!this.partidosData || Object.keys(this.partidosData).length === 0) {
+      console.warn('[MR DISTRIBUTION] ⚠️ No hay partidos disponibles, esperando datos...');
+      
+      // Mostrar mensaje de espera
+      container.innerHTML = `
+        <div style="padding:20px; text-align:center; color:#6B7280;">
+          <p style="font-size:14px;">Cargando partidos...</p>
+          <p style="font-size:12px; margin-top:4px;">Espera a que se carguen los datos del año seleccionado</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Inicializar datos de distribución MR
+    if (!this.mrDistributionData) {
+      this.mrDistributionData = {};
+    }
+    
+    const partidos = Object.keys(this.partidosData);
+    console.log(`[MR DISTRIBUTION] 📊 Partidos disponibles (${partidos.length}): ${partidos.join(', ')}`);
+    
+    // Generar slider para cada partido
+    partidos.forEach(partido => {
+      const partyName = partido.toLowerCase();
+      const partyLabel = partido;
+      const partyColor = this.partidosData[partido]?.color || '#6B7280';
+      
+      // Inicializar con 0 distritos si no existe
+      if (typeof this.mrDistributionData[partido] === 'undefined') {
+        this.mrDistributionData[partido] = 0;
+      }
+      
+      const sliderGroup = document.createElement('div');
+      sliderGroup.className = 'shock-input-group';
+      sliderGroup.style.cssText = 'position:relative; margin-bottom:8px;';
+      sliderGroup.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <label class="shock-label" for="mr-dist-${partyName}" style="display:flex; align-items:center; gap:8px; margin:0;">
+            <div style="width:12px; height:12px; border-radius:50%; background:${partyColor};"></div>
+            <span>${partyLabel}</span>
+          </label>
+          <div class="shock-value-box" id="mr-dist-value-${partyName}" style="min-width:45px; text-align:center;">${this.mrDistributionData[partido]}</div>
+        </div>
+        <input type="range" class="control-slider" id="mr-dist-${partyName}" 
+               min="0" max="${totalMR}" step="1" value="${this.mrDistributionData[partido]}"
+               style="--slider-color:${partyColor};">
+      `;
+      
+      container.appendChild(sliderGroup);
+      
+      console.log(`[MR DISTRIBUTION] ✅ Slider creado para ${partyLabel}: ${this.mrDistributionData[partido]}/${totalMR}`);
+      
+      // Agregar event listener
+      const slider = sliderGroup.querySelector(`#mr-dist-${partyName}`);
+      const valueBox = sliderGroup.querySelector(`#mr-dist-value-${partyName}`);
+      
+      if (slider && valueBox) {
+        slider.addEventListener('input', (event) => {
+          const newValue = parseInt(event.target.value);
+          
+          // Actualizar display
+          valueBox.textContent = newValue;
+          
+          // Actualizar datos
+          this.mrDistributionData[partido] = newValue;
+          
+          console.log(`[MR DISTRIBUTION] 🎚️ ${partyLabel}: ${newValue} distritos`);
+          
+          // Actualizar total asignado
+          this.updateMRDistributionTotal();
+        });
+        
+        // Event listener para cuando termina de mover el slider (mouseup/touchend)
+        slider.addEventListener('change', () => {
+          // Enviar al backend solo cuando termine de ajustar
+          this.sendMRDistribution();
+        });
+      }
+    });
+    
+    // Actualizar total inicial
+    this.updateMRDistributionTotal();
+    
+    console.log('[MR DISTRIBUTION] ✅ Sliders generados correctamente');
+  }
+  
+  // 🆕 Actualizar total de distritos MR asignados
+  updateMRDistributionTotal() {
+    if (!this.mrDistributionData) return;
+    
+    const total = Object.values(this.mrDistributionData).reduce((sum, val) => sum + val, 0);
+    const mrAssignedDisplay = document.getElementById('mr-assigned-display');
+    
+    if (mrAssignedDisplay) {
+      mrAssignedDisplay.textContent = total;
+      
+      // Cambiar color según si excede o no
+      const mrSlider = this.querySelector('#input-mr');
+      const totalMR = mrSlider ? parseInt(mrSlider.value) : 300;
+      
+      if (total > totalMR) {
+        mrAssignedDisplay.style.color = '#EF4444'; // Rojo - excede
+        console.log(`[MR DISTRIBUTION] ⚠️ EXCESO: ${total}/${totalMR} distritos`);
+      } else if (total === totalMR) {
+        mrAssignedDisplay.style.color = '#10B981'; // Verde - perfecto
+        console.log(`[MR DISTRIBUTION] ✅ COMPLETO: ${total}/${totalMR} distritos`);
+      } else {
+        mrAssignedDisplay.style.color = '#F59E0B'; // Amarillo - falta asignar
+        console.log(`[MR DISTRIBUTION] ⏳ PARCIAL: ${total}/${totalMR} distritos`);
+      }
+    }
+  }
+  
+  // 🆕 Enviar distribución MR al backend
+  async sendMRDistribution() {
+    if (!this.mrDistributionData) {
+      console.log('[MR DISTRIBUTION] ❌ No hay datos de distribución para enviar');
+      return;
+    }
+    
+    const total = Object.values(this.mrDistributionData).reduce((sum, val) => sum + val, 0);
+    
+    // Validar que el total no exceda el máximo permitido
+    const mrSlider = this.querySelector('#input-mr');
+    const totalMR = mrSlider ? parseInt(mrSlider.value) : 300;
+    
+    if (total > totalMR) {
+      console.warn(`[MR DISTRIBUTION] ⚠️ Total excede el límite: ${total}/${totalMR}. No se enviará al backend.`);
+      // Mostrar advertencia visual al usuario (opcional)
+      const warningBox = document.getElementById('mr-distribution-warning');
+      if (warningBox) {
+        warningBox.style.borderColor = '#EF4444';
+        setTimeout(() => {
+          warningBox.style.borderColor = '#F59E0B';
+        }, 2000);
+      }
+      return;
+    }
+    
+    console.log('[MR DISTRIBUTION] 📡 Enviando distribución al backend:', {
+      distribucion: this.mrDistributionData,
+      total_asignado: total,
+      total_disponible: totalMR,
+      porcentaje: `${((total/totalMR)*100).toFixed(1)}%`
+    });
+    
+    // Guardar distribución en variable global para que script.js la envíe al backend
+    window.mrDistributionManual = {
+      activa: true,
+      distribucion: { ...this.mrDistributionData },
+      total_asignado: total,
+      total_disponible: totalMR
+    };
+    
+    // Llamar a actualizarDesdeControles para recalcular
+    if (typeof window.actualizarDesdeControles === 'function') {
+      setTimeout(() => {
+        window.actualizarDesdeControles();
+        console.log('[MR DISTRIBUTION] ✅ Sistema recalculado con distribución manual');
+      }, 100);
+    } else {
+      console.error('[MR DISTRIBUTION] ❌ window.actualizarDesdeControles no está disponible');
+    }
   }
 
   //  Método para actualizar estado de sliders según modelo

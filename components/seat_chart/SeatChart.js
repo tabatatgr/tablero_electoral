@@ -148,6 +148,9 @@ class SeatChart extends HTMLElement {
           <div id="results-table-container">
             <!-- La tabla se insertará aquí dinámicamente desde ControlSidebar -->
           </div>
+          <div id="states-table-container">
+            <!-- La tabla de distritos por estado se insertará aquí -->
+          </div>
         </div>
       </div>
     `;

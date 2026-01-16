@@ -385,7 +385,7 @@ function mapearModeloAPlan(modelo) {
     return resultado;
 }
 
-async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, silentLoad = false, porcentajes_redistribucion = null} = {}) {
+async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vigente', magnitud, umbral = undefined, sobrerrepresentacion = undefined, sistema = undefined, mr_seats = undefined, rp_seats = undefined, pm_seats = undefined, escanos_totales = undefined, reparto_mode = 'cuota', reparto_method = 'hare', max_seats_per_party = undefined, usar_coaliciones = true, votos_custom = null, silentLoad = false, porcentajes_redistribucion = null, mr_distritos_manuales = null} = {}) {
     // 🆕 LÓGICA PARA COALICIONES - Establecer año por defecto basado en si están activadas
     if (anio === null) {
         if (usar_coaliciones) {
@@ -396,7 +396,7 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             console.log('[DEBUG] 🚫 Coaliciones desactivadas: usando año 2018 por defecto');
         }
     }
-    console.log('[DEBUG]  cargarSimulacion INICIADA con parámetros:', {anio, camara, modelo, magnitud, mr_seats, rp_seats, pm_seats, escanos_totales, reparto_mode, reparto_method, usar_coaliciones, silentLoad});
+    console.log('[DEBUG]  cargarSimulacion INICIADA con parámetros:', {anio, camara, modelo, magnitud, mr_seats, rp_seats, pm_seats, escanos_totales, reparto_mode, reparto_method, usar_coaliciones, votos_custom, silentLoad});
     
     // Sin notificación en cargarSimulacion - las notificaciones se manejan en actualizarDesdeControles
     let notificationId = null;
@@ -516,6 +516,13 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 console.log('[DEBUG]  Enviando usar_coaliciones:', usar_coaliciones, 'para', camara, '(modo personalizado)');
             }
             
+            //  VOTOS PERSONALIZADOS (votos_custom)
+            if (votos_custom !== null && votos_custom !== undefined) {
+                // Enviar como parámetro de query string (URL encoded)
+                url += `&votos_custom=${encodeURIComponent(votos_custom)}`;
+                console.log('[CUSTOM VOTES] 🗳️ Enviando votos_custom al backend:', votos_custom);
+            }
+            
             //  ELIMINAR max_seats_per_party duplicado (ya se envía como sobrerrepresentacion)
             // if (typeof max_seats_per_party !== 'undefined' && max_seats_per_party !== null) {
             //     url += `&max_seats_per_party=${max_seats_per_party}`;
@@ -568,23 +575,32 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             signal: controller.signal
         };
         
-        // 🆕 REDISTRIBUCIÓN DE VOTOS: Si hay porcentajes, enviar en body
-        if (porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) {
-            console.log('[DEBUG]  REDISTRIBUCIÓN ACTIVA - Enviando porcentajes en body:', porcentajes_redistribucion);
+        // 🆕 REDISTRIBUCIÓN DE VOTOS O DISTRITOS MR MANUALES: Si hay datos, enviar en body
+        if ((porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) || mr_distritos_manuales) {
+            console.log('[DEBUG]  Preparando body para envío...');
             
-            // Enviar como JSON para asegurar que el backend reconozca 'porcentajes_partidos'
             const jsonBody = {
-                porcentajes_partidos: porcentajes_redistribucion,
+                porcentajes_partidos: porcentajes_redistribucion || {},
                 partidos_fijos: {},
                 overrides_pool: {}
             };
+            
+            // 🆕 MR DISTRIBUTION: Agregar distribución manual si existe
+            if (mr_distritos_manuales && mr_distritos_manuales.activa && mr_distritos_manuales.distribucion) {
+                jsonBody.mr_distritos_manuales = mr_distritos_manuales.distribucion;
+                console.log('[MR DISTRIBUTION] 📡 Enviando distribución manual al backend:', {
+                    distribucion: mr_distritos_manuales.distribucion,
+                    total_asignado: mr_distritos_manuales.total_asignado,
+                    total_disponible: mr_distritos_manuales.total_disponible
+                });
+            }
 
             fetchOptions.headers['Content-Type'] = 'application/json';
             fetchOptions.body = JSON.stringify(jsonBody);
 
-            console.log('[DEBUG] Body JSON incluido para redistribución de votos:', jsonBody);
+            console.log('[DEBUG] Body JSON completo:', jsonBody);
         } else {
-            console.log('[DEBUG] Sin redistribución - POST solo con query parameters');
+            console.log('[DEBUG] Sin redistribución ni MR manual - POST solo con query parameters');
         }
         
         console.log('[DEBUG] Método HTTP: POST para cámara:', camara);
@@ -645,6 +661,70 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         if (pendingRequestId !== requestId) {
             console.log('[DEBUG]  Respuesta descartada - hay un request más reciente');
             return;
+        }
+        
+        // 🆕 APLICAR MAYORÍA FORZADA si está activa
+        if (window.mayoriaForzadaData && window.mayoriaForzadaData.activa) {
+            console.log('[MAYORÍAS] 🔄 Mayoría forzada ACTIVA - usando datos del backend de mayorías...');
+            console.log('[MAYORÍAS] 📋 Datos de mayoría:', window.mayoriaForzadaData);
+            
+            const mayoriaData = window.mayoriaForzadaData;
+            
+            // 🔑 VERIFICAR SI EL BACKEND DEVOLVIÓ SEAT_CHART COMPLETO
+            if (mayoriaData.data_completa && mayoriaData.data_completa.seat_chart) {
+                console.log('[MAYORÍAS] ✅ Backend devolvió seat_chart completo - REEMPLAZANDO datos normales');
+                
+                // REEMPLAZAR COMPLETAMENTE el seat_chart normal con el de mayoría forzada
+                data.seat_chart = mayoriaData.data_completa.seat_chart;
+                
+                console.log('[MAYORÍAS] 📊 Seat chart reemplazado:', data.seat_chart);
+                console.log('[MAYORÍAS] 📊 Total escaños:', data.seat_chart.reduce((sum, p) => sum + (p.seats || 0), 0));
+                
+                // También reemplazar KPIs si vienen
+                if (mayoriaData.data_completa.kpis) {
+                    data.kpis = mayoriaData.data_completa.kpis;
+                    console.log('[MAYORÍAS] 📊 KPIs reemplazados:', data.kpis);
+                }
+                
+            } else {
+                // FALLBACK: Sobrescribir solo el partido objetivo (método anterior)
+                console.warn('[MAYORÍAS] ⚠️ Backend NO devolvió seat_chart completo - usando fallback mejorado');
+                
+                const partidoObjetivo = mayoriaData.partido;
+                
+                if (data.seat_chart && Array.isArray(data.seat_chart)) {
+                    const partidoIndex = data.seat_chart.findIndex(p => p.party === partidoObjetivo);
+                    
+                    if (partidoIndex !== -1) {
+                        const partidoOriginal = data.seat_chart[partidoIndex];
+                        console.log('[MAYORÍAS] 📊 Partido original:', partidoOriginal);
+                        
+                        // 🆕 CRÍTICO: Actualizar el porcentaje de votos también
+                        const votosPorcentaje = mayoriaData.votos_porcentaje || partidoOriginal.votes_percent;
+                        
+                        console.log('[MAYORÍAS] 🔢 Porcentaje de votos:', {
+                            desde_backend: mayoriaData.votos_porcentaje,
+                            original: partidoOriginal.votes_percent,
+                            usando: votosPorcentaje
+                        });
+                        
+                        // Actualizar partido con TODOS los datos incluyendo votes_percent
+                        data.seat_chart[partidoIndex] = {
+                            ...partidoOriginal,
+                            seats: mayoriaData.escanos_obtenidos,
+                            mr_seats: mayoriaData.mr_asignados,
+                            rp_seats: mayoriaData.rp_asignados,
+                            pm_seats: mayoriaData.pm_asignados || 0,
+                            votes_percent: votosPorcentaje,  // ← CRÍTICO: Incluir el nuevo porcentaje
+                            color: partidoOriginal.color
+                        };
+                        
+                        console.log('[MAYORÍAS] ✅ Partido actualizado (fallback mejorado):', data.seat_chart[partidoIndex]);
+                    } else {
+                        console.warn('[MAYORÍAS] ⚠️ Partido no encontrado en seat_chart:', partidoObjetivo);
+                    }
+                }
+            }
         }
         
         console.log('[DEBUG]  DATOS RECIBIDOS DETALLADOS:', {
@@ -752,12 +832,21 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                     console.log('[DEBUG] 🔍 data.seat_chart RAW del backend:', JSON.stringify(data.seat_chart, null, 2));
                     const sidebar = document.querySelector('control-sidebar');
                     if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                        // 🆕 GUARDAR DATOS COMPLETOS en sidebar.lastResult para que updateStatesTable() tenga acceso
+                        sidebar.lastResult = data;
+                        console.log('[DEBUG] 💾 Guardando data completo en sidebar.lastResult:', data);
+                        
                         const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
                         const config = {
                             sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
                             pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
                         };
                         sidebar.updateResultsTable(resultadosTabla, config);
+                        
+                        // 🆕 Actualizar tabla de distritos por estado
+                        if (sidebar.updateStatesTable) {
+                            sidebar.updateStatesTable();
+                        }
                     } else {
                         console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
                     }
@@ -961,12 +1050,21 @@ async function cargarSeatChart(anio, camara, modelo) {
                 console.log('[DEBUG] 🔍 seatArray RAW (fallback):', JSON.stringify(seatArray, null, 2));
                 const sidebar = document.querySelector('control-sidebar');
                 if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                    // 🆕 GUARDAR DATOS (sin meta porque es fallback)
+                    sidebar.lastResult = { seat_chart: seatArray };
+                    console.log('[DEBUG] 💾 Guardando seatArray en sidebar.lastResult (fallback sin meta)');
+                    
                     const resultadosTabla = sidebar.transformSeatChartToTable(seatArray);
                     const config = {
                         sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
                         pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
                     };
                     sidebar.updateResultsTable(resultadosTabla, config);
+                    
+                    // 🆕 Actualizar tabla de distritos por estado (se ocultará porque no hay meta)
+                    if (sidebar.updateStatesTable) {
+                        sidebar.updateStatesTable();
+                    }
                 } else {
                     console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
                 }
@@ -1632,14 +1730,53 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
             usar_coaliciones
         });
         
+        //  CONSTRUIR VOTOS_CUSTOM SI EL SWITCH ESTÁ ACTIVADO
+        let votos_custom = null;
+        const customVotesSwitch = document.getElementById('custom-votes-switch');
+        
+        if (customVotesSwitch && customVotesSwitch.classList.contains('active')) {
+            // Obtener porcentajes de todos los partidos desde partidosData
+            const sidebar = document.querySelector('control-sidebar');
+            if (sidebar && sidebar.partidosData) {
+                const votosObj = {};
+                let totalPorcentaje = 0;
+                
+                for (const partido in sidebar.partidosData) {
+                    const porcentaje = sidebar.partidosData[partido].porcentajeActual;
+                    if (porcentaje > 0) {
+                        votosObj[partido] = porcentaje;
+                        totalPorcentaje += porcentaje;
+                    }
+                }
+                
+                // Convertir a JSON string
+                votos_custom = JSON.stringify(votosObj);
+                
+                console.log('[CUSTOM VOTES] 🗳️ Votos personalizados activados:', {
+                    votos_custom,
+                    total_porcentaje: totalPorcentaje.toFixed(2) + '%',
+                    partidos: Object.keys(votosObj).length
+                });
+                
+                // Advertencia si no suma 100%
+                if (Math.abs(totalPorcentaje - 100) > 0.1) {
+                    console.warn(`[CUSTOM VOTES] ⚠️ Los porcentajes no suman 100% (suma: ${totalPorcentaje.toFixed(2)}%)`);
+                }
+            } else {
+                console.warn('[CUSTOM VOTES] ⚠️ Switch activado pero no se encontraron datos de partidos');
+            }
+        }
+        
         cargarSimulacion({
             anio, camara, modelo: modeloBackend, magnitud: magnitudFinal, 
             sobrerrepresentacion, umbral, sistema, 
             mr_seats, rp_seats, pm_seats, escanos_totales,  //  Nuevos parámetros
             reparto_mode, reparto_method, max_seats_per_party,
             usar_coaliciones,
+            votos_custom,  //  🆕 Incluir votos personalizados si están activados
             silentLoad: !showSuccessNotification,  // Mostrar notificación de éxito si es interacción del usuario
-            porcentajes_redistribucion: window.porcentajesTemporales || null  // 🆕 Incluir porcentajes si existen
+            porcentajes_redistribucion: window.porcentajesTemporales || null,  // 🆕 Incluir porcentajes si existen
+            mr_distritos_manuales: window.mrDistributionManual || null  // 🆕 Incluir distribución manual de MR
         });
     } else {
         // Estado por defecto: vigente diputados=500, senado=128
@@ -1648,7 +1785,8 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
             anio, camara, modelo: modeloBackend, magnitud, 
             reparto_mode, reparto_method,
             silentLoad: !showSuccessNotification,
-            porcentajes_redistribucion: window.porcentajesTemporales || null  // 🆕 Incluir porcentajes si existen
+            porcentajes_redistribucion: window.porcentajesTemporales || null,  // 🆕 Incluir porcentajes si existen
+            mr_distritos_manuales: window.mrDistributionManual || null  // 🆕 Incluir distribución manual de MR
         });
     }
     
@@ -1880,12 +2018,21 @@ window.electoralDebugger = {
                     console.log('[DEBUG] 🔍 data.seat_chart RAW (brutal test):', JSON.stringify(data.seat_chart, null, 2));
                     const sidebar = document.querySelector('control-sidebar');
                     if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                        // 🆕 GUARDAR DATOS COMPLETOS
+                        sidebar.lastResult = data;
+                        console.log('[DEBUG] 💾 Guardando data completo en sidebar.lastResult (brutal test):', data);
+                        
                         const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
                         const config = {
                             sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
                             pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : true
                         };
                         sidebar.updateResultsTable(resultadosTabla, config);
+                        
+                        // 🆕 Actualizar tabla de distritos por estado
+                        if (sidebar.updateStatesTable) {
+                            sidebar.updateStatesTable();
+                        }
                     }
                 });
             }

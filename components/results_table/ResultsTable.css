@@ -241,3 +241,110 @@
 .results-table tbody tr:nth-child(6) { animation-delay: 0.3s; }
 .results-table tbody tr:nth-child(7) { animation-delay: 0.35s; }
 .results-table tbody tr:nth-child(8) { animation-delay: 0.4s; }
+
+/* ========================================
+   🆕 MAYORÍAS - Colorear celdas Total
+   ======================================== */
+
+/* Mayoría Calificada - Verde oscuro profundo */
+.results-table tbody td.mayoria-calificada {
+  background-color: #012f2a !important; /* Verde oscuro profundo */
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  position: relative;
+}
+
+.results-table tbody td.mayoria-calificada .percent-escanos {
+  color: #D1FAE5 !important; /* Verde muy claro para contraste */
+}
+
+/* Mayoría Simple - Verde grisáceo */
+.results-table tbody td.mayoria-simple {
+  background-color: #5e7470 !important; /* Verde grisáceo */
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+.results-table tbody td.mayoria-simple .percent-escanos {
+  color: #E0E7E5 !important; /* Color claro para contraste */
+}
+
+/* Indicador visual (opcional - puntito en la esquina) */
+.results-table tbody td.mayoria-calificada::after,
+.results-table tbody td.mayoria-simple::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========================================
+   🆕 COLUMNA DE COALICIÓN
+   ======================================== */
+
+.results-table th.col-coalicion,
+.results-table td.col-coalicion {
+  text-align: center !important;
+  font-weight: 500;
+  padding: 12px 16px;
+}
+
+.results-table thead th.col-coalicion {
+  color: #6B7280;
+  font-size: 12px;
+}
+
+/* ========================================
+   🆕 LEYENDA DE MAYORÍAS (debajo de tabla)
+   ======================================== */
+
+.mayoria-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 12px 0;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #6B7280;
+  border-top: 1px solid #F3F4F6;
+}
+
+.mayoria-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mayoria-legend-badge {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.mayoria-legend-badge.calificada {
+  background-color: #012f2a;
+}
+
+.mayoria-legend-badge.simple {
+  background-color: #5e7470;
+}
+
+.mayoria-legend-badge.sin-mayoria {
+  background-color: #E5E7EB;
+  border: 1px solid #D1D5DB;
+}
+
+.mayoria-legend-text {
+  font-weight: 500;
+  color: #374151;
+}
+
+.mayoria-legend-umbral {
+  color: #9CA3AF;
+  font-size: 11px;
+}
