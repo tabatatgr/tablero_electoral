@@ -587,9 +587,11 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             
             // 🆕 MR DISTRIBUTION: Agregar distribución manual si existe
             if (mr_distritos_manuales && mr_distritos_manuales.activa && mr_distritos_manuales.distribucion) {
-                jsonBody.mr_distritos_manuales = mr_distritos_manuales.distribucion;
+                // Backend espera un string JSON, no un objeto directo
+                jsonBody.mr_distritos_manuales = JSON.stringify(mr_distritos_manuales.distribucion);
                 console.log('[MR DISTRIBUTION] 📡 Enviando distribución manual al backend:', {
                     distribucion: mr_distritos_manuales.distribucion,
+                    distribucion_string: jsonBody.mr_distritos_manuales,
                     total_asignado: mr_distritos_manuales.total_asignado,
                     total_disponible: mr_distritos_manuales.total_disponible
                 });
@@ -827,12 +829,12 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 }));
                 
                 // 🆕 ACTUALIZAR TABLA DE RESULTADOS (mismo flujo que seat-chart)
-                requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
                     console.log('[DEBUG] 📊 Actualizando tabla de resultados desde script.js');
                     console.log('[DEBUG] 🔍 data.seat_chart RAW del backend:', JSON.stringify(data.seat_chart, null, 2));
                     const sidebar = document.querySelector('control-sidebar');
                     if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
-                        // 🆕 GUARDAR DATOS COMPLETOS en sidebar.lastResult para que updateStatesTable() tenga acceso
+                        // 🆕 GUARDAR DATOS COMPLETOS PRIMERO (antes de todo)
                         sidebar.lastResult = data;
                         console.log('[DEBUG] 💾 Guardando data completo en sidebar.lastResult:', data);
                         
@@ -845,7 +847,8 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                         
                         // 🆕 Actualizar tabla de distritos por estado
                         if (sidebar.updateStatesTable) {
-                            sidebar.updateStatesTable();
+                            console.log('[DEBUG] 🗺️ Llamando a updateStatesTable desde script.js');
+                            await sidebar.updateStatesTable();
                         }
                     } else {
                         console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
@@ -1045,7 +1048,7 @@ async function cargarSeatChart(anio, camara, modelo) {
             }));
             
             // 🆕 ACTUALIZAR TABLA DE RESULTADOS (fallback)
-            requestAnimationFrame(() => {
+            requestAnimationFrame(async () => {
                 console.log('[DEBUG] 📊 Actualizando tabla de resultados desde fallback');
                 console.log('[DEBUG] 🔍 seatArray RAW (fallback):', JSON.stringify(seatArray, null, 2));
                 const sidebar = document.querySelector('control-sidebar');
@@ -1063,7 +1066,8 @@ async function cargarSeatChart(anio, camara, modelo) {
                     
                     // 🆕 Actualizar tabla de distritos por estado (se ocultará porque no hay meta)
                     if (sidebar.updateStatesTable) {
-                        sidebar.updateStatesTable();
+                        console.log('[DEBUG] 🗺️ Llamando a updateStatesTable desde fallback');
+                        await sidebar.updateStatesTable();
                     }
                 } else {
                     console.warn('[WARN] No se pudo actualizar tabla: sidebar o métodos no disponibles');
@@ -2013,7 +2017,7 @@ window.electoralDebugger = {
                 console.log(' SeatChart actualizado brutalmente');
                 
                 // 🆕 ACTUALIZAR TABLA DE RESULTADOS (brutal test)
-                requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
                     console.log('[DEBUG] 📊 Actualizando tabla de resultados desde brutal test');
                     console.log('[DEBUG] 🔍 data.seat_chart RAW (brutal test):', JSON.stringify(data.seat_chart, null, 2));
                     const sidebar = document.querySelector('control-sidebar');
@@ -2031,7 +2035,8 @@ window.electoralDebugger = {
                         
                         // 🆕 Actualizar tabla de distritos por estado
                         if (sidebar.updateStatesTable) {
-                            sidebar.updateStatesTable();
+                            console.log('[DEBUG] 🗺️ Llamando a updateStatesTable desde brutal test');
+                            await sidebar.updateStatesTable();
                         }
                     }
                 });
