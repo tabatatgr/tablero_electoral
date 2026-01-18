@@ -54,8 +54,14 @@ export class ControlSidebar extends HTMLElement {
                   <label class="control-label">Modelo</label>
                   <select class="control-select" id="model-select">
                     <option value="vigente" selected>Vigente</option>
+                    <option value="plan_a">Plan A</option>
+                    <option value="plan_c">Plan C</option>
+                    <option value="300_100_con_topes">300-100 con Topes</option>
+                    <option value="300_100_sin_topes">300-100 sin Topes</option>
+                    <option value="200_200_sin_topes">200-200 Balanceado</option>
                     <option value="personalizado">Personalizado</option>
                   </select>
+                  <small class="control-hint" id="model-hint"></small>
                 </div>
               </div>
             </div>
@@ -544,6 +550,12 @@ initializeSidebarControls() {
         this.selectedChamber = selectedChamber;
         console.log('[DEBUG] 📌 Cámara seleccionada guardada:', this.selectedChamber);
         
+        // 🆕 Actualizar hint del escenario cuando cambia la cámara
+        const modelSelectEl = this.querySelector('#model-select');
+        if (modelSelectEl && typeof updateModelHint === 'function') {
+          updateModelHint(modelSelectEl.value);
+        }
+        
         //  LÓGICA PARA COALICIONES - Ajustar año cuando cambie la cámara
         const coalitionSwitch = document.querySelector('#coalition-switch');
         const yearSelect = document.getElementById('year-select');
@@ -680,6 +692,39 @@ initializeSidebarControls() {
       });
     });
 
+    // 🆕 Función para actualizar el hint del escenario (definida fuera para ser reutilizable)
+    const updateModelHint = (escenarioId) => {
+      const hintEl = this.querySelector('#model-hint');
+      if (!hintEl) return;
+      
+      const chamberBtn = this.querySelector('.master-toggle.active');
+      const camara = chamberBtn ? chamberBtn.dataset.chamber : 'diputados';
+      
+      // Mapeo de descripciones según cámara
+      const HINTS_DIPUTADOS = {
+        'vigente': '300 MR + 200 RP = 500 escaños (con tope de 300)',
+        'plan_a': '300 RP puro (sin mayorías relativas)',
+        'plan_c': '300 MR puro (sin proporcionales)',
+        '300_100_con_topes': '300 MR + 100 RP = 400 (tope 300 escaños)',
+        '300_100_sin_topes': '300 MR + 100 RP = 400 (sin tope)',
+        '200_200_sin_topes': '200 MR + 200 RP = 400 (balanceado 50-50)',
+        'personalizado': 'Configura tus propios parámetros'
+      };
+      
+      const HINTS_SENADO = {
+        'vigente': '64 MR + 32 PM + 32 RP = 128 senadores',
+        'plan_a': '96 RP puro (lista nacional)',
+        'plan_c': '32 MR + 32 PM = 64 (sin RP)',
+        'personalizado': 'Configura tus propios parámetros'
+      };
+      
+      const hints = camara === 'senadores' ? HINTS_SENADO : HINTS_DIPUTADOS;
+      const hint = hints[escenarioId] || '';
+      
+      hintEl.textContent = hint;
+      hintEl.style.display = hint ? 'block' : 'none';
+    };
+
     const modelPills = this.querySelectorAll('.master-pill[data-model]');
     modelPills.forEach(pill => {
       pill.addEventListener('click', function() {
@@ -692,21 +737,242 @@ initializeSidebarControls() {
     const modelSelect = this.querySelector('#model-select');
     if (modelSelect) {
       modelSelect.addEventListener('change', (event) => {
-        const isPersonalizado = modelSelect.value === 'personalizado';
+        const scenario = modelSelect.value;
+        const isPersonalizado = scenario === 'personalizado';
+        
+        // 🆕 HABILITAR sliders para TODOS los escenarios (no solo "personalizado")
+        // El usuario puede modificar cualquier escenario predefinido
+        const enableSliders = true; // Siempre habilitado para permitir ajustes
+        
         // Si el cambio proviene del usuario (isTrusted), NO sincronizamos automáticamente
         // con valores vigentes para evitar sobreescribir lo que el usuario ya tenía.
         const syncWithVigente = !(event && event.isTrusted);
-        this.updateSlidersState(isPersonalizado, syncWithVigente);
-        console.log(`[DEBUG]  Modelo cambiado a: ${modelSelect.value} - Sliders ${isPersonalizado ? 'habilitados' : 'deshabilitados'} (syncWithVigente=${syncWithVigente})`);
+        this.updateSlidersState(enableSliders, syncWithVigente);
+        console.log(`[DEBUG]  Escenario cambiado a: ${scenario} - Sliders habilitados para permitir ajustes (syncWithVigente=${syncWithVigente})`);
 
-        // Ajustar topes de sliders según modelo y cámara
+        // 🆕 Actualizar hint del escenario
+        updateModelHint(scenario);
+
+        // 🆕 PRE-LLENAR VALORES según escenario seleccionado
         const chamberBtn = this.querySelector('.master-toggle.active');
         const camara = chamberBtn ? chamberBtn.dataset.chamber : 'diputados';
         const mrSlider = this.querySelector('#input-mr');
+        const rpSlider = this.querySelector('#input-rp');
+        const mrValue = this.querySelector('#input-mr-value');
+        const rpValue = this.querySelector('#input-rp-value');
         const magnitudeSlider = this.querySelector('#input-magnitud');
+        const magnitudeValue = this.querySelector('#input-magnitud-value');
+        const overrepSwitch = this.querySelector('#overrep-switch');
+        const overrepSlider = this.querySelector('#overrep-slider');
+        const overrepValue = this.querySelector('#overrep-value-box');
+        
+        // Radio buttons de sistema electoral
+        const radioMixto = this.querySelector('#radio-mixto');
+        const radioMR = this.querySelector('#radio-mr');
+        const radioRP = this.querySelector('#radio-rp');
+        
+        // Configurar valores predefinidos por escenario (solo para Diputados)
+        if (camara === 'diputados' && event && event.isTrusted) {
+          const escenarios = {
+            'vigente': { 
+              mr: 300, rp: 200, total: 500, 
+              sistema: 'mixto',
+              sobrerrepActiva: true, sobrerrepValor: 8.0,
+              umbralActivo: true, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: false, topeEscanosValor: 300
+            },
+            'plan_a': { 
+              mr: 0, rp: 300, total: 300,
+              sistema: 'rp',
+              sobrerrepActiva: false, sobrerrepValor: 0,
+              umbralActivo: true, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: false, topeEscanosValor: 300
+            },
+            'plan_c': { 
+              mr: 300, rp: 0, total: 300,
+              sistema: 'mr',
+              sobrerrepActiva: false, sobrerrepValor: 0,
+              umbralActivo: false, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: false, topeEscanosValor: 300
+            },
+            '300_100_con_topes': { 
+              mr: 300, rp: 100, total: 400,
+              sistema: 'mixto',
+              sobrerrepActiva: true, sobrerrepValor: 8.0,
+              umbralActivo: true, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: true, topeEscanosValor: 300
+            },
+            '300_100_sin_topes': { 
+              mr: 300, rp: 100, total: 400,
+              sistema: 'mixto',
+              sobrerrepActiva: false, sobrerrepValor: 0,
+              umbralActivo: true, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: false, topeEscanosValor: 300
+            },
+            '200_200_sin_topes': { 
+              mr: 200, rp: 200, total: 400,
+              sistema: 'mixto',
+              sobrerrepActiva: false, sobrerrepValor: 0,
+              umbralActivo: true, umbralTipo: 'national', umbralValor: 3.0,
+              repartoMode: 'cuota', repartoMethod: 'hare',
+              topeEscanosActivo: false, topeEscanosValor: 300
+            }
+          };
+          
+          if (escenarios[scenario]) {
+            const config = escenarios[scenario];
+            console.log(`[SCENARIO] 🎯 Aplicando configuración completa de "${scenario}":`, config);
+            
+            // 1. ✅ Sistema electoral (radio buttons)
+            if (config.sistema === 'mixto' && radioMixto) radioMixto.checked = true;
+            else if (config.sistema === 'mr' && radioMR) radioMR.checked = true;
+            else if (config.sistema === 'rp' && radioRP) radioRP.checked = true;
+            
+            // 2. ✅ Mostrar/ocultar controles según sistema
+            const mixtoInputs = this.querySelector('#mixto-inputs');
+            if (mixtoInputs) {
+              mixtoInputs.style.display = config.sistema === 'mixto' ? 'block' : 'none';
+            }
+            
+            // 3. ✅ Valores de MR/RP
+            if (mrSlider && mrValue) {
+              mrSlider.value = config.mr;
+              mrValue.textContent = config.mr;
+            }
+            if (rpSlider && rpValue) {
+              rpSlider.value = config.rp;
+              rpValue.textContent = config.rp;
+            }
+            
+            // 4. ✅ Magnitud total
+            if (magnitudeSlider && magnitudeValue) {
+              magnitudeSlider.value = config.total;
+              magnitudeValue.textContent = config.total;
+            }
+            
+            // 5. ✅ Sobrerrepresentación (switch + slider)
+            if (overrepSwitch) {
+              if (config.sobrerrepActiva) {
+                overrepSwitch.classList.add('active');
+                overrepSwitch.setAttribute('data-switch', 'On');
+                overrepSwitch.setAttribute('aria-checked', 'true');
+              } else {
+                overrepSwitch.classList.remove('active');
+                overrepSwitch.setAttribute('data-switch', 'Off');
+                overrepSwitch.setAttribute('aria-checked', 'false');
+              }
+            }
+            if (overrepSlider && overrepValue) {
+              overrepSlider.value = config.sobrerrepValor;
+              overrepValue.textContent = `${config.sobrerrepValor.toFixed(1)}%`;
+            }
+            
+            // 6. 🆕 UMBRAL (switch + tipo + valor)
+            const thresholdSwitch = this.querySelector('#threshold-switch');
+            const thresholdRadioGroup = this.querySelector('#threshold-radio-group');
+            const thresholdControlsGroup = this.querySelector('#threshold-controls-group');
+            const thresholdSlider = this.querySelector('#threshold-slider');
+            const thresholdValueBox = this.querySelector('#threshold-value-box');
+            const radioNational = this.querySelector('#radio-national');
+            const radioState = this.querySelector('#radio-state');
+            
+            if (thresholdSwitch) {
+              if (config.umbralActivo) {
+                thresholdSwitch.classList.add('active');
+                thresholdSwitch.setAttribute('data-switch', 'On');
+                thresholdSwitch.setAttribute('aria-checked', 'true');
+                if (thresholdRadioGroup) thresholdRadioGroup.style.display = 'block';
+                if (thresholdControlsGroup) thresholdControlsGroup.style.display = 'block';
+              } else {
+                thresholdSwitch.classList.remove('active');
+                thresholdSwitch.setAttribute('data-switch', 'Off');
+                thresholdSwitch.setAttribute('aria-checked', 'false');
+                if (thresholdRadioGroup) thresholdRadioGroup.style.display = 'none';
+                if (thresholdControlsGroup) thresholdControlsGroup.style.display = 'none';
+              }
+            }
+            
+            if (config.umbralActivo) {
+              if (config.umbralTipo === 'national' && radioNational) radioNational.checked = true;
+              else if (config.umbralTipo === 'state' && radioState) radioState.checked = true;
+              
+              if (thresholdSlider && thresholdValueBox) {
+                thresholdSlider.value = config.umbralValor;
+                thresholdValueBox.textContent = `${config.umbralValor.toFixed(1)}%`;
+              }
+            }
+            
+            // 7. 🆕 MÉTODO DE REPARTO (radio mode + select method)
+            const repartoCuotaRadio = this.querySelector('#reparto-cuota');
+            const repartoDivisorRadio = this.querySelector('#reparto-divisor');
+            const repartoMethodSelect = this.querySelector('#reparto-method');
+            
+            if (config.repartoMode === 'cuota' && repartoCuotaRadio) {
+              repartoCuotaRadio.checked = true;
+              // Actualizar opciones del select para métodos de cuota
+              if (repartoMethodSelect) {
+                repartoMethodSelect.innerHTML = `
+                  <option value="hare" ${config.repartoMethod === 'hare' ? 'selected' : ''}>Hare</option>
+                  <option value="droop" ${config.repartoMethod === 'droop' ? 'selected' : ''}>Droop</option>
+                  <option value="imperiali" ${config.repartoMethod === 'imperiali' ? 'selected' : ''}>Imperiali</option>
+                `;
+              }
+            } else if (config.repartoMode === 'divisor' && repartoDivisorRadio) {
+              repartoDivisorRadio.checked = true;
+              // Actualizar opciones del select para métodos de divisor
+              if (repartoMethodSelect) {
+                repartoMethodSelect.innerHTML = `
+                  <option value="dhondt" ${config.repartoMethod === 'dhondt' ? 'selected' : ''}>D'Hondt</option>
+                  <option value="saint-lague" ${config.repartoMethod === 'saint-lague' ? 'selected' : ''}>Sainte-Laguë</option>
+                  <option value="modified-saint-lague" ${config.repartoMethod === 'modified-saint-lague' ? 'selected' : ''}>Sainte-Laguë Modificado</option>
+                `;
+              }
+            }
+            
+            // 8. 🆕 TOPE DE ESCAÑOS POR PARTIDO (switch + valor)
+            const seatCapSwitch = this.querySelector('#seat-cap-switch');
+            const seatCapInputGroup = this.querySelector('#seat-cap-input-group');
+            const seatCapInput = this.querySelector('#seat-cap-input');
+            const seatCapInputValue = this.querySelector('#seat-cap-input-value');
+            
+            if (seatCapSwitch) {
+              if (config.topeEscanosActivo) {
+                seatCapSwitch.classList.add('active');
+                seatCapSwitch.setAttribute('data-switch', 'On');
+                seatCapSwitch.setAttribute('aria-checked', 'true');
+                if (seatCapInputGroup) seatCapInputGroup.style.display = 'block';
+              } else {
+                seatCapSwitch.classList.remove('active');
+                seatCapSwitch.setAttribute('data-switch', 'Off');
+                seatCapSwitch.setAttribute('aria-checked', 'false');
+                if (seatCapInputGroup) seatCapInputGroup.style.display = 'none';
+              }
+            }
+            
+            if (config.topeEscanosActivo && seatCapInput && seatCapInputValue) {
+              seatCapInput.value = config.topeEscanosValor;
+              seatCapInputValue.textContent = config.topeEscanosValor;
+            }
+            
+            console.log(`[SCENARIO] ✅ Configuración COMPLETA aplicada:
+              - Sistema: ${config.sistema}, MR:${config.mr}, RP:${config.rp}, Total:${config.total}
+              - Sobrerrepresentación: ${config.sobrerrepActiva ? config.sobrerrepValor + '%' : 'OFF'}
+              - Umbral: ${config.umbralActivo ? config.umbralTipo + ' ' + config.umbralValor + '%' : 'OFF'}
+              - Reparto: ${config.repartoMode} / ${config.repartoMethod}
+              - Tope escaños: ${config.topeEscanosActivo ? config.topeEscanosValor : 'OFF'}`);
+          }
+        }
+
+        // Ajustar topes de sliders según modelo y cámara
+        // Ajustar topes de sliders según modelo y cámara
         let maxMr = 700;
         let maxMagnitud = 700;
-        if (modelSelect.value === 'personalizado' || modelSelect.value === 'mixto') {
+        if (scenario === 'personalizado' || scenario === 'mixto') {
           if (camara === 'senadores') {
             maxMr = 64;
             maxMagnitud = 128;
@@ -730,6 +996,9 @@ initializeSidebarControls() {
         }
         if (magnitudeSlider) magnitudeSlider.max = maxMagnitud;
       });
+      
+      // 🆕 Mostrar hint inicial
+      updateModelHint(modelSelect.value);
       
   // Establecer estado inicial (sin especificar event → sincronizar por defecto)
   const initialPersonalizado = modelSelect.value === 'personalizado';
@@ -2722,6 +2991,12 @@ initializeSidebarControls() {
     let distritosPorEstado = this.lastResult.meta.distritos_por_estado || 
                              this.lastResult.meta.senadores_por_estado ||
                              this.lastResult.meta.mr_distritos_por_estado;
+    
+    // 🔍 DEBUG: Verificar si el backend envió el nuevo campo
+    console.log('[DEBUG] 📦 meta.distritos_por_estado desde backend:', this.lastResult.meta.distritos_por_estado ? '✅ EXISTE' : '❌ NO EXISTE');
+    if (this.lastResult.meta.distritos_por_estado) {
+      console.log('[DEBUG] 📊 Ejemplo distritos_por_estado:', Object.entries(this.lastResult.meta.distritos_por_estado).slice(0, 3));
+    }
                              
     // 🔥 FALLBACK ROBUSTO: Si no hay definición geográfica explícita, 
     // inferirla de la suma de ganadores por estado (funciona para ambas cámaras)
@@ -3814,12 +4089,22 @@ initializeSidebarControls() {
       // ✅ Incluir 'anio' en AMBOS endpoints (diputados y senado)
       console.log('[MAYORÍAS] 🔧 Construyendo parámetros - aplicarTopes final:', aplicarTopes);
       
+      // 🆕 Determinar si es coalición o partido individual
+      const esCoalicion = partido.includes('+');
+      
       const params = new URLSearchParams({
         partido: partido,
         tipo_mayoria: tipoMayoria,  // ✅ Con UNDERSCORE
         plan: plan,
         aplicar_topes: aplicarTopes.toString(),  // ← Debe usar el valor modificado
-        anio: anio.toString()  // ✅ AGREGADO para ambos endpoints
+        anio: anio.toString(),  // ✅ AGREGADO para ambos endpoints
+        solo_partido: (!esCoalicion).toString()  // 🆕 TRUE si es partido individual, FALSE si es coalición
+      });
+      
+      console.log('[MAYORÍAS] 🎯 Tipo de selección:', {
+        partidoSeleccionado: partido,
+        esCoalicion: esCoalicion,
+        soloPartido: !esCoalicion
       });
       
       // 🆕 Agregar parámetros de configuración personalizada
@@ -3858,7 +4143,14 @@ initializeSidebarControls() {
       const data = await response.json();
       console.log('[MAYORÍAS] ✅ Data recibida:', data);
       
-      // 🔄 Actualizar tabla y seat chart en lugar de solo mostrar resumen
+      // � DEBUG: Verificar campo solo_partido de la respuesta
+      if (data.solo_partido !== undefined) {
+        console.log('[MAYORÍAS] ✅ Backend confirmó solo_partido:', data.solo_partido);
+      } else {
+        console.warn('[MAYORÍAS] ⚠️ Backend NO devolvió campo solo_partido (puede ser versión antigua)');
+      }
+      
+      // �🔄 Actualizar tabla y seat chart en lugar de solo mostrar resumen
       this.aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara);
       
     } catch (error) {
@@ -3885,6 +4177,16 @@ initializeSidebarControls() {
   // 🆕 Aplicar Mayoría Forzada al Sistema (actualiza tabla y seat chart)
   aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara) {
     console.log('[MAYORÍAS] 🔄 Aplicando mayoría forzada al sistema...', { data, partido, camara });
+    
+    // 🔍 DEBUG: Ver estructura completa de la respuesta
+    console.log('[MAYORÍAS] 📦 Estructura de data completa:', JSON.stringify(data, null, 2));
+    
+    // 🔍 DEBUG: Verificar si vienen resultados por partido
+    if (data.resultados) {
+      console.log('[MAYORÍAS] 📊 Resultados por partido:', data.resultados);
+      const partidosAfectados = data.resultados.map(p => p.partido || p.name);
+      console.log('[MAYORÍAS] 🎯 Partidos en respuesta:', partidosAfectados);
+    }
     
     // Extraer datos según cámara
     const escanosNecesarios = data.senadores_necesarios || data.diputados_necesarios || data.escanos_necesarios || 0;

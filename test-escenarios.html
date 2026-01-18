@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Nuevos Escenarios</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .hint {
+            background: #f0f0f0;
+            padding: 10px;
+            border-left: 3px solid #1E5B4F;
+            margin: 10px 0;
+            font-style: italic;
+            color: #666;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test de Nuevos Escenarios</h1>
+    
+    <div id="status" class="status"></div>
+    
+    <h2>Selector de Escenarios:</h2>
+    <select id="escenario-select">
+        <optgroup label="⚖️ Sistema Oficial">
+            <option value="vigente" selected>⚖️ Sistema Vigente</option>
+        </optgroup>
+        <optgroup label="📋 Propuestas de Reforma">
+            <option value="plan_a">📊 Plan A - Solo RP (300)</option>
+            <option value="plan_c">🗳️ Plan C - Solo MR (300)</option>
+        </optgroup>
+        <optgroup label="🆕 Escenarios Nuevos (400 escaños)">
+            <option value="300_100_con_topes">🆕 300-100 con Topes</option>
+            <option value="300_100_sin_topes">🆕 300-100 sin Topes</option>
+            <option value="200_200_sin_topes">⚖️ 200-200 Balanceado</option>
+        </optgroup>
+        <optgroup label="⚙️ Configuración Manual">
+            <option value="personalizado">⚙️ Personalizado</option>
+        </optgroup>
+    </select>
+    
+    <div class="hint" id="hint"></div>
+    
+    <h3>Opciones Disponibles:</h3>
+    <ul id="options-list"></ul>
+    
+    <script>
+        // Test: Verificar que todas las opciones están disponibles
+        const select = document.getElementById('escenario-select');
+        const optionsList = document.getElementById('options-list');
+        const statusDiv = document.getElementById('status');
+        const hintDiv = document.getElementById('hint');
+        
+        const expectedOptions = [
+            'vigente',
+            'plan_a',
+            'plan_c',
+            '300_100_con_topes',
+            '300_100_sin_topes',
+            '200_200_sin_topes',
+            'personalizado'
+        ];
+        
+        // Obtener todas las opciones
+        const options = Array.from(select.options).map(opt => opt.value);
+        
+        // Verificar
+        const missingOptions = expectedOptions.filter(exp => !options.includes(exp));
+        const extraOptions = options.filter(opt => !expectedOptions.includes(opt));
+        
+        // Mostrar en la lista
+        options.forEach(opt => {
+            const li = document.createElement('li');
+            const isNew = ['300_100_con_topes', '300_100_sin_topes', '200_200_sin_topes'].includes(opt);
+            li.textContent = opt + (isNew ? ' 🆕 NUEVO' : '');
+            li.style.color = isNew ? '#1E5B4F' : '#333';
+            li.style.fontWeight = isNew ? 'bold' : 'normal';
+            optionsList.appendChild(li);
+        });
+        
+        // Mostrar status
+        if (missingOptions.length === 0 && extraOptions.length === 0) {
+            statusDiv.className = 'status success';
+            statusDiv.innerHTML = `
+                <strong>✅ TEST EXITOSO</strong><br>
+                Se encontraron ${options.length} escenarios.<br>
+                Los 3 nuevos escenarios están presentes: 
+                <ul>
+                    <li>300_100_con_topes ✅</li>
+                    <li>300_100_sin_topes ✅</li>
+                    <li>200_200_sin_topes ✅</li>
+                </ul>
+            `;
+        } else {
+            statusDiv.className = 'status error';
+            let errorMsg = '<strong>❌ TEST FALLIDO</strong><br>';
+            if (missingOptions.length > 0) {
+                errorMsg += `Faltan: ${missingOptions.join(', ')}<br>`;
+            }
+            if (extraOptions.length > 0) {
+                errorMsg += `Sobran: ${extraOptions.join(', ')}<br>`;
+            }
+            statusDiv.innerHTML = errorMsg;
+        }
+        
+        // Hints
+        const hints = {
+            'vigente': '300 MR + 200 RP = 500 escaños (con tope de 300)',
+            'plan_a': '300 RP puro (sin mayorías relativas)',
+            'plan_c': '300 MR puro (sin proporcionales)',
+            '300_100_con_topes': '300 MR + 100 RP = 400 (tope 300 escaños)',
+            '300_100_sin_topes': '300 MR + 100 RP = 400 (sin tope)',
+            '200_200_sin_topes': '200 MR + 200 RP = 400 (balanceado 50-50)',
+            'personalizado': 'Configura tus propios parámetros'
+        };
+        
+        select.addEventListener('change', function() {
+            hintDiv.textContent = hints[this.value] || '';
+        });
+        
+        // Mostrar hint inicial
+        hintDiv.textContent = hints[select.value];
+    </script>
+</body>
+</html>

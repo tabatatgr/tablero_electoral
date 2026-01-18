@@ -362,15 +362,140 @@ console.log(' Electoral Dashboard script loaded');
 
 // ===== FETCH Y ACTUALIZACIÓN DE DASHBOARD (MVP) =====
 
+// 🎯 DEFINICIONES DE ESCENARIOS PREDETERMINADOS
+const ESCENARIOS_DIPUTADOS = {
+    'vigente': {
+        id: 'vigente',
+        nombre: 'Sistema Vigente',
+        descripcion: '300 MR + 200 RP = 500 (con topes)',
+        categoria: 'oficial',
+        icon: '⚖️',
+        totales: 500,
+        mr: 300,
+        rp: 200
+    },
+    'plan_a': {
+        id: 'plan_a',
+        nombre: 'Plan A - Solo RP',
+        descripcion: '300 RP puro (sin mayorías)',
+        categoria: 'reforma',
+        icon: '📊',
+        totales: 300,
+        mr: 0,
+        rp: 300
+    },
+    'plan_c': {
+        id: 'plan_c',
+        nombre: 'Plan C - Solo MR',
+        descripcion: '300 MR puro (sin proporcionales)',
+        categoria: 'reforma',
+        icon: '🗳️',
+        totales: 300,
+        mr: 300,
+        rp: 0
+    },
+    '300_100_con_topes': {
+        id: '300_100_con_topes',
+        nombre: '300-100 con Topes',
+        descripcion: '300 MR + 100 RP = 400 (tope 300)',
+        categoria: 'nuevo',
+        icon: '🆕',
+        badge: 'NUEVO',
+        totales: 400,
+        mr: 300,
+        rp: 100
+    },
+    '300_100_sin_topes': {
+        id: '300_100_sin_topes',
+        nombre: '300-100 sin Topes',
+        descripcion: '300 MR + 100 RP = 400 (sin tope)',
+        categoria: 'nuevo',
+        icon: '🆕',
+        badge: 'NUEVO',
+        totales: 400,
+        mr: 300,
+        rp: 100
+    },
+    '200_200_sin_topes': {
+        id: '200_200_sin_topes',
+        nombre: '200-200 Balanceado',
+        descripcion: '200 MR + 200 RP = 400 (50-50)',
+        categoria: 'nuevo',
+        icon: '⚖️',
+        badge: 'NUEVO',
+        totales: 400,
+        mr: 200,
+        rp: 200
+    },
+    'personalizado': {
+        id: 'personalizado',
+        nombre: 'Personalizado',
+        descripcion: 'Configura tus propios parámetros',
+        categoria: 'custom',
+        icon: '⚙️'
+    }
+};
+
+const ESCENARIOS_SENADO = {
+    'vigente': {
+        id: 'vigente',
+        nombre: 'Sistema Vigente',
+        descripcion: '64 MR + 32 PM + 32 RP = 128',
+        categoria: 'oficial',
+        icon: '⚖️',
+        totales: 128,
+        mr: 64,
+        pm: 32,
+        rp: 32
+    },
+    'plan_a': {
+        id: 'plan_a',
+        nombre: 'Plan A - Solo RP',
+        descripcion: '96 RP puro',
+        categoria: 'reforma',
+        icon: '📊',
+        totales: 96,
+        mr: 0,
+        pm: 0,
+        rp: 96
+    },
+    'plan_c': {
+        id: 'plan_c',
+        nombre: 'Plan C - Solo MR+PM',
+        descripcion: '32 MR + 32 PM = 64',
+        categoria: 'reforma',
+        icon: '🗳️',
+        totales: 64,
+        mr: 32,
+        pm: 32,
+        rp: 0
+    },
+    'personalizado': {
+        id: 'personalizado',
+        nombre: 'Personalizado',
+        descripcion: 'Configura tus propios parámetros',
+        categoria: 'custom',
+        icon: '⚙️'
+    }
+};
+
 //  FUNCIÓN CENTRALIZADA: Mapeo modelo → plan
 function mapearModeloAPlan(modelo) {
     const mapeo = {
         'vigente': 'vigente',
-        'plan a': 'A', 
-        'plan b': 'B',
-        'plan c': 'C',
-        'plan_c': 'C',
-        'personalizado': 'personalizado'  //  CORRECTO: mantener como personalizado
+        'plan a': 'plan_a',
+        'plan_a': 'plan_a',
+        'plan b': 'plan_b',
+        'plan_b': 'plan_b',
+        'plan c': 'plan_c',
+        'plan_c': 'plan_c',
+        '300_100_con_topes': '300_100_con_topes',
+        '300-100 con topes': '300_100_con_topes',
+        '300_100_sin_topes': '300_100_sin_topes',
+        '300-100 sin topes': '300_100_sin_topes',
+        '200_200_sin_topes': '200_200_sin_topes',
+        '200-200 balanceado': '200_200_sin_topes',
+        'personalizado': 'personalizado'
     };
     
     // Si el modelo está en el mapeo, usarlo; sino usar el modelo tal como viene
@@ -1477,13 +1602,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mapas de modelos válidos por año y cámara
     const modelosPorCamaraAnio = {
         'diputados': {
-            2018: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
-            2021: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
-            2024: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ]
+            2018: [ 'vigente', 'plan_a', 'plan_c', '300_100_con_topes', '300_100_sin_topes', '200_200_sin_topes', 'personalizado' ],
+            2021: [ 'vigente', 'plan_a', 'plan_c', '300_100_con_topes', '300_100_sin_topes', '200_200_sin_topes', 'personalizado' ],
+            2024: [ 'vigente', 'plan_a', 'plan_c', '300_100_con_topes', '300_100_sin_topes', '200_200_sin_topes', 'personalizado' ]
         },
         'senado': {
-            2018: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ],
-            2024: [ 'vigente', 'plan-a', 'plan-c', 'personalizado' ]
+            2018: [ 'vigente', 'plan_a', 'plan_c', 'personalizado' ],
+            2024: [ 'vigente', 'plan_a', 'plan_c', 'personalizado' ]
         }
     };
     function updateModelosDisponibles() {
@@ -1504,8 +1629,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Opciones legibles
         const modelosLabels = {
             'vigente': 'Vigente',
-            'plan-a': 'Plan A',
-            'plan-c': 'Plan C',
+            'plan_a': 'Plan A',
+            'plan_c': 'Plan C',
+            '300_100_con_topes': '300-100 con Topes',
+            '300_100_sin_topes': '300-100 sin Topes',
+            '200_200_sin_topes': '200-200 Balanceado',
             'personalizado': 'Personalizado'
         };
         // Actualiza el select de modelos
@@ -1662,8 +1790,11 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
     // Modelos válidos
     const modelosValidos = [
         { value: 'vigente', label: 'Vigente' },
-        { value: 'plan-a', label: 'Plan A' },
-        { value: 'plan-c', label: 'Plan C' },
+        { value: 'plan_a', label: 'Plan A' },
+        { value: 'plan_c', label: 'Plan C' },
+        { value: '300_100_con_topes', label: '300-100 con Topes' },
+        { value: '300_100_sin_topes', label: '300-100 sin Topes' },
+        { value: '200_200_sin_topes', label: '200-200 Balanceado' },
         { value: 'personalizado', label: 'Personalizado' }
     ];
     const modelSelect = document.getElementById('model-select');
@@ -1683,8 +1814,11 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
     // Mapear modelo a los valores esperados por el backend/parquet
     let modeloBackend = modelo;
     if (modelo === 'vigente') modeloBackend = 'vigente';
-    else if (modelo === 'plan-a') modeloBackend = 'plan a';
-    else if (modelo === 'plan-c') modeloBackend = 'plan c';
+    else if (modelo === 'plan_a') modeloBackend = 'plan a';
+    else if (modelo === 'plan_c') modeloBackend = 'plan c';
+    else if (modelo === '300_100_con_topes') modeloBackend = '300_100_con_topes';
+    else if (modelo === '300_100_sin_topes') modeloBackend = '300_100_sin_topes';
+    else if (modelo === '200_200_sin_topes') modeloBackend = '200_200_sin_topes';
 
     // ===== LEER SISTEMA DE REPARTO (PARA TODOS LOS MODELOS) =====
     const repartoModeRadios = document.querySelectorAll('input[name="reparto-mode"]');
