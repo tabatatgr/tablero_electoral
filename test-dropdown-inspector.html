@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inspector de Dropdown</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #333; margin-top: 0; }
+        h2 { color: #666; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .success { color: #4CAF50; font-weight: bold; }
+        .error { color: #f44336; font-weight: bold; }
+        .warning { color: #ff9800; font-weight: bold; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .instruction {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🔍 Inspector de Dropdown - Modelo Electoral</h1>
+        
+        <div class="instruction">
+            <h3>📋 INSTRUCCIONES:</h3>
+            <ol>
+                <li>Abre tu dashboard principal (<code>index.html</code>)</li>
+                <li>Abre la consola del navegador (F12)</li>
+                <li>Copia y pega este código en la consola:</li>
+            </ol>
+        </div>
+
+        <div class="code-block">const select = document.getElementById('model-select');
+if (select) {
+    const options = Array.from(select.options).map(opt => ({
+        value: opt.value,
+        text: opt.textContent,
+        selected: opt.selected
+    }));
+    console.log('🔍 OPCIONES ENCONTRADAS:', options.length);
+    console.table(options);
+} else {
+    console.error('❌ NO SE ENCONTRÓ el select con id="model-select"');
+}</div>
+
+        <h2>🎯 Lo que DEBERÍAS ver:</h2>
+        <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+                <tr style="background: #4CAF50; color: white;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">value</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">text</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;">vigente</td><td style="padding: 8px; border: 1px solid #ddd;">Vigente</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;">plan_a</td><td style="padding: 8px; border: 1px solid #ddd;">Plan A</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;">plan_c</td><td style="padding: 8px; border: 1px solid #ddd;">Plan C</td></tr>
+                <tr style="background: #fff3cd;"><td style="padding: 8px; border: 1px solid #ddd;"><strong>300_100_con_topes</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><strong>300-100 con Topes</strong></td></tr>
+                <tr style="background: #fff3cd;"><td style="padding: 8px; border: 1px solid #ddd;"><strong>300_100_sin_topes</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><strong>300-100 sin Topes</strong></td></tr>
+                <tr style="background: #fff3cd;"><td style="padding: 8px; border: 1px solid #ddd;"><strong>200_200_sin_topes</strong></td><td style="padding: 8px; border: 1px solid #ddd;"><strong>200-200 Balanceado</strong></td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;">personalizado</td><td style="padding: 8px; border: 1px solid #ddd;">Personalizado</td></tr>
+            </tbody>
+        </table>
+        
+        <p style="margin-top: 20px;"><span class="success">✅ Total esperado: 7 opciones</span></p>
+
+        <h2 style="margin-top: 30px;">⚠️ Si ves MENOS de 7 opciones:</h2>
+        <div class="instruction">
+            <p><strong>Ejecuta este comando en la consola:</strong></p>
+        </div>
+        
+        <div class="code-block">// Ver la fuente HTML REAL del componente
+const sidebar = document.querySelector('control-sidebar');
+if (sidebar) {
+    const selectHTML = sidebar.querySelector('#model-select').outerHTML;
+    console.log('📄 HTML DEL SELECT:', selectHTML);
+    
+    // Ver si el archivo ControlSidebar.js tiene la versión correcta
+    const scripts = Array.from(document.querySelectorAll('script[src*="ControlSidebar"]'));
+    scripts.forEach(s => console.log('📜 Script cargado:', s.src));
+} else {
+    console.error('❌ No se encontró <control-sidebar>');
+}</div>
+
+        <h2 style="margin-top: 30px;">🔧 SOLUCIÓN NUCLEAR:</h2>
+        <div class="instruction">
+            <p>Si después de todo SIGUE sin funcionar, ejecuta esto en la consola para <strong>reescribir el dropdown manualmente:</strong></p>
+        </div>
+
+        <div class="code-block">const select = document.getElementById('model-select');
+if (select) {
+    select.innerHTML = `
+        <option value="vigente" selected>Vigente</option>
+        <option value="plan_a">Plan A</option>
+        <option value="plan_c">Plan C</option>
+        <option value="300_100_con_topes">300-100 con Topes</option>
+        <option value="300_100_sin_topes">300-100 sin Topes</option>
+        <option value="200_200_sin_topes">200-200 Balanceado</option>
+        <option value="personalizado">Personalizado</option>
+    `;
+    console.log('✅ Dropdown reescrito manualmente con 7 opciones');
+    console.log('📊 Opciones ahora:', select.options.length);
+} else {
+    console.error('❌ No existe #model-select');
+}</div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+            <h3>📸 Comparte el resultado:</h3>
+            <p>Después de ejecutar los comandos, copia el output de la consola y pégalo en el chat para que pueda ver qué está pasando.</p>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔍 Página de Inspector cargada');
+        console.log('📋 Copia los comandos de arriba y pégalos en la consola de tu dashboard principal');
+    </script>
+</body>
+</html>
