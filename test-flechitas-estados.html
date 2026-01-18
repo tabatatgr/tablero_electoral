@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Flechitas Estados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 0.5rem;
+        }
+        
+        .instructions {
+            background: #f0f8ff;
+            padding: 1rem;
+            border-left: 4px solid #0066cc;
+            margin: 1rem 0;
+        }
+        
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .test-status {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            font-weight: bold;
+        }
+        
+        .test-status.waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .test-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .test-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test - Flechitas de Ajuste por Estado</h1>
+    
+    <div class="instructions">
+        <h3>📋 Instrucciones:</h3>
+        <ol>
+            <li>Abre el <strong>tablero principal</strong> en otra pestaña</li>
+            <li>Abre la <strong>Consola del Navegador</strong> (F12 → Console)</li>
+            <li>Activa el <strong>toggle de "Distribución MR Manual"</strong></li>
+            <li>Haz clic en una <strong>flechita ↑ o ↓</strong> en la tabla de estados</li>
+            <li>Observa los logs en la consola</li>
+        </ol>
+    </div>
+    
+    <div class="test-status waiting" id="testStatus">
+        ⏳ Esperando acción del usuario...
+    </div>
+    
+    <h2>🔍 ¿Qué buscar en la consola?</h2>
+    
+    <div class="console-output">
+[STATES TABLE] 🎯 ↑ PAN en Jalisco
+[STATES TABLE] 📊 PAN en Jalisco: 6 → 7
+[STATES TABLE] 🔥 Después del ajuste - PAN en Jalisco: 7
+[STATES TABLE] 🔥 Estado completo Jalisco: {MORENA: 11, PAN: 7, MC: 2, ...}
+[STATES TABLE] 📊 Quitando 1 distritos de otros partidos en Jalisco
+[STATES TABLE]   ↳ MORENA: 12 → 11 (-1)
+[DEBUG] 🗺️ Actualizando tabla de MR por estado...
+[DEBUG] 🔥 mrPorEstado ANTES de generar HTML: {
+  "Jalisco": {
+    "MORENA": 11,   ← ✅ Debe estar en 11 (bajó de 12)
+    "PAN": 7,       ← ✅ Debe estar en 7 (subió de 6)
+    "MC": 2
+  }
+}
+[DEBUG] ✅ Tabla de estados actualizada en el DOM
+    </div>
+    
+    <h2>✅ Verificaciones:</h2>
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
+        <thead>
+            <tr style="background: #f0f0f0;">
+                <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Test</th>
+                <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Qué verificar</th>
+                <th style="padding: 0.5rem; text-align: left; border: 1px solid #ddd;">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">1. Click en flechita</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    Debe aparecer: <code>[STATES TABLE] 🎯 ↑ PARTIDO en ESTADO</code>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check1">
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">2. Ajuste local</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <code>[STATES TABLE] 📊 PARTIDO: X → Y</code>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check2">
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">3. Datos actualizados</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <code>[STATES TABLE] 🔥 Después del ajuste - PARTIDO: Y</code>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check3">
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">4. Redistribución</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <code>[STATES TABLE] ↳ OTRO_PARTIDO: A → B</code>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check4">
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">5. Re-render tabla</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <code>[DEBUG] 🗺️ Actualizando tabla de MR por estado...</code>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check5">
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">6. Datos en HTML</td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <code>[DEBUG] 🔥 mrPorEstado ANTES de generar HTML</code> con valores correctos
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check6">
+                </td>
+            </tr>
+            <tr style="background: #fffacd;">
+                <td style="padding: 0.5rem; border: 1px solid #ddd;"><strong>7. UI actualizada</strong></td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <strong>El número en la tabla DEBE cambiar visualmente</strong>
+                </td>
+                <td style="padding: 0.5rem; border: 1px solid #ddd;">
+                    <input type="checkbox" id="check7">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>❌ Si el número NO cambia en la UI:</h2>
+    
+    <div style="background: #fff3cd; padding: 1rem; border-left: 4px solid #ffc107; margin: 1rem 0;">
+        <h3>Posibles causas:</h3>
+        <ol>
+            <li><strong>Cache del navegador:</strong> Presiona <code>Ctrl + Shift + R</code> para forzar recarga</li>
+            <li><strong>Otro código sobrescribiendo:</strong> Revisa si <code>window.actualizarDesdeControles()</code> está volviendo a cargar datos del backend</li>
+            <li><strong>Referencia perdida:</strong> Verifica en consola que <code>mrPorEstado</code> sea el MISMO objeto que <code>this.lastResult.meta.mr_por_estado</code></li>
+            <li><strong>Debounce interfiere:</strong> El timeout de 500ms llama al backend que devuelve valores viejos</li>
+        </ol>
+    </div>
+    
+    <h2>🔧 Solución si no funciona:</h2>
+    
+    <div class="console-output">
+// Opción 1: Forzar actualización inmediata del DOM
+// En adjustStateDistrict(), después de modificar mrPorEstado:
+
+// Actualizar directamente el span del valor
+const cell = document.querySelector(
+  `[data-estado="${estado}"][data-partido="${partido}"]`
+).closest('td');
+const valueSpan = cell.querySelector('.state-value');
+if (valueSpan) {
+  valueSpan.textContent = nuevoValor;
+}
+
+// Opción 2: Cancelar el recálculo del backend hasta que usuario termine
+// Comentar temporalmente la línea que llama window.actualizarDesdeControles()
+    </div>
+    
+    <script>
+        // Auto-verificar checkboxes cuando se hace click
+        document.querySelectorAll('input[type="checkbox"]').forEach((checkbox, index) => {
+            checkbox.addEventListener('change', () => {
+                const allChecked = Array.from(document.querySelectorAll('input[type="checkbox"]'))
+                    .every(cb => cb.checked);
+                
+                const statusDiv = document.getElementById('testStatus');
+                if (allChecked) {
+                    statusDiv.className = 'test-status success';
+                    statusDiv.textContent = '✅ ¡Todos los tests pasaron! Las flechitas funcionan correctamente.';
+                } else {
+                    const checkedCount = document.querySelectorAll('input[type="checkbox"]:checked').length;
+                    statusDiv.className = 'test-status waiting';
+                    statusDiv.textContent = `⏳ ${checkedCount}/7 verificaciones completadas...`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

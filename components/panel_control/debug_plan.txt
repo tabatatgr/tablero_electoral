@@ -1,0 +1,11 @@
+
+I understand. I will revert to reading from the HTML table as you requested, but I will do it CAREFULLY this time to avoid the timing issues that broke it before.
+
+I will implement `readMRDistributionFromTable` again, but I will make sure it's robust and used correctly in `sendMRDistribution`.
+
+Here is the plan:
+1.  Restore the `readMRDistributionFromTable` function in `ControlSidebar.js` that parses the HTML table.
+2.  Update `sendMRDistribution` to call this function to get the current state *before* sending to backend.
+3.  Ensure I use `querySelector` safely.
+
+I'm making the edits now to restore the HTML reading logic you want.

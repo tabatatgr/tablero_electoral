@@ -579,28 +579,128 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         if ((porcentajes_redistribucion && Object.keys(porcentajes_redistribucion).length > 0) || mr_distritos_manuales) {
             console.log('[DEBUG]  Preparando body para envío...');
             
-            const jsonBody = {
-                porcentajes_partidos: porcentajes_redistribucion || {},
-                partidos_fijos: {},
-                overrides_pool: {}
-            };
+            // 🆕 Decidir formato según tipo de datos
+            // FORZO JSON SIEMPRE para asegurar compatibilidad con el backend que espera JSON body o Query Params
+            const soloMRManual = false; // mr_distritos_manuales && !porcentajes_redistribucion; DESACTIVADO POR PROBLEMAS DE BACKEND
             
-            // 🆕 MR DISTRIBUTION: Agregar distribución manual si existe
-            if (mr_distritos_manuales && mr_distritos_manuales.activa && mr_distritos_manuales.distribucion) {
-                // Backend espera un string JSON, no un objeto directo
-                jsonBody.mr_distritos_manuales = JSON.stringify(mr_distritos_manuales.distribucion);
-                console.log('[MR DISTRIBUTION] 📡 Enviando distribución manual al backend:', {
-                    distribucion: mr_distritos_manuales.distribucion,
-                    distribucion_string: jsonBody.mr_distritos_manuales,
-                    total_asignado: mr_distritos_manuales.total_asignado,
-                    total_disponible: mr_distritos_manuales.total_disponible
-                });
+            if (soloMRManual) {
+                // ... (Código desactivado) ...
+            } else {
+                // 📊 REDISTRIBUCIÓN O MIXTO: Usar JSON (formato estándar)
+                const jsonBody = {
+                    porcentajes_partidos: porcentajes_redistribucion || {},
+                    partidos_fijos: {},
+                    overrides_pool: {}
+                };
+                
+                // 🆕 MR DISTRIBUTION: Agregar distribución manual si existe
+                // Modificado para aceptar si tiene distribución O por_estado
+                if (mr_distritos_manuales && mr_distritos_manuales.activa && (mr_distritos_manuales.distribucion || mr_distritos_manuales.por_estado)) {
+                    
+                    // Agregar distribución global si existe
+                    if (mr_distritos_manuales.distribucion) {
+                         jsonBody.mr_distritos_manuales = JSON.stringify(mr_distritos_manuales.distribucion);
+                    }
+                    
+                    // 🆕 Incluir desglose por estado si está disponible (para flechitas)
+                    // ⚠️ IMPORTANTE: El backend espera IDs NUMÉRICOS (1-32) como claves
+                    if (mr_distritos_manuales.por_estado) {
+                        // Mapeo de nombres de estados a IDs numéricos (1-32)
+                        const NOMBRE_A_ID = {
+                            "AGUASCALIENTES": 1, "BAJA CALIFORNIA": 2, "BAJA CALIFORNIA SUR": 3,
+                            "CAMPECHE": 4, "COAHUILA": 5, "COLIMA": 6, "CHIAPAS": 7, "CHIHUAHUA": 8,
+                            "CIUDAD DE MEXICO": 9, "DURANGO": 10, "GUANAJUATO": 11, "GUERRERO": 12,
+                            "HIDALGO": 13, "JALISCO": 14, "MEXICO": 15, "MICHOACAN": 16,
+                            "MORELOS": 17, "NAYARIT": 18, "NUEVO LEON": 19, "OAXACA": 20,
+                            "PUEBLA": 21, "QUERETARO": 22, "QUINTANA ROO": 23, "SAN LUIS POTOSI": 24,
+                            "SINALOA": 25, "SONORA": 26, "TABASCO": 27, "TAMAULIPAS": 28,
+                            "TLAXCALA": 29, "VERACRUZ": 30, "YUCATAN": 31, "ZACATECAS": 32
+                        };
+                        
+                        // Convertir de {NOMBRE: {PARTIDO: count}} a {ID: {PARTIDO: count}}
+                        // Aceptamos dos formatos entrantes:
+                        //  - claves con NOMBRES de estado (mayúsculas) → convertimos a IDs
+                        //  - claves numéricas ("1".."32") → ya vienen como IDs y las aceptamos tal cual
+                        const porEstadoConIDs = {};
+                        for (const [nombreEstado, distribuciones] of Object.entries(mr_distritos_manuales.por_estado)) {
+                            // Si la clave ya es un ID numérico (string of digits), aceptarla directamente
+                            if (/^\d+$/.test(String(nombreEstado).trim())) {
+                                porEstadoConIDs[String(nombreEstado).trim()] = distribuciones;
+                                continue;
+                            }
+
+                            // Normalizar nombre de estado a MAYÚSCULAS para lookup
+                            const nombreKey = String(nombreEstado).trim().toUpperCase();
+                            const id = NOMBRE_A_ID[nombreKey];
+                            if (id) {
+                                porEstadoConIDs[id.toString()] = distribuciones;
+                            } else {
+                                // Fallback: intentar limpiar acentos y espacios comunes (por si viene en formato distinto)
+                                const fallback = nombreKey.normalize ? nombreKey.normalize('NFKD').replace(/\p{Diacritic}/gu, '').replace(/\s+/g, ' ').trim() : nombreKey;
+                                const id2 = NOMBRE_A_ID[fallback];
+                                if (id2) {
+                                    porEstadoConIDs[id2.toString()] = distribuciones;
+                                } else {
+                                    // No reconocido: enviar con la clave original (backend puede mapear por nombre)
+                                    porEstadoConIDs[nombreEstado] = distribuciones;
+                                    console.warn('[MR DISTRIBUTION] ⚠️ Estado no reconocido al mapear a ID, enviando clave original como fallback:', nombreEstado);
+                                }
+                            }
+                        }
+                        
+                        // Enviar BOTH keys for compatibility: mr_distritos_por_estado (new) and mr_por_estado (legacy)
+                        jsonBody.mr_distritos_por_estado = JSON.stringify(porEstadoConIDs);
+                        // También incluir mr_por_estado para que backends que esperan esa clave lo acepten
+                        try {
+                            jsonBody.mr_por_estado = JSON.stringify(porEstadoConIDs);
+                        } catch (e) {
+                            // Si fallara (no debería), enviar la versión no-serializada como fallback
+                            jsonBody.mr_por_estado = porEstadoConIDs;
+                        }
+                        console.log('[MR DISTRIBUTION] 🗺️ Enviando desglose por estado (mr_distritos_por_estado & mr_por_estado) con IDs numéricos:', Object.keys(porEstadoConIDs).length, 'estados');
+                    }
+                    
+                    console.log('[MR DISTRIBUTION] 📡 Enviando distribución manual al backend (JSON):', {
+                        tiene_distribucion: !!mr_distritos_manuales.distribucion,
+                        tiene_por_estado: !!mr_distritos_manuales.por_estado
+                    });
+                }
+
+                fetchOptions.headers['Content-Type'] = 'application/json';
+                fetchOptions.body = JSON.stringify(jsonBody);
+
+                console.log('[DEBUG] 📦 Body JSON completo keys:', Object.keys(jsonBody));
+                
+                // 🔍 Verificación de mr_distritos_manuales (totales por partido)
+                if (jsonBody.mr_distritos_manuales) {
+                    try {
+                        const parsed = JSON.parse(jsonBody.mr_distritos_manuales);
+                        const totalMR = Object.values(parsed).reduce((s, v) => s + v, 0);
+                        console.log('[DEBUG] 📊 Total MR enviado al backend (mr_distritos_manuales):', totalMR);
+                        console.log('[DEBUG] 📊 Distribución por partido:', parsed);
+                    } catch (e) {
+                        console.error('[DEBUG] Error parseando verificación mr_distritos_manuales:', e);
+                    }
+                }
+                
+                // 🔍 Verificación de mr_distritos_por_estado (con IDs numéricos)
+                if (jsonBody.mr_distritos_por_estado) {
+                    const parsed = JSON.parse(jsonBody.mr_distritos_por_estado);
+                    const numEstados = Object.keys(parsed).length;
+                    console.log('[DEBUG] 🗺️ mr_distritos_por_estado EN BODY - Estados enviados:', numEstados, '(debe ser 32)');
+                    console.log('[DEBUG] 🗺️ Primeros 3 IDs:', Object.keys(parsed).slice(0, 3).join(', '));
+                    console.log('[DEBUG] 🗺️ Ejemplo ID "1" (Aguascalientes):', parsed["1"]);
+                    
+                    // Calcular total MR desde estados como verificación
+                    let totalMREstados = 0;
+                    for (const distribuciones of Object.values(parsed)) {
+                        for (const count of Object.values(distribuciones)) {
+                            totalMREstados += count;
+                        }
+                    }
+                    console.log('[DEBUG] 📊 Total MR desde estados:', totalMREstados);
+                }
             }
-
-            fetchOptions.headers['Content-Type'] = 'application/json';
-            fetchOptions.body = JSON.stringify(jsonBody);
-
-            console.log('[DEBUG] Body JSON completo:', jsonBody);
         } else {
             console.log('[DEBUG] Sin redistribución ni MR manual - POST solo con query parameters');
         }
@@ -770,26 +870,59 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
             console.log('[DEBUG]  seat-chart encontrado:', !!seatChart, seatChart);
             if (seatChart) {
                 // El componente espera un array
-                const seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : data.seat_chart.seats || [];
+                let seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : data.seat_chart.seats || [];
                 
                 //  DEBUGGING DETALLADO DE SEAT_CHART DATA
                 console.log('[DEBUG]  SEAT_CHART DATA ANALYSIS:');
                 console.log('[DEBUG]  data.seat_chart tipo:', typeof data.seat_chart);
                 console.log('[DEBUG]  data.seat_chart es array:', Array.isArray(data.seat_chart));
                 console.log('[DEBUG]  data.seat_chart completo:', data.seat_chart);
-                console.log('[DEBUG]  seatArray después de procesar:', seatArray);
+                console.log('[DEBUG]  seatArray ANTES de normalizar:', seatArray);
+                
+                // 🆕 NORMALIZACIÓN DE CAMPOS: Compatibilidad con diferentes formatos del backend
+                // Mapea tanto "mr" como "mr_seats", "partido" como "party", etc.
+                seatArray = seatArray.map(partido => {
+                    const mr = partido.mr_seats || partido.mr || 0;
+                    const rp = partido.rp_seats || partido.rp || 0;
+                    const pm = partido.pm_seats || partido.pm || 0;
+                    // 🔧 FIX: Si seats no viene, calcularlo desde mr + rp + pm
+                    const seats = partido.seats || partido.total || (mr + rp + pm);
+                    
+                    return {
+                        party: partido.party || partido.partido,
+                        seats: seats,
+                        mr_seats: mr,
+                        rp_seats: rp,
+                        pm_seats: pm,
+                        votes_percent: partido.votes_percent || partido.votos_percent || 0,
+                        color: partido.color || '#CCCCCC'
+                    };
+                });
+                
+                console.log('[DEBUG]  seatArray DESPUÉS de normalizar:', seatArray);
                 console.log('[DEBUG]  seatArray length:', seatArray.length);
+                
+                // 🔍 DIAGNÓSTICO MR: Verificar distribución de escaños MR/RP
+                console.log('[DEBUG] 🔍 DIAGNÓSTICO DE ESCAÑOS MR/RP:');
+                seatArray.forEach(p => {
+                    console.log(`[DEBUG]  ${p.party}: MR=${p.mr_seats}, RP=${p.rp_seats}, PM=${p.pm_seats}, Total=${p.seats}`);
+                });
                 
                 // Calcular total de escaños de seatArray
                 let totalCalculado = 0;
+                let totalMR = 0, totalRP = 0, totalPM = 0;
                 if (Array.isArray(seatArray)) {
                     totalCalculado = seatArray.reduce((total, partido) => {
                         const seats = partido.seats || 0;
-                        console.log(`[DEBUG]  Partido ${partido.party}: ${seats} escaños`);
+                        totalMR += partido.mr_seats || 0;
+                        totalRP += partido.rp_seats || 0;
+                        totalPM += partido.pm_seats || 0;
+                        console.log(`[DEBUG]  Partido ${partido.party}: ${seats} escaños (MR:${partido.mr_seats}, RP:${partido.rp_seats})`);
                         return total + seats;
                     }, 0);
                 }
                 console.log('[DEBUG]  TOTAL ESCAÑOS CALCULADO desde seatArray:', totalCalculado);
+                console.log('[DEBUG] 📊 TOTALES POR TIPO: MR=' + totalMR + ', RP=' + totalRP + ', PM=' + totalPM);
                 
                 //  DETECTAR SI EL TOPE DE ESCAÑOS ESTÁ LIMITANDO LOS RESULTADOS
                 if (seatArray.length > 0) {
@@ -834,9 +967,41 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                     console.log('[DEBUG] 🔍 data.seat_chart RAW del backend:', JSON.stringify(data.seat_chart, null, 2));
                     const sidebar = document.querySelector('control-sidebar');
                     if (sidebar && sidebar.updateResultsTable && sidebar.transformSeatChartToTable) {
+                        // 🔧 PRESERVAR mr_por_estado local si el backend devolvió ceros y hay distribución manual activa
+                        let preservedMrPorEstado = null;
+                        if (sidebar.lastResult?.meta?.mr_por_estado && window.mrDistributionManual?.activa) {
+                            const backendMrPorEstado = data.meta?.mr_por_estado;
+                            
+                            if (backendMrPorEstado) {
+                                // Contar cuántos estados tienen TODOS los partidos en 0
+                                const estadosCeros = Object.values(backendMrPorEstado).filter(estadoData => 
+                                    Object.values(estadoData).every(val => val === 0)
+                                ).length;
+                                
+                                const totalEstados = Object.keys(backendMrPorEstado).length;
+                                const porcentajeCeros = (estadosCeros / totalEstados) * 100;
+                                
+                                console.log('[DEBUG] 🔍 Estados con todos en 0:', estadosCeros, '/', totalEstados, `(${porcentajeCeros.toFixed(1)}%)`);
+                                
+                                // Si más del 80% de los estados están en ceros → Preservar datos locales
+                                if (porcentajeCeros > 80) {
+                                    console.log('[DEBUG] 🔧 Backend devolvió mayoría de estados en ceros + distribución manual activa → PRESERVANDO datos locales');
+                                    preservedMrPorEstado = sidebar.lastResult.meta.mr_por_estado;
+                                } else {
+                                    console.log('[DEBUG] ✅ Backend devolvió datos válidos → Usando respuesta del backend');
+                                }
+                            }
+                        }
+                        
                         // 🆕 GUARDAR DATOS COMPLETOS PRIMERO (antes de todo)
                         sidebar.lastResult = data;
                         console.log('[DEBUG] 💾 Guardando data completo en sidebar.lastResult:', data);
+                        
+                        // 🔧 Restaurar mr_por_estado preservado si es necesario
+                        if (preservedMrPorEstado) {
+                            sidebar.lastResult.meta.mr_por_estado = preservedMrPorEstado;
+                            console.log('[DEBUG] ✅ mr_por_estado local preservado (backend devolvió ceros)');
+                        }
                         
                         const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
                         const config = {
@@ -945,6 +1110,9 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
         
         //  ✅ NOTIFICACIÓN DE ÉXITO: Mostrar cuando NO es silentLoad Y NO es inicialización
         if (window.notifications && !silentLoad && !isInitializing) {
+            // 🔍 Detectar si es distribución manual de estados
+            const esDistribucionManual = window.mrDistributionManual && window.mrDistributionManual.activa;
+            
             if (isUserTriggered) {
                 // Para interacciones del usuario: mostrar "Listo" (reemplazará automáticamente si hay una previa)
                 console.log('[DEBUG] Mostrando notificación "Listo" para usuario');
@@ -958,6 +1126,16 @@ async function cargarSimulacion({anio = null, camara = 'diputados', modelo = 'vi
                 
                 // Resetear flag de usuario
                 isUserTriggered = false;
+            } else if (esDistribucionManual) {
+                // 🔔 NOTIFICACIÓN ESPECÍFICA para distribución manual desde estados
+                console.log('[DEBUG] Mostrando notificación para distribución manual');
+                
+                window.notifications.success(
+                    'Distribución Actualizada',
+                    'Cambios aplicados desde tabla de estados',
+                    4000,
+                    'state-recalculation' // Reemplaza la notificación de "loading"
+                );
             } else {
                 // Para otras actualizaciones: mensaje estándar
                 console.log('[DEBUG] Mostrando notificación estándar');
@@ -1388,13 +1566,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 function actualizarDesdeControles() {
-    //  Notificación de "Calculando modelo" - SOLO si es acción del usuario después de inicialización
-    if (!isInitializing && isUserTriggered) {
+    // 🔍 Detectar si es distribución manual de estados
+    const esDistribucionManual = window.mrDistributionManual && window.mrDistributionManual.activa;
+    
+    //  Notificación de "Calculando modelo" - Mostrar si:
+    // 1. Es acción del usuario después de inicialización, O
+    // 2. Es distribución manual desde tabla de estados
+    if (!isInitializing && (isUserTriggered || esDistribucionManual)) {
         safeNotification('show', { 
-            title: 'Calculando modelo...',
+            title: esDistribucionManual ? 'Recalculando distribución...' : 'Calculando modelo...',
             type: 'loading',
             autoHide: false,
-            id: 'user-calculation' // ID fijo para poder actualizar después
+            id: esDistribucionManual ? 'state-recalculation' : 'user-calculation'
         });
     }
     

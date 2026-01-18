@@ -42,7 +42,18 @@ class SeatChart extends HTMLElement {
         
         if (Array.isArray(parsedData)) {
           console.log('[DEBUG]  SeatChart número de partidos:', parsedData.length);
+          
+          // 🔧 FIX: Normalizar partidos con seats undefined a 0
           parsedData.forEach((partido, index) => {
+            // Si seats es undefined o null, calcular desde mr + rp + pm
+            if (partido.seats === undefined || partido.seats === null) {
+              const mr = partido.mr_seats || partido.mr || 0;
+              const rp = partido.rp_seats || partido.rp || 0;
+              const pm = partido.pm_seats || partido.pm || 0;
+              partido.seats = mr + rp + pm;
+              console.log(`[DEBUG]  SeatChart FIX partido ${index} (${partido.party}): seats era undefined, calculado como ${partido.seats} (MR:${mr} + RP:${rp} + PM:${pm})`);
+            }
+            
             console.log(`[DEBUG]  SeatChart partido ${index}:`, {
               party: partido.party,
               seats: partido.seats,
@@ -61,7 +72,8 @@ class SeatChart extends HTMLElement {
       console.log('[DEBUG]  SeatChart usando datos de ejemplo (no hay atributo data)');
     }
     
-    const total = data.reduce((sum, p) => sum + p.seats, 0);
+    // Filtrar partidos sin escaños para el cálculo total
+    const total = data.reduce((sum, p) => sum + (p.seats || 0), 0);
     console.log('[DEBUG]  SeatChart TOTAL ESCAÑOS CALCULADO:', total, 'partidos:', data.length);
     
     // Log individual de cada partido para verificar escaños
@@ -108,9 +120,14 @@ class SeatChart extends HTMLElement {
     let seatIndex = 0;
     let seatElements = [];
     let partySeatMap = [];
+    
+    // 🔧 FIX: Filtrar partidos con escaños y crear mapa de colores
     data.forEach(p => {
-      for (let i = 0; i < p.seats; i++) {
-        partySeatMap.push(p.color);
+      const seats = p.seats || 0; // Protección contra undefined
+      if (seats > 0) { // Solo partidos con escaños
+        for (let i = 0; i < seats; i++) {
+          partySeatMap.push(p.color);
+        }
       }
     });
     

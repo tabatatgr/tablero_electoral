@@ -986,11 +986,72 @@ control-sidebar .sidebar-content::-webkit-scrollbar-thumb {
   font-size: 14px;
   padding: 0;
   text-align: center;
+  transition: all 0.3s ease;
 }
 
 .state-value.zero-value {
   color: #D1D5DB;
   font-weight: 400;
+}
+
+/* 🆕 ANIMACIONES VISUALES para feedback inmediato */
+.state-value.value-increasing {
+  animation: pulse-green 0.6s ease;
+}
+
+.state-value.value-decreasing {
+  animation: pulse-red 0.6s ease;
+}
+
+@keyframes pulse-green {
+  0% {
+    background: transparent;
+    transform: scale(1);
+  }
+  30% {
+    background: #10B981;
+    color: white;
+    transform: scale(1.3);
+  }
+  100% {
+    background: transparent;
+    color: #1F2937;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-red {
+  0% {
+    background: transparent;
+    transform: scale(1);
+  }
+  30% {
+    background: #EF4444;
+    color: white;
+    transform: scale(1.3);
+  }
+  100% {
+    background: transparent;
+    color: #1F2937;
+    transform: scale(1);
+  }
+}
+
+/* Resaltar celda completa cuando se modifica */
+.states-table-editable.cell-modified {
+  animation: highlight-cell 0.8s ease;
+}
+
+@keyframes highlight-cell {
+  0% {
+    background: transparent;
+  }
+  50% {
+    background: #FEF3C7;
+  }
+  100% {
+    background: transparent;
+  }
 }
 
 /* Columna de nombres de estados */

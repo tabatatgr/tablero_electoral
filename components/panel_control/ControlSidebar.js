@@ -5,10 +5,10 @@ export class ControlSidebar extends HTMLElement {
     
     //  Exposer referencia global para que VoteRedistribution pueda acceder
     window.controlSidebar = this;
-    
-    // 🆕 Inicializar cámara por defecto (diputados)
+    // Inicializar cámara por defecto
     this.selectedChamber = 'diputados';
-    
+
+    // Renderizar y preparar controles
     this.render();
     this.initializeSidebarControls();
   }
@@ -79,7 +79,7 @@ export class ControlSidebar extends HTMLElement {
             <!-- 3. Tipo de Regla Electoral -->
             <div class="control-group" data-group="rules">
               <button class="group-toggle" data-target="rules">
-                <span class="group-title">Tipo de regla electoral</span>
+                <span class="group-title">Regla Electoral</span>
                 <svg class="chevron" width="12" height="12" viewBox="0 0 12 12">
                   <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
                 </svg>
@@ -1318,7 +1318,7 @@ initializeSidebarControls() {
         
         // 🆕 MR Distribution switch - habilitar/deshabilitar sliders
         if (switchId === 'mr-distribution-switch') {
-          console.log(`[MR DISTRIBUTION] Toggle cambiado: ${isActive ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}`);
+          console.info(`[MR DISTRIBUTION] Toggle cambiado: ${isActive ? 'ACTIVADO ✅' : 'DESACTIVADO ❌'}`);
           
           // Llamar a updateMRSlidersState para habilitar/deshabilitar
           const sidebar = document.querySelector('control-sidebar');
@@ -1334,7 +1334,7 @@ initializeSidebarControls() {
             if (typeof window.actualizarDesdeControles === 'function') {
               setTimeout(() => {
                 window.actualizarDesdeControles();
-                console.log('[MR DISTRIBUTION] ✅ Sistema recalculado con distribución automática');
+                console.info('[MR DISTRIBUTION] ✅ Sistema recalculado con distribución automática');
               }, 100);
             }
           }
@@ -2717,13 +2717,33 @@ initializeSidebarControls() {
     
     const mrPorEstado = this.lastResult.meta.mr_por_estado;
     
-    // 🆕 SOPORTE PARA SENADO: Buscar distritos_por_estado O senadores_por_estado
-    const distritosPorEstado = this.lastResult.meta.distritos_por_estado || this.lastResult.meta.senadores_por_estado;
+    // 🆕 SELECCIÓN FLEXIBLE DE METADATOS (Restaurando funcionalidad)
+    // Intentar leer la definición geográfica específica
+    let distritosPorEstado = this.lastResult.meta.distritos_por_estado || 
+                             this.lastResult.meta.senadores_por_estado ||
+                             this.lastResult.meta.mr_distritos_por_estado;
+                             
+    // 🔥 FALLBACK ROBUSTO: Si no hay definición geográfica explícita, 
+    // inferirla de la suma de ganadores por estado (funciona para ambas cámaras)
+    if (!distritosPorEstado && mrPorEstado) {
+         console.log('[DEBUG] ⚠️ No hay distritos_por_estado explícito. Inferiendo de mr_por_estado...');
+         distritosPorEstado = {};
+         Object.keys(mrPorEstado).forEach(estado => {
+             const total = Object.values(mrPorEstado[estado]).reduce((a, b) => a + b, 0);
+             distritosPorEstado[estado] = total;
+         });
+         // Guardar en meta para cachear
+         // this.lastResult.meta.distritos_por_estado = distritosPorEstado; // No cachear para evitar conflictos
+    }
+    
+    // 🔥 DEBUG DETALLADO DE KEYS PARA DIAGNOSTICO
+    if (!distritosPorEstado) {
+        console.warn('[DIAGNOSTICO] ⚠️ No se pudo determinar la geografía electoral (distritos/senadores por estado)');
+    }
+
     
     console.log('[DEBUG] 🔍 mr_por_estado:', mrPorEstado ? `✅ (${Object.keys(mrPorEstado).length} estados)` : '❌ NO EXISTE');
-    console.log('[DEBUG] 🔍 distritos_por_estado:', this.lastResult.meta.distritos_por_estado ? `✅ Diputados` : '❌');
-    console.log('[DEBUG] 🔍 senadores_por_estado:', this.lastResult.meta.senadores_por_estado ? `✅ Senado` : '❌');
-    console.log('[DEBUG] 🔍 Usando para tabla:', distritosPorEstado ? '✅' : '❌ NINGUNO DISPONIBLE');
+    console.log('[DEBUG] 🔍 distritos_por_estado (Activo para ' + this.selectedChamber + '):', distritosPorEstado ? '✅' : '❌');
     
     // 🆕 FALLBACK: Si falta el campo específico de distritos/senadores, intentar desde /data/initial
     if (!mrPorEstado || !distritosPorEstado) {
@@ -2760,10 +2780,15 @@ initializeSidebarControls() {
             
             // 🆕 WORKAROUND: Si estamos en Senado y sigue sin senadores_por_estado, generarlo
             if (this.selectedChamber === 'senadores' && !this.lastResult.meta.senadores_por_estado && this.lastResult.meta.mr_por_estado) {
-              console.log('[DEBUG] 🔧 WORKAROUND: Generando senadores_por_estado automáticamente (todos los estados = 3 senadores)');
+              // Calcular límite dinámico basado en slider MR
+              const mrInput = document.getElementById('input-mr');
+              const totalMR = mrInput ? parseInt(mrInput.value) : 64;
+              const perState = Math.max(1, Math.floor(totalMR / 32));
+
+              console.log(`[DEBUG] 🔧 WORKAROUND: Generando senadores_por_estado automáticamente (limite: ${perState} por estado, Total: ${totalMR})`);
               const senadoresPorEstado = {};
               Object.keys(this.lastResult.meta.mr_por_estado).forEach(estado => {
-                senadoresPorEstado[estado] = 3; // Todos los estados tienen 3 senadores
+                senadoresPorEstado[estado] = perState; 
               });
               this.lastResult.meta.senadores_por_estado = senadoresPorEstado;
               console.log('[DEBUG] ✅ senadores_por_estado generado para', Object.keys(senadoresPorEstado).length, 'estados');
@@ -2782,16 +2807,20 @@ initializeSidebarControls() {
       
       // 🆕 WORKAROUND ADICIONAL: Si ya se intentó fallback pero estamos en Senado sin senadores_por_estado, generarlo
       if (this.selectedChamber === 'senadores' && !this.lastResult.meta.senadores_por_estado && this.lastResult.meta.mr_por_estado) {
-        console.log('[DEBUG] 🔧 WORKAROUND FINAL: Generando senadores_por_estado automáticamente');
+        // Calcular límite dinámico basado en slider MR
+        const mrInput = document.getElementById('input-mr');
+        const totalMR = mrInput ? parseInt(mrInput.value) : 64;
+        const perState = Math.max(1, Math.floor(totalMR / 32));
+
+        console.log(`[DEBUG] 🔧 WORKAROUND FINAL: Generando senadores_por_estado automáticamente (limite: ${perState} por estado)`);
         const senadoresPorEstado = {};
         Object.keys(this.lastResult.meta.mr_por_estado).forEach(estado => {
-          senadoresPorEstado[estado] = 3;
+          senadoresPorEstado[estado] = perState;
         });
         this.lastResult.meta.senadores_por_estado = senadoresPorEstado;
         console.log('[DEBUG] ✅ senadores_por_estado generado para', Object.keys(senadoresPorEstado).length, 'estados');
         
-        // Recursivamente llamar para procesar con el campo generado
-        await this.updateStatesTable();
+        // Recursivamente llamar para procesar con el campo generado        await this.updateStatesTable();
         return;
       }
       
@@ -2847,7 +2876,8 @@ initializeSidebarControls() {
   
   // 🆕 Event listeners para botones de flechas en la tabla de estados
   attachStateArrowListeners() {
-    const container = this.querySelector('#states-table-container');
+    // Buscar primero en el documento global (la tabla suele renderizarse fuera del shadow/element)
+    const container = document.getElementById('states-table-container') || this.querySelector('#states-table-container') || this.querySelector('.states-table-container');
     if (!container) return;
     
     // Evitar agregar múltiples listeners
@@ -2878,52 +2908,199 @@ initializeSidebarControls() {
       return;
     }
     
+    // 🔥 Recuperar distribución actual para no perder sincronía
     const mrPorEstado = this.lastResult.meta.mr_por_estado;
-    const distritosPorEstado = this.lastResult.meta.distritos_por_estado || 
-                               this.lastResult.meta.senadores_por_estado;
+    let distritosPorEstado = this.lastResult.meta.distritos_por_estado || 
+                             this.lastResult.meta.senadores_por_estado ||
+                             this.lastResult.meta.mr_distritos_por_estado;
+
+    // Si no existe el mapa específico, intentar inferirlo
+    if (!distritosPorEstado && mrPorEstado) {
+         distritosPorEstado = {};
+         Object.keys(mrPorEstado).forEach(estado => {
+             distritosPorEstado[estado] = Object.values(mrPorEstado[estado]).reduce((a, b) => a + b, 0);
+         });
+    }
     
     if (!mrPorEstado[estado]) {
       console.error(`[STATES TABLE] ❌ Estado ${estado} no encontrado`);
       return;
     }
     
+    // Obtener límites
+    let maxDistritosEstado;
+
+    if (this.selectedChamber === 'senadores') {
+        // 🔥 SENADO: Usar el valor que reporta el backend si existe (para respetar 96 o 64 según se calculó)
+        // Pero si no existe, calcular dinámicamente.
+        if (distritosPorEstado && distritosPorEstado[estado]) {
+             maxDistritosEstado = distritosPorEstado[estado];
+        } else {
+             // Fallback dinámico si por alguna razón el backend no mandó la metadata
+             const mrInput = document.getElementById('input-mr');
+             let totalMR = mrInput ? parseInt(mrInput.value) : 64;
+             if (isNaN(totalMR)) totalMR = 64;
+             maxDistritosEstado = Math.floor(totalMR / 32); 
+             if (maxDistritosEstado < 1) maxDistritosEstado = 2; 
+        }
+    } else {
+        // 🔥 DIPUTADOS: El límite es la geografía física del estado (distritos_por_estado)
+        if (distritosPorEstado && distritosPorEstado[estado]) {
+            maxDistritosEstado = distritosPorEstado[estado];
+        } else {
+            console.error(`[STATES TABLE] ❌ No hay límite definido para estado ${estado} en Diputados. Usando default.`);
+            maxDistritosEstado = 100; // Valor seguro alto si falla meta
+        }
+    }
+
+    if (typeof maxDistritosEstado === 'undefined') {
+        console.warn(`[STATES TABLE] ⚠️ Límite indefinido para ${estado}, forzando default.`);
+        maxDistritosEstado = this.selectedChamber === 'senadores' ? 2 : 10;
+    }
+
     const valorActual = mrPorEstado[estado][partido] || 0;
+    
+    // Si queremos bajar de 0, ignorar
+    if (delta < 0 && valorActual <= 0) return;
+    
     const nuevoValor = Math.max(0, valorActual + delta);
-    const totalDistritos = distritosPorEstado[estado] || 0;
     
-    // Validar que no exceda el total de distritos del estado
-    const totalAsignado = Object.values(mrPorEstado[estado]).reduce((sum, val) => sum + val, 0);
-    const totalDespues = totalAsignado - valorActual + nuevoValor;
-    
-    if (totalDespues > totalDistritos) {
-      console.warn(`[STATES TABLE] ⚠️ No se puede aumentar: total excedería ${totalDistritos} distritos`);
-      return;
-    }
-    
-    console.log(`[STATES TABLE] 📊 ${partido} en ${estado}: ${valorActual} → ${nuevoValor}`);
-    
-    // Actualizar valor
-    const oldValue = mrPorEstado[estado][partido] || 0;
-    mrPorEstado[estado][partido] = nuevoValor;
-    
-    // Si disminuimos distritos, redistribuir entre otros partidos
-    if (delta < 0 && oldValue > 0) {
-      this.redistributeStateDistricts(estado, partido, -delta, mrPorEstado, totalDistritos);
-    }
-    
-    // Si aumentamos distritos, quitar de otros partidos
+    // Límite global
+    const slidersTotal = document.getElementById('mr-seats-slider');
+    const globalLimit = slidersTotal ? parseInt(slidersTotal.value) : 
+                        (this.lastResult.meta.scaled_info ? this.lastResult.meta.scaled_info.total_target : 300);
+
+    // Calcular ocupaciones
+    const ocupacionEstado = Object.values(mrPorEstado[estado]).reduce((sum, val) => sum + val, 0);
+    const ocupacionGlobal = Object.values(mrPorEstado).reduce((acc, est) => {
+        return acc + Object.values(est).reduce((s, v) => s + v, 0);
+    }, 0);
+
+    // Validación principal
     if (delta > 0) {
-      this.takeFromOtherParties(estado, partido, delta, mrPorEstado);
+        // --- CASO 1: LÍMITE ESTATAL (Priority Criticidad Alta) ---
+        // Si el estado está físicamente lleno, DEBEMOS robar localmente.
+        const espacioEstado = maxDistritosEstado - ocupacionEstado;
+        
+        if (espacioEstado < delta) {
+            // No cabe en el estado. Intentar robar localmente (a otros partidos del mismo estado)
+            const necesarios = delta - espacioEstado;
+            const robados = this.takeFromOtherParties(estado, partido, necesarios, mrPorEstado);
+
+            if (robados < necesarios) {
+               console.warn(`[STATES TABLE] ⚠️ Estado ${estado} lleno (${ocupacionEstado}/${maxDistritosEstado}). No se pudo redistribuir localmente por completo.`);
+
+               // Intento alternativo: mover el incremento a OTRO estado donde sí haya capacidad disponible
+               try {
+                 const partidosList = Object.keys(mrPorEstado[estado] || {});
+                 const required = necesarios - robados;
+                 let moved = false;
+
+                 // Buscar estados candidatos ordenados por (preferir estados donde el partido ya tiene presencia)
+                 const otherStates = Object.keys(mrPorEstado).filter(s => s !== estado);
+                 otherStates.sort((a,b) => {
+                   const pa = mrPorEstado[a][partido] || 0;
+                   const pb = mrPorEstado[b][partido] || 0;
+                   return (pb - pa); // prefer states where party has more presence
+                 });
+
+                 for (const s of otherStates) {
+                   // calcular límite para el estado candidato
+                   let maxForState;
+                   if (this.selectedChamber === 'senadores') {
+                     if (distritosPorEstado && distritosPorEstado[s]) {
+                       maxForState = distritosPorEstado[s];
+                     } else {
+                       const mrInput = document.getElementById('input-mr');
+                       let totalMR = mrInput ? parseInt(mrInput.value) : 64;
+                       if (isNaN(totalMR)) totalMR = 64;
+                       maxForState = Math.floor(totalMR / 32);
+                       if (maxForState < 1) maxForState = 2;
+                     }
+                   } else {
+                     if (distritosPorEstado && distritosPorEstado[s]) {
+                       maxForState = distritosPorEstado[s];
+                     } else {
+                       maxForState = 100;
+                     }
+                   }
+
+                   const ocupacionS = Object.values(mrPorEstado[s] || {}).reduce((sum, v) => sum + (v || 0), 0);
+                   const espacioS = maxForState - ocupacionS;
+                   if (espacioS <= 0) continue;
+
+                   // Cantidad que podemos asignar en este estado
+                   const asignar = Math.min(espacioS, required);
+                   mrPorEstado[s][partido] = (mrPorEstado[s][partido] || 0) + asignar;
+                   console.log(`[STATES TABLE] 🔁 Movimiento alternativo: Asignando +${asignar} a ${partido} en estado ${s} (porque ${estado} está lleno)`);
+                   moved = true;
+                   // Reducir required y seguir si aún queda
+                   required -= asignar;
+                   if (required <= 0) break;
+                 }
+
+                 if (moved) {
+                   // Si movimos al menos parte, continuar (no retornar)
+                   console.log('[STATES TABLE] ✅ Incremento aplicado en otro(s) estado(s)');
+                 } else {
+                   // Ningún estado candidato con capacidad: caer al comportamiento anterior (robar globalmente)
+                   const robadosGlobal = this.takeFromGlobalPool(necesarios - robados, partido, mrPorEstado);
+                   if (robadosGlobal < (necesarios - robados)) {
+                     console.warn(`[STATES TABLE] ⚠️ Límite global alcanzado (${globalLimit}). No hay de donde robar.`);
+                     return;
+                   }
+                 }
+               } catch (e) {
+                 console.warn('[STATES TABLE] ⚠️ Error en movimiento alternativo entre estados:', e);
+                 // Fallback: intentar robar globalmente como antes
+                 const robadosGlobal2 = this.takeFromGlobalPool(necesarios - robados, partido, mrPorEstado);
+                 if (robadosGlobal2 < (necesarios - robados)) {
+                   console.warn(`[STATES TABLE] ⚠️ Límite global alcanzado (${globalLimit}). No hay de donde robar.`);
+                   return;
+                 }
+               }
+            }
+            // Si robamos localmente, el balance neto global es 0. No necesitamos chequear global.
+        } 
+        
+        // --- CASO 2: LÍMITE GLOBAL ---
+        // El estado tiene espacio, pero el país quizás no.
+        else {
+            const espacioGlobal = globalLimit - ocupacionGlobal;
+            
+            if (espacioGlobal < delta) {
+                 // Cabe en el estado, pero el país está lleno. Robar de cualquier lado (Global).
+                 const necesarios = delta - espacioGlobal;
+                 const robados = this.takeFromGlobalPool(necesarios, partido, mrPorEstado);
+                 
+                 if (robados < necesarios) {
+                     console.warn(`[STATES TABLE] ⚠️ Límite global alcanzado (${globalLimit}). No hay de donde robar.`);
+                     return;
+                 }
+            }
+        }
+        
+        // Asignar
+        mrPorEstado[estado][partido] = nuevoValor;
+
+    } else {
+      // Disminuir siempre se puede
+      mrPorEstado[estado][partido] = nuevoValor;
     }
-    
-    // Actualizar la tabla (sin recalcular todo el backend)
+
+    console.log(`[STATES TABLE] 📊 ${partido} en ${estado}: ${valorActual} → ${mrPorEstado[estado][partido]}`);
+    try {
+      const totalGlobal = Object.values(mrPorEstado).reduce((acc, est) => acc + Object.values(est).reduce((s, v) => s + (Number(v) || 0), 0), 0);
+      console.log('[STATES TABLE] 📌 adjustStateDistrict() - estado modificado:', estado, 'partido:', partido, 'nuevoValor:', mrPorEstado[estado][partido]);
+      console.log('[STATES TABLE] 📌 adjustStateDistrict() - total MR global tras ajuste:', totalGlobal);
+    } catch (e) {
+      console.warn('[STATES TABLE] 📌 adjustStateDistrict() - error calculando totales para debug:', e);
+    }
+
     this.updateStatesTable();
-    
-    // Actualizar sliders globales con los nuevos totales
     const partidos = Object.keys(this.partidosData || {});
     this.updateMRSlidersFromStatesData(mrPorEstado, partidos);
     
-    // 🔧 Enviar cambios al backend después de 500ms de inactividad
     clearTimeout(this._stateAdjustTimeout);
     this._stateAdjustTimeout = setTimeout(() => {
       this.sendMRDistributionFromStates();
@@ -2935,51 +3112,35 @@ initializeSidebarControls() {
     const otrosPartidos = Object.keys(mrPorEstado[estado])
       .filter(p => p !== partidoExcluido && (mrPorEstado[estado][p] || 0) > 0);
     
-    if (otrosPartidos.length === 0) {
-      console.log(`[STATES TABLE] ℹ️ No hay otros partidos para redistribuir en ${estado}`);
-      return;
-    }
+    if (otrosPartidos.length === 0) return; // No hay a quien darle
     
-    console.log(`[STATES TABLE] 📊 Redistribuyendo ${distritosLibres} distritos entre:`, otrosPartidos);
+    // OPCIONAL: Si queremos que redistribuya automáticamente. 
+    // Por ahora, redistribuir proporcionalmente a quien ya tiene.
+    // Pero ojo: No superar el totalDistritos. (Ya implícito porque solo redistribuimos lo liberado).
     
-    // Redistribuir proporcionalmente
+    // Verificar si realmente necesitamos redistribuir o podemos dejar vacante.
+    // UX moderna: Dejar vacante da más control. Redistribuir confunde.
+    // COMENTADO para dar control manual total (como sugiere el prompt "asignar libremente").
+    /*
     const totalOtros = otrosPartidos.reduce((sum, p) => sum + (mrPorEstado[estado][p] || 0), 0);
     let distritosRestantes = distritosLibres;
     
     otrosPartidos.forEach((p, index) => {
       if (distritosRestantes === 0) return;
-      
-      const valorActual = mrPorEstado[estado][p] || 0;
-      const proporcion = valorActual / totalOtros;
-      
-      // Último partido recibe lo que queda
-      const ajuste = (index === otrosPartidos.length - 1) 
-        ? distritosRestantes 
-        : Math.min(Math.round(distritosLibres * proporcion), distritosRestantes);
-      
-      mrPorEstado[estado][p] = valorActual + ajuste;
-      distritosRestantes -= ajuste;
-      
-      console.log(`[STATES TABLE]   ↳ ${p}: ${valorActual} → ${valorActual + ajuste} (+${ajuste})`);
+      // ... lógica de redistribución ...
     });
+    */
   }
   
   // 🆕 Quitar distritos de otros partidos cuando uno aumenta
   takeFromOtherParties(estado, partidoBeneficiado, distritosNecesarios, mrPorEstado) {
     const otrosPartidos = Object.keys(mrPorEstado[estado])
       .filter(p => p !== partidoBeneficiado && (mrPorEstado[estado][p] || 0) > 0)
-      .sort((a, b) => (mrPorEstado[estado][b] || 0) - (mrPorEstado[estado][a] || 0)); // Mayor a menor
-    
-    if (otrosPartidos.length === 0) {
-      console.log(`[STATES TABLE] ℹ️ No hay partidos de los que quitar en ${estado}`);
-      return;
-    }
-    
-    console.log(`[STATES TABLE] 📊 Quitando ${distritosNecesarios} distritos de otros partidos en ${estado}`);
+      .sort((a, b) => (mrPorEstado[estado][b] || 0) - (mrPorEstado[estado][a] || 0)); // Quitar al que más tiene primero
     
     let distritosRestantes = distritosNecesarios;
+    let totalQuitado = 0;
     
-    // Quitar primero de los partidos con más distritos
     for (const p of otrosPartidos) {
       if (distritosRestantes === 0) break;
       
@@ -2988,25 +3149,187 @@ initializeSidebarControls() {
       
       mrPorEstado[estado][p] = valorActual - aQuitar;
       distritosRestantes -= aQuitar;
+      totalQuitado += aQuitar;
       
-      console.log(`[STATES TABLE]   ↳ ${p}: ${valorActual} → ${valorActual - aQuitar} (-${aQuitar})`);
+      console.log(`[STATES TABLE]   🔻 Robando localmente a ${p} en ${estado}: -${aQuitar}`);
     }
+    
+    return totalQuitado;
+  }
+
+  // 🆕 Robar escaños del pool global (buscar partido con más escaños en cualquier estado)
+  takeFromGlobalPool(cantidad, partidoBeneficiado, mrPorEstado) {
+    if (cantidad <= 0) return 0;
+
+    let robados = 0;
+    const partidos = Object.keys(this.partidosData || {});
+
+    // 1. Calcular riqueza nacional (total escaños MR por partido)
+    const riqueza = {};
+    partidos.forEach(p => riqueza[p] = 0);
+    
+    Object.values(mrPorEstado).forEach(estadoData => {
+        Object.entries(estadoData).forEach(([p, count]) => {
+            riqueza[p] = (riqueza[p] || 0) + count;
+        });
+    });
+
+    // 2. Ordenar candidatos a víctimas (más ricos primero, excluyendo al beneficiado)
+    const victimas = partidos
+        .filter(p => p !== partidoBeneficiado && (riqueza[p] || 0) > 0)
+        .sort((a, b) => riqueza[b] - riqueza[a]);
+
+    // 3. Robar
+    for (const victima of victimas) {
+        if (robados >= cantidad) break;
+
+        // Buscar estados donde la víctima tenga escaños
+        // Prioridad: Estados donde tenga MÁS escaños (para no dejarlo en 0 si es posible)
+        const estadosConVictima = Object.keys(mrPorEstado)
+            .filter(e => (mrPorEstado[e][victima] || 0) > 0)
+            .sort((a, b) => mrPorEstado[b][victima] - mrPorEstado[a][victima]);
+
+        for (const estado of estadosConVictima) {
+            if (robados >= cantidad) break;
+
+            const disponible = mrPorEstado[estado][victima];
+            if (disponible > 0) {
+                mrPorEstado[estado][victima] -= 1;
+                robados++;
+                console.log(`[STATES TABLE]   🌍 Robando globalmente a ${victima} en ${estado} (-1)`);
+            }
+        }
+    }
+
+    return robados;
   }
   
+  // 🆕 Leer distribución MR por estado desde la tabla HTML (Fuente de verdad visual)
+  readMRDistributionFromTable() {
+    // Intentar buscar en el documento global primero (coherencia con updateStatesTable)
+    let container = document.getElementById('states-table-container');
+    
+    // Fallback: buscar dentro del componente si no está en global
+    if (!container) {
+      container = this.querySelector('.states-table-container');
+    }
+    
+    if (!container) return null;
+    
+    const table = container.querySelector('table.states-table');
+    if (!table) return null;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return null;
+    
+    // Leer encabezados (idx 0=Estado, idx 1=Total, idx 2+=Partidos)
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    const partidos = headers.slice(2); 
+    
+    const rows = tbody.querySelectorAll('tr');
+    const porEstado = {};
+    
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length === 0) return;
+      
+      const nombreEstado = cells[0].textContent.trim();
+      const distribuciones = {};
+      
+      partidos.forEach((partido, idx) => {
+        const cell = cells[idx + 2];
+        if (cell) {
+          const val = parseInt(cell.textContent.trim()) || 0;
+          distribuciones[partido] = val;
+        }
+      });
+      
+      porEstado[nombreEstado] = distribuciones;
+    });
+    
+    // Validar integridad mínima
+    if (Object.keys(porEstado).length === 0) return null;
+
+    // Debug: mostrar lo que se leyó desde la tabla
+    try {
+      const totalLeido = Object.values(porEstado).reduce((s, est) => s + Object.values(est).reduce((ss, v) => ss + (Number(v) || 0), 0), 0);
+      console.log('[STATES TABLE] 🧾 readMRDistributionFromTable() - datos leídos desde la tabla:', porEstado);
+      console.log('[STATES TABLE] 🧾 readMRDistributionFromTable() - total leido desde tabla:', totalLeido);
+    } catch (e) {
+      console.warn('[STATES TABLE] 🧾 readMRDistributionFromTable() - error al calcular total para debug:', e);
+    }
+
+    return porEstado;
+  }
+
+  // Normalizar nombre de estado (quita tildes, puntos y normaliza espacios/minúsculas)
+  normalizeStateName(name) {
+    if (!name) return '';
+    try {
+      let s = name.normalize('NFKD').replace(/\p{Diacritic}/gu, '');
+      s = s.replace(/\./g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+      return s;
+    } catch (e) {
+      // Fallback simple
+      return String(name).toLowerCase().trim();
+    }
+  }
+
+  // Convierte un objeto {NOMBRE_ESTADO: {PARTIDO: count}} a {ID: {PARTIDO: count}}
+  convertNamesToIds(mrPorEstado) {
+    if (!mrPorEstado) return null;
+    const NOMBRE_A_ID = {
+      "aguascalientes": 1, "baja california": 2, "baja california sur": 3,
+      "campeche": 4, "coahuila": 5, "colima": 6, "chiapas": 7, "chihuahua": 8,
+      "ciudad de mexico": 9, "cdmx": 9, "durango": 10, "guanajuato": 11,
+      "guerrero": 12, "hidalgo": 13, "jalisco": 14, "mexico": 15, "michoacan": 16,
+      "morelos": 17, "nayarit": 18, "nuevo leon": 19, "oaxaca": 20,
+      "puebla": 21, "queretaro": 22, "quintana roo": 23, "san luis potosi": 24,
+      "sinaloa": 25, "sonora": 26, "tabasco": 27, "tamaulipas": 28,
+      "tlaxcala": 29, "veracruz": 30, "yucatan": 31, "zacatecas": 32
+    };
+
+    const out = {};
+    for (const [nombreEstado, partidos] of Object.entries(mrPorEstado)) {
+      const key = this.normalizeStateName(nombreEstado);
+      const id = NOMBRE_A_ID[key];
+      if (id) {
+        out[String(id)] = partidos;
+      } else {
+        // Si no se reconoce, intentar con la clave original en mayúsculas (backend puede mapear)
+        out[nombreEstado] = partidos;
+        console.warn('[MR CONVERT] Estado no reconocido, enviando nombre original como fallback:', nombreEstado, '→ normalizado:', key);
+      }
+    }
+    return out;
+  }
+
   // 🆕 Enviar distribución manual por estados al backend
   sendMRDistributionFromStates() {
-    if (!this.lastResult || !this.lastResult.meta || !this.lastResult.meta.mr_por_estado) {
+    // 🔥 LEER DESDE HTML (Prioridad Máxima del Usuario)
+    let mrPorEstado = this.readMRDistributionFromTable();
+    
+    if (!mrPorEstado) {
+      console.warn('[STATES TABLE] ⚠️ No se pudo leer HTML, usando fallback de memoria');
+      if (this.lastResult && this.lastResult.meta) {
+        mrPorEstado = this.lastResult.meta.mr_por_estado;
+      }
+    }
+    
+    if (!mrPorEstado) {
       console.error('[STATES TABLE] ❌ No hay datos para enviar');
       return;
     }
     
-    const mrPorEstado = this.lastResult.meta.mr_por_estado;
-    
-    // Calcular totales por partido
+    // Calcular totales para consumo local (sliders)
     const distribucion = {};
     const partidos = Object.keys(this.partidosData || {});
+    // Usar el primer estado para obtener lista de partidos si la global falla
+    const firstState = Object.values(mrPorEstado)[0];
+    const partidosEnEstado = firstState ? Object.keys(firstState) : [];
+    const partidosFinal = partidos.length > 0 ? partidos : partidosEnEstado;
     
-    partidos.forEach(partido => {
+    partidosFinal.forEach(partido => {
       let total = 0;
       Object.values(mrPorEstado).forEach(estadoData => {
         total += estadoData[partido] || 0;
@@ -3014,24 +3337,139 @@ initializeSidebarControls() {
       distribucion[partido] = total;
     });
     
-    console.log('[STATES TABLE] 📡 Enviando distribución calculada desde estados:', distribucion);
     
+    // Convertir nombres de estado a IDs cuando sea posible y preparar body compatible
+    const porEstadoIds = this.convertNamesToIds(mrPorEstado) || mrPorEstado;
+
+    // Si por alguna razón el parseo desde la tabla devolviera todos 0 (bug intermitente),
+    // intentar recuperar la distribución desde la memoria lastResult.meta (más fiable)
+    const safeSumStates = (o) => {
+      try {
+        return Object.values(o).reduce((s, est) => {
+          if (!est || typeof est !== 'object') return s;
+          return s + Object.values(est).reduce((ss, v) => ss + (Number(v) || 0), 0);
+        }, 0);
+      } catch (e) { return 0; }
+    };
+
+    const totalFromTable = safeSumStates(porEstadoIds);
+    if (totalFromTable === 0 && this.lastResult && this.lastResult.meta && this.lastResult.meta.mr_por_estado) {
+      console.warn('[STATES TABLE] ⚠️ Distribución leída desde tabla suma 0. Intentando fallback a lastResult.meta.mr_por_estado');
+      const fallback = this.convertNamesToIds(this.lastResult.meta.mr_por_estado) || this.lastResult.meta.mr_por_estado;
+      const totalFallback = safeSumStates(fallback);
+      if (totalFallback > 0) {
+        console.info('[STATES TABLE] ✅ Fallback exitoso: usando mr_por_estado de lastResult.meta en lugar de la tabla');
+        // Recompute distribucion from fallback
+        const partidosFinal2 = partidosFinal;
+        const distribucion2 = {};
+        partidosFinal2.forEach(partido => {
+          let total = 0;
+          Object.values(fallback).forEach(estadoData => {
+            total += estadoData[partido] || 0;
+          });
+          distribucion2[partido] = total;
+        });
+
+        // Reassign for subsequent logic
+        Object.assign(distribucion, distribucion2);
+        // Replace porEstadoIds with fallback
+        for (const k of Object.keys(porEstadoIds)) delete porEstadoIds[k];
+        Object.assign(porEstadoIds, fallback);
+      } else {
+        console.warn('[STATES TABLE] ❌ Fallback también suma 0: no hay datos válidos para enviar');
+      }
+    }
+
+    // Asegurarse de que se envíen siempre los 32 estados (IDs "1".."32").
+    // Si el usuario no editó algún estado, rellenar desde lastResult.meta.mr_por_estado si existe, o con ceros.
+    try {
+      const ALL_IDS = Array.from({ length: 32 }, (_, i) => String(i + 1));
+      const fallbackFromMeta = (this.lastResult && this.lastResult.meta && this.lastResult.meta.mr_por_estado)
+        ? (this.convertNamesToIds(this.lastResult.meta.mr_por_estado) || this.lastResult.meta.mr_por_estado)
+        : null;
+
+      const completePorEstado = {};
+      ALL_IDS.forEach(id => {
+        if (porEstadoIds && Object.prototype.hasOwnProperty.call(porEstadoIds, id) && porEstadoIds[id] && typeof porEstadoIds[id] === 'object') {
+          completePorEstado[id] = porEstadoIds[id];
+        } else if (fallbackFromMeta && Object.prototype.hasOwnProperty.call(fallbackFromMeta, id) && fallbackFromMeta[id]) {
+          completePorEstado[id] = fallbackFromMeta[id];
+        } else {
+          // Crear objeto con todos los partidos en 0 para este estado
+          const emptyState = {};
+          partidosFinal.forEach(p => { emptyState[p] = 0; });
+          completePorEstado[id] = emptyState;
+        }
+      });
+
+      // Reassign porEstadoIds to a completed map
+      for (const k of Object.keys(porEstadoIds || {})) if (!/^[0-9]+$/.test(k)) delete porEstadoIds[k];
+      Object.assign(porEstadoIds, completePorEstado);
+    } catch (e) {
+      console.warn('[STATES TABLE] ⚠️ Error al completar 32 estados para envío:', e);
+    }
+
     // Actualizar window.mrDistributionManual
+    // ⚠️ REGLA DE ORO: Si enviamos por_estado (flechitas), distribucion (sliders) debe ser NULL o ignorada por el script
+    const totalAsignado = Object.values(distribucion).reduce((sum, val) => sum + val, 0);
     window.mrDistributionManual = {
       activa: true,
-      distribucion: distribucion,
-      por_estado: mrPorEstado, // 🆕 Incluir desglose por estado
-      total_asignado: Object.values(distribucion).reduce((sum, val) => sum + val, 0)
+      distribucion: null, // 🔥 NO ENVIAR TOTALES GLOBALES (Para que el backend respete las flechitas)
+      por_estado: porEstadoIds, // estructura interna (objeto)
+      // Enviar ambos campos serializados para compatibilidad con distintas versiones del backend
+      mr_distritos_por_estado: JSON.stringify(porEstadoIds),
+      mr_por_estado: JSON.stringify(porEstadoIds),
+      total_asignado: totalAsignado
     };
+    console.log('[STATES TABLE] 🔍 window.mrDistributionManual preparado:', window.mrDistributionManual);
     
-    // Actualizar sliders globales
+    // Actualizar sliders globales (solo visualmente, sin disparar evento)
     this.mrDistributionData = distribucion;
     this.updateMRDistributionTotal();
-    
-    // Recalcular sistema
+    // Aplicar preview optimista al seat-chart y tabla (igual que sliders globales)
+    try {
+      if (this.lastResult && Array.isArray(this.lastResult.seat_chart)) {
+        const lastSeatChart = this.lastResult.seat_chart;
+        const previewSeatChart = lastSeatChart.map(item => {
+          const clone = Object.assign({}, item);
+          const partyName = (item.party || item.Party || item.partido || '').toString();
+          // usar totales por partido calculados arriba (distribucion)
+          const mrNew = distribucion[partyName] ?? distribucion[partyName.toUpperCase()] ?? distribucion[partyName.toLowerCase()];
+          if (typeof mrNew !== 'undefined') {
+            if ('mr' in clone) clone.mr = mrNew;
+            if ('mr_seats' in clone) clone.mr_seats = mrNew;
+            const rpVal = clone.rp ?? clone.rp_seats ?? clone.RP ?? 0;
+            clone.seats = Number(rpVal) + Number(mrNew || 0);
+          }
+          return clone;
+        });
+
+        const seatChartEl = document.querySelector('seat-chart');
+        if (seatChartEl) {
+          seatChartEl.setAttribute('data', JSON.stringify(previewSeatChart));
+          try { seatChartEl.dispatchEvent(new CustomEvent('force-update', { detail: { optimistic: true, timestamp: Date.now() } })); } catch(e) {/* ignore */}
+        }
+
+        try {
+          const resultadosTabla = this.transformSeatChartToTable(previewSeatChart);
+          const config = { sistema: this.getActiveSystem ? this.getActiveSystem() : 'mixto', pm_activo: this.isPMActive ? this.isPMActive() : false };
+          if (this.updateResultsTable) this.updateResultsTable(resultadosTabla, config);
+        } catch (e) {
+          console.debug('[STATES TABLE] ⚠️ No se pudo aplicar preview de tabla local:', e);
+        }
+
+        console.info('[STATES TABLE] 🔮 Aplicado preview local de seat-chart y tabla (optimista)');
+      }
+    } catch (e) {
+      console.debug('[STATES TABLE] ⚠️ Error al generar preview local desde estados:', e);
+    }
+
+    // Recalcular sistema (backend) — mandar payload con por_estado
     if (typeof window.actualizarDesdeControles === 'function') {
       window.actualizarDesdeControles();
       console.log('[STATES TABLE] ✅ Sistema recalculado con distribución desde estados');
+    } else {
+      console.error('[STATES TABLE] ❌ window.actualizarDesdeControles no está disponible');
     }
   }
   
@@ -4184,7 +4622,7 @@ initializeSidebarControls() {
 
   // 🆕 Método para generar sliders de distribución de distritos MR
   generateMRDistributionSliders() {
-    console.log('[MR DISTRIBUTION] 🎯 Generando sliders de distribución de distritos MR...');
+  console.info('[MR DISTRIBUTION] 🎯 Generando sliders de distribución de distritos MR...');
     
     const container = this.querySelector('#dynamic-mr-district-sliders');
     if (!container) {
@@ -4199,7 +4637,7 @@ initializeSidebarControls() {
     const mrSlider = this.querySelector('#input-mr');
     const totalMR = mrSlider ? parseInt(mrSlider.value) : 300;
     
-    console.log(`[MR DISTRIBUTION] 📊 Total de distritos MR disponibles: ${totalMR}`);
+  console.debug(`[MR DISTRIBUTION] 📊 Total de distritos MR disponibles: ${totalMR}`);
     
     // Actualizar display
     const mrTotalDisplay = document.getElementById('mr-total-display');
@@ -4227,13 +4665,13 @@ initializeSidebarControls() {
     }
     
     const partidos = Object.keys(this.partidosData);
-    console.log(`[MR DISTRIBUTION] 📊 Partidos disponibles (${partidos.length}): ${partidos.join(', ')}`);
+  console.info(`[MR DISTRIBUTION] 📊 Partidos disponibles (${partidos.length}): ${partidos.join(', ')}`);
     
     // 🆕 Intentar obtener valores iniciales desde la tabla de estados si existe
     let valoresIniciales = {};
     if (this.lastResult && this.lastResult.meta && this.lastResult.meta.mr_por_estado) {
       const mrPorEstado = this.lastResult.meta.mr_por_estado;
-      console.log('[MR DISTRIBUTION] 📊 Datos de estados disponibles, calculando totales...');
+  console.debug('[MR DISTRIBUTION] 📊 Datos de estados disponibles, calculando totales...');
       
       partidos.forEach(partido => {
         let totalPartido = 0;
@@ -4243,7 +4681,7 @@ initializeSidebarControls() {
         valoresIniciales[partido] = totalPartido;
       });
       
-      console.log('[MR DISTRIBUTION] ✅ Valores iniciales desde backend:', valoresIniciales);
+  console.info('[MR DISTRIBUTION] ✅ Valores iniciales desde backend:', valoresIniciales);
     }
     
     // Generar slider para cada partido
@@ -4271,7 +4709,7 @@ initializeSidebarControls() {
       
       container.appendChild(sliderGroup);
       
-      console.log(`[MR DISTRIBUTION] ✅ Slider creado para ${partyLabel}: ${this.mrDistributionData[partido]}/${totalMR}`);
+  console.debug(`[MR DISTRIBUTION] ✅ Slider creado para ${partyLabel}: ${this.mrDistributionData[partido]}/${totalMR}`);
       
       // Agregar event listener
       const slider = sliderGroup.querySelector(`#mr-dist-${partyName}`);
@@ -4283,7 +4721,8 @@ initializeSidebarControls() {
           const oldValue = this.mrDistributionData[partido];
           const diferencia = newValue - oldValue;
           
-          console.log(`[MR DISTRIBUTION] 🎚️ ${partyLabel}: ${oldValue} → ${newValue} (diferencia: ${diferencia > 0 ? '+' : ''}${diferencia})`);
+          // Registrar cambio del slider (mensaje conciso)
+          console.debug(`[MR DISTRIBUTION] 🎚️ ${partyLabel}: ${oldValue} → ${newValue} (Δ ${diferencia > 0 ? '+' : ''}${diferencia})`);
           
           // 🆕 REDISTRIBUCIÓN PROPORCIONAL (SUMA CERO)
           if (diferencia !== 0) {
@@ -4299,7 +4738,8 @@ initializeSidebarControls() {
               // Cantidad a redistribuir (con signo opuesto)
               const aRedistribuir = -diferencia;
               
-              console.log(`[MR DISTRIBUTION] 📊 Redistribuyendo ${aRedistribuir} distritos entre ${otrosPartidos.length} partidos...`);
+              // Resumen de redistribución (no log por cada pequeño ajuste)
+              console.debug(`[MR DISTRIBUTION] 📊 Redistribuyendo ${aRedistribuir} distritos entre ${otrosPartidos.length} partidos...`);
               
               // Calcular ajustes proporcionales basados en valores actuales
               let distritosRestantes = aRedistribuir;
@@ -4321,29 +4761,33 @@ initializeSidebarControls() {
                 }
               });
               
-              // Aplicar ajustes
+              // Aplicar ajustes y acumular resumen de cambios
+              const resumenAjustes = [];
               otrosPartidos.forEach(otroPartido => {
                 const partyNameOther = otroPartido.toLowerCase();
                 const valorActual = this.mrDistributionData[otroPartido] || 0;
                 const ajuste = ajustes[otroPartido];
                 const nuevoValor = Math.max(0, valorActual + ajuste);
-                
+
                 // Actualizar datos
                 this.mrDistributionData[otroPartido] = nuevoValor;
-                
+
                 // Actualizar UI
                 const otherSlider = document.getElementById(`mr-dist-${partyNameOther}`);
                 const otherValueBox = document.getElementById(`mr-dist-value-${partyNameOther}`);
-                
+
                 if (otherSlider) otherSlider.value = nuevoValor;
                 if (otherValueBox) otherValueBox.textContent = nuevoValor;
-                
-                console.log(`[MR DISTRIBUTION]   ↳ ${otroPartido}: ${valorActual} → ${nuevoValor} (${ajuste > 0 ? '+' : ''}${ajuste})`);
+
+                resumenAjustes.push(`${otroPartido}: ${valorActual}→${nuevoValor} (${ajuste > 0 ? '+' : ''}${ajuste})`);
               });
+
+              // Log resumido de los ajustes aplicados
+              console.info('[MR DISTRIBUTION]   Ajustes aplicados:', resumenAjustes.join(', '));
               
               // Verificar suma total
               const totalFinal = Object.values(this.mrDistributionData).reduce((sum, val) => sum + val, 0);
-              console.log(`[MR DISTRIBUTION] ✅ Total final: ${totalFinal}/${totalMR}`);
+              console.debug(`[MR DISTRIBUTION] ✅ Total final: ${totalFinal}/${totalMR}`);
             }
           }
           
@@ -4352,13 +4796,13 @@ initializeSidebarControls() {
           
           // 🆕 DEBOUNCE: Enviar al backend automáticamente después de 800ms sin cambios
           if (this.mrDistributionDebounceTimer) {
-            console.log('[MR DISTRIBUTION] ⏱️ Cancelando debounce anterior...');
+            // Evitar spam en consola al cancelar debounces frecuentes
             clearTimeout(this.mrDistributionDebounceTimer);
           }
-          
-          console.log('[MR DISTRIBUTION] ⏱️ Iniciando debounce de 800ms...');
+
+          console.debug('[MR DISTRIBUTION] ⏱️ Debounce programado (800ms)');
           this.mrDistributionDebounceTimer = setTimeout(() => {
-            console.log('[MR DISTRIBUTION] ⏱️ Debounce completado, enviando al backend...');
+            console.info('[MR DISTRIBUTION] ⏱️ Debounce completado — enviando distribución al backend');
             this.sendMRDistribution();
           }, 800);
         });
@@ -4366,7 +4810,7 @@ initializeSidebarControls() {
         // Event listener para cuando termina de mover el slider (mouseup/touchend)
         slider.addEventListener('change', () => {
           // Enviar al backend solo cuando termine de ajustar
-          console.log('[MR DISTRIBUTION] 🚀 Enviando distribución manual al backend...');
+          console.info('[MR DISTRIBUTION] 🚀 Cambio finalizado — enviando distribución manual al backend');
           this.sendMRDistribution();
         });
       }
@@ -4375,11 +4819,11 @@ initializeSidebarControls() {
     // Actualizar total inicial
     this.updateMRDistributionTotal();
     
-    console.log('[MR DISTRIBUTION] ✅ Sliders generados correctamente');
+  console.info('[MR DISTRIBUTION] ✅ Sliders generados correctamente');
     
     // Aplicar estado inicial (deshabilitados por defecto) - SIN setTimeout
     this.updateMRSlidersState();
-    console.log('[MR DISTRIBUTION] 🎯 Estado inicial aplicado inmediatamente');
+  console.debug('[MR DISTRIBUTION] 🎯 Estado inicial aplicado inmediatamente');
   }
   
   // 🆕 Método para habilitar/deshabilitar sliders de MR según toggle
@@ -4393,7 +4837,7 @@ initializeSidebarControls() {
     const sliders = container.querySelectorAll('.control-slider');
     const valueBoxes = container.querySelectorAll('.shock-value-box');
     
-    console.log(`[MR DISTRIBUTION] Actualizando estado de sliders: ${isEnabled ? 'HABILITADOS ✅' : 'DESHABILITADOS ❌'} (${sliders.length} sliders)`);
+  console.info(`[MR DISTRIBUTION] Actualizando estado de sliders: ${isEnabled ? 'HABILITADOS ✅' : 'DESHABILITADOS ❌'} (${sliders.length} sliders)`);
     
     if (isEnabled) {
       // Habilitar sliders
@@ -4409,7 +4853,7 @@ initializeSidebarControls() {
       container.style.opacity = '1';
       container.style.pointerEvents = 'auto';
       
-      console.log('[MR DISTRIBUTION] ✅ Modo manual activado - sliders habilitados para edición');
+  console.info('[MR DISTRIBUTION] ✅ Modo manual activado - sliders habilitados para edición');
       
       // 🆕 Activar flag global para que se envíen los datos manuales
       if (window.mrDistributionManual) {
@@ -4512,8 +4956,8 @@ initializeSidebarControls() {
     const totalMR = mrSlider ? parseInt(mrSlider.value) : 300;
     
     if (total > totalMR) {
-      console.warn(`[MR DISTRIBUTION] ⚠️ Total excede el límite: ${total}/${totalMR}. No se enviará al backend.`);
-      // Mostrar advertencia visual al usuario (opcional)
+      console.warn(`[MR DISTRIBUTION] ⚠️ Total excede el límite: ${total}/${totalMR}. Enviando de todos modos (Modo Flex).`);
+      // Mostrar advertencia visual pero NO BLOQUEAR
       const warningBox = document.getElementById('mr-distribution-warning');
       if (warningBox) {
         warningBox.style.borderColor = '#EF4444';
@@ -4521,7 +4965,7 @@ initializeSidebarControls() {
           warningBox.style.borderColor = '#F59E0B';
         }, 2000);
       }
-      return;
+      // return; // 🔥 REMOVED BLOCKING - Allow user override
     }
     
     console.log('[MR DISTRIBUTION] 📡 Enviando distribución al backend:', {
@@ -4531,10 +4975,20 @@ initializeSidebarControls() {
       porcentaje: `${((total/totalMR)*100).toFixed(1)}%`
     });
     
+    // Al usar sliders globales, intencionalmente NO leemos ni enviamos el estado geográfico actual
+    // para permitir que el backend regenere la distribución basada en los nuevos totales.
+
     // Guardar distribución en variable global para que script.js la envíe al backend
     window.mrDistributionManual = {
       activa: true,
       distribucion: { ...this.mrDistributionData },
+      // ⚠️ IMPORTANTE: Al mover sliders globales, NO enviamos por_estado (dejamos null)
+      // para que el backend pueda recalcular la geografía base usando los nuevos totales.
+      // Si enviáramos el por_estado viejo, tendría prioridad y anularía el slider.
+      por_estado: null,
+      // Para compatibilidad con backends que esperan claves por estado, enviar también
+      mr_distritos_por_estado: null,
+      mr_por_estado: null,
       total_asignado: total,
       total_disponible: totalMR
     };
@@ -4546,6 +5000,47 @@ initializeSidebarControls() {
     if (typeof window.actualizarDesdeControles === 'function') {
       console.log('[MR DISTRIBUTION] 🚀 Llamando a window.actualizarDesdeControles()...');
       // Sin setTimeout ni debounce - ejecutar inmediatamente
+      // Primero aplicar una actualización optimista local del seat-chart y tabla
+      try {
+        if (this.lastResult && Array.isArray(this.lastResult.seat_chart)) {
+          const lastSeatChart = this.lastResult.seat_chart;
+          const previewSeatChart = lastSeatChart.map(item => {
+            const clone = Object.assign({}, item);
+            const partyName = (item.party || item.Party || '').toString();
+            const mrNew = this.mrDistributionData[partyName] ?? this.mrDistributionData[partyName.toUpperCase()] ?? this.mrDistributionData[partyName.toLowerCase()];
+            if (typeof mrNew !== 'undefined') {
+              if ('mr' in clone) clone.mr = mrNew;
+              if ('mr_seats' in clone) clone.mr_seats = mrNew;
+              // Recalculate total seats if rp/rp_seats present
+              const rpVal = clone.rp ?? clone.rp_seats ?? clone.RP ?? 0;
+              clone.seats = Number(rpVal) + Number(mrNew || 0);
+            }
+            return clone;
+          });
+
+          // Actualizar seat-chart DOM para vista inmediata
+          const seatChartEl = document.querySelector('seat-chart');
+          if (seatChartEl) {
+            seatChartEl.setAttribute('data', JSON.stringify(previewSeatChart));
+            try { seatChartEl.dispatchEvent(new CustomEvent('force-update', { detail: { optimistic: true, timestamp: Date.now() } })); } catch(e){/* ignore */}
+          }
+
+          // Actualizar tabla de resultados usando los helpers locales
+          try {
+            const resultadosTabla = this.transformSeatChartToTable(previewSeatChart);
+            const config = { sistema: this.getActiveSystem ? this.getActiveSystem() : 'mixto', pm_activo: this.isPMActive ? this.isPMActive() : false };
+            if (this.updateResultsTable) this.updateResultsTable(resultadosTabla, config);
+          } catch (e) {
+            console.debug('[MR DISTRIBUTION] ⚠️ No se pudo aplicar preview de tabla local:', e);
+          }
+
+          console.info('[MR DISTRIBUTION] 🔮 Aplicado preview local de seat-chart y tabla (optimista)');
+        }
+      } catch (e) {
+        console.debug('[MR DISTRIBUTION] ⚠️ Error al generar preview local:', e);
+      }
+
+      // Ejecutar la recálculación real (backend)
       window.actualizarDesdeControles();
       console.log('[MR DISTRIBUTION] ✅ Sistema recalculado con distribución manual');
     } else {
