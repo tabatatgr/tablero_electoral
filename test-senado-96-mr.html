@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba Senado 96 MR - Electoral Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=20260118020100">
+    <link rel="stylesheet" href="components/DashboardHeader/DashboardHeader.css?v=20260118020100">
+    <link rel="stylesheet" href="components/DashboardTitle/DashboardTitle.css?v=20260118020100">
+    <link rel="stylesheet" href="components/seat_chart/SeatChart.css?v=20260118020100">
+    <link rel="stylesheet" href="components/panel_control/ControlSidebar.css?v=20260118020100">
+    <link rel="stylesheet" href="components/IndicadorBox/IndicadorBox.css?v=20260118020100">
+    <link rel="stylesheet" href="components/notifications/NotificationSystem.css?v=20260118020100">
+    <link rel="stylesheet" href="components/vote_redistribution/VoteRedistribution.css?v=20260118020100">
+</head>
+<body>
+    <dashboard-header></dashboard-header>
+    <div class="container">
+        <div class="main-content">
+            <dashboard-title 
+                titulo="Senado 96 Escaños - Solo Mayoría Relativa + Primera Minoría" 
+                subtitulo="Prueba: 64 MR + 32 PM = 96 totales">
+                <div class="indicadores-resumen">
+                    <indicador-box etiqueta="Escaños totales" valor="96"></indicador-box>
+                    <indicador-box etiqueta="MR Pura" valor="64"></indicador-box>
+                    <indicador-box etiqueta="Primera Minoría" valor="32"></indicador-box>
+                    <indicador-box etiqueta="RP" valor="0"></indicador-box>
+                </div>
+                <seat-chart></seat-chart>
+            </dashboard-title>
+        </div>
+        <control-sidebar></control-sidebar>
+    </div>
+    <notification-system></notification-system>
+    
+    <script src="components/DashboardHeader/DashboardHeader.js?v=20260118020100"></script>
+    <script src="components/DashboardTitle/DashboardTitle.js?v=20260118020100"></script>
+    <script src="components/seat_chart/SeatChart.js?v=20260118020100"></script>
+    <script src="components/IndicadorBox/IndicadorBox.js?v=20260118020100"></script>
+    <script src="components/panel_control/ControlSidebar.js?v=20260118020100"></script>
+    <script src="components/notifications/NotificationSystem.js?v=20260118020100"></script>
+    <script src="components/vote_redistribution/VoteRedistribution.js?v=20260118020100"></script>
+    <script src="scripts/script_general/script.js?v=20260118020100"></script>
+
+    <script>
+        // Configuración automática al cargar la página
+        window.addEventListener('load', async () => {
+            console.log('🎯 Configurando prueba Senado 96 MR...');
+            
+            // Esperar a que los componentes se inicialicen
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // 1. Cambiar a Senado
+            const senadoBtn = document.querySelector('[data-chamber="senado"]');
+            if (senadoBtn) {
+                senadoBtn.click();
+                console.log('✅ Cambiado a Senado');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // 2. Seleccionar año 2024
+            const yearSelect = document.getElementById('year-select');
+            if (yearSelect) {
+                yearSelect.value = '2024';
+                yearSelect.dispatchEvent(new Event('change'));
+                console.log('✅ Año configurado: 2024');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // 3. Cambiar a modelo Personalizado
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect) {
+                modelSelect.value = 'personalizado';
+                modelSelect.dispatchEvent(new Event('change'));
+                console.log('✅ Modelo configurado: Personalizado');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // 4. Configurar 96 escaños totales
+            const magnitudSlider = document.getElementById('input-magnitud');
+            if (magnitudSlider) {
+                magnitudSlider.value = '96';
+                magnitudSlider.dispatchEvent(new Event('input'));
+                console.log('✅ Magnitud configurada: 96 escaños');
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 5. Seleccionar regla electoral: Mixto (MR + RP)
+            const mixtoRadio = document.querySelector('input[name="electoral-rule"][value="mixto"]');
+            if (mixtoRadio) {
+                mixtoRadio.checked = true;
+                mixtoRadio.dispatchEvent(new Event('change'));
+                console.log('✅ Regla electoral: Mixto');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // 6. Configurar MR = 64
+            const mrSlider = document.getElementById('input-mr');
+            if (mrSlider) {
+                mrSlider.value = '64';
+                mrSlider.dispatchEvent(new Event('input'));
+                console.log('✅ MR configurada: 64 escaños');
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 7. Configurar RP = 0
+            const rpSlider = document.getElementById('input-rp');
+            if (rpSlider) {
+                rpSlider.value = '0';
+                rpSlider.dispatchEvent(new Event('input'));
+                console.log('✅ RP configurada: 0 escaños');
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 8. Activar Primera Minoría
+            const pmSwitch = document.getElementById('first-minority-switch');
+            if (pmSwitch && pmSwitch.getAttribute('data-switch') === 'Off') {
+                pmSwitch.click();
+                console.log('✅ Primera Minoría activada');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            // 9. Configurar PM = 32
+            const pmSlider = document.getElementById('input-first-minority');
+            if (pmSlider) {
+                pmSlider.value = '32';
+                pmSlider.dispatchEvent(new Event('input'));
+                console.log('✅ PM configurada: 32 escaños');
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 10. Lanzar actualización
+            console.log('🚀 Lanzando simulación...');
+            if (window.actualizarDesdeControles) {
+                window.actualizarDesdeControles();
+                console.log('✅ Simulación lanzada');
+            }
+            
+            // 11. Esperar resultados y mostrar desglose
+            setTimeout(() => {
+                console.log('\n📊 ===== DESGLOSE DE RESULTADOS =====\n');
+                
+                // Obtener datos del SeatChart
+                const seatChart = document.querySelector('seat-chart');
+                if (seatChart && seatChart.getAttribute('data')) {
+                    const data = JSON.parse(seatChart.getAttribute('data'));
+                    
+                    console.log('Total de escaños: 96');
+                    console.log('MR Pura: 64');
+                    console.log('Primera Minoría: 32');
+                    console.log('RP: 0\n');
+                    
+                    let totalEscanos = 0;
+                    console.log('PARTIDO\t\t\tESCAÑOS\t\t%');
+                    console.log('─'.repeat(60));
+                    
+                    data.forEach(partido => {
+                        const nombre = partido.partido.padEnd(20);
+                        const escanos = partido.escanos.toString().padEnd(8);
+                        const porcentaje = ((partido.escanos / 96) * 100).toFixed(2) + '%';
+                        console.log(`${nombre}\t${escanos}\t${porcentaje}`);
+                        totalEscanos += partido.escanos;
+                    });
+                    
+                    console.log('─'.repeat(60));
+                    console.log(`TOTAL\t\t\t${totalEscanos}\t\t100%`);
+                    
+                    // Extraer datos adicionales si existen en window
+                    if (window.lastSimulationData) {
+                        console.log('\n📈 DESGLOSE POR TIPO DE ESCAÑO:\n');
+                        console.log('Estos datos requieren análisis del backend...');
+                    }
+                }
+            }, 5000);
+        });
+    </script>
+</body>
+</html>

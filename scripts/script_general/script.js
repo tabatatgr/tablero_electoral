@@ -1842,7 +1842,42 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
     
     console.log('[DEBUG] Sistema de reparto exclusivo (global):', { reparto_mode, reparto_method });
 
-    // Si el modelo es personalizado, obtener el valor del slider de magnitud, sobrerrepresentación, umbral y regla electoral
+    //  LEER UMBRAL PARA TODOS LOS MODELOS (no solo personalizado)
+    const thresholdInput = document.getElementById('threshold-slider');
+    const thresholdSwitch = document.getElementById('threshold-switch');
+    let umbral = undefined;  // undefined = no aplicar filtro en backend
+    
+    console.log('[DEBUG]  UMBRAL DEBUG (global):', {
+        thresholdInputFound: !!thresholdInput,
+        thresholdSwitchFound: !!thresholdSwitch,
+        switchActive: thresholdSwitch ? thresholdSwitch.classList.contains('active') : false,
+        sliderValue: thresholdInput ? thresholdInput.value : 'N/A',
+        camara: camara,
+        modelo: modelo
+    });
+    
+    if (thresholdSwitch && thresholdSwitch.classList.contains('active')) {
+        umbral = thresholdInput ? parseFloat(thresholdInput.value) : 3;  // Default 3% si no hay slider
+        if (isNaN(umbral)) umbral = 3;
+        
+        // Validación robusta de rangos
+        let umbralStatus = 'normal';
+        if (umbral > 10) {
+            umbralStatus = 'muy_alto';
+            console.log('[DEBUG]  UMBRAL MUY ALTO:', umbral, '% - Puede eliminar todos los partidos');
+        } else if (umbral > 5) {
+            umbralStatus = 'alto';
+            console.log('[DEBUG]  UMBRAL ALTO:', umbral, '% - Puede reducir significativamente los partidos');
+        } else {
+            console.log('[DEBUG] ✅ UMBRAL ACTIVADO:', umbral, '%');
+        }
+        
+        console.log('[DEBUG]  UMBRAL STATUS:', umbralStatus);
+    } else {
+        console.log('[DEBUG]  UMBRAL DESACTIVADO (switch off o no encontrado)');
+    }
+
+    // Si el modelo es personalizado, obtener el valor del slider de magnitud, sobrerrepresentación y regla electoral
     if (modelo === 'personalizado') {
         const magnitudInput = document.getElementById('input-magnitud');
         let magnitud;
@@ -1858,40 +1893,10 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         if (overrepSwitch && overrepSwitch.classList.contains('active') && overrepInput) {
             sobrerrepresentacion = parseFloat(overrepInput.value);
         }
-        const thresholdInput = document.getElementById('threshold-slider');
-        const thresholdSwitch = document.getElementById('threshold-switch');
-        let umbral = 0;
         
-        console.log('[DEBUG]  UMBRAL DEBUG:', {
-            thresholdInputFound: !!thresholdInput,
-            thresholdSwitchFound: !!thresholdSwitch,
-            switchActive: thresholdSwitch ? thresholdSwitch.classList.contains('active') : false,
-            sliderValue: thresholdInput ? thresholdInput.value : 'N/A',
-            camara: camara,
-            modelo: modelo
-        });
+        //  NOTA: umbral ya fue leído arriba (fuera del bloque personalizado)
+        //  para que aplique a TODOS los modelos
         
-        if (thresholdSwitch && thresholdSwitch.classList.contains('active')) {
-            umbral = thresholdInput ? parseFloat(thresholdInput.value) : 0;
-            if (isNaN(umbral)) umbral = 0;
-            
-            // Validación robusta de rangos
-            let umbralStatus = 'normal';
-            if (umbral > 10) {
-                umbralStatus = 'muy_alto';
-                console.log('[DEBUG]  UMBRAL MUY ALTO:', umbral, '% - Puede eliminar todos los partidos');
-            } else if (umbral > 5) {
-                umbralStatus = 'alto';
-                console.log('[DEBUG]  UMBRAL ALTO:', umbral, '% - Puede reducir significativamente los partidos');
-            } else {
-                console.log('[DEBUG] UMBRAL NORMAL:', umbral, '%');
-            }
-            
-            console.log('[DEBUG]  UMBRAL ACTIVADO:', umbral, 'Status:', umbralStatus);
-        } else {
-            umbral = 0;
-            console.log('[DEBUG]  UMBRAL DESACTIVADO (switch off o no encontrado)');
-        }
         const electoralRuleRadio = document.querySelector('input[name="electoral-rule"]:checked');
         let sistema = electoralRuleRadio ? electoralRuleRadio.value : undefined;
         
@@ -2104,6 +2109,7 @@ function actualizarDesdeControlesSilent(forceChamber = null, showSuccessNotifica
         let magnitud = (camara === 'senado') ? 128 : 500;
         cargarSimulacion({
             anio, camara, modelo: modeloBackend, magnitud, 
+            umbral,  // ✅ Incluir umbral también para modelos NO personalizados
             reparto_mode, reparto_method,
             silentLoad: !showSuccessNotification,
             porcentajes_redistribucion: window.porcentajesTemporales || null,  // 🆕 Incluir porcentajes si existen
