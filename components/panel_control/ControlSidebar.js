@@ -4178,32 +4178,14 @@ initializeSidebarControls() {
   aplicarMayoriaForzadaAlSistema(data, tipoMayoria, partido, camara) {
     console.log('[MAYORÍAS] 🔄 Aplicando mayoría forzada al sistema...', { data, partido, camara });
     
-    // 🔍 DEBUG: Ver estructura completa de la respuesta
-    console.log('[MAYORÍAS] 📦 Estructura de data completa:', JSON.stringify(data, null, 2));
-    
-    // 🔍 DEBUG: Verificar si vienen resultados por partido
-    if (data.resultados) {
-      console.log('[MAYORÍAS] 📊 Resultados por partido:', data.resultados);
-      const partidosAfectados = data.resultados.map(p => p.partido || p.name);
-      console.log('[MAYORÍAS] 🎯 Partidos en respuesta:', partidosAfectados);
-    }
-    
     // Extraer datos según cámara
     const escanosNecesarios = data.senadores_necesarios || data.diputados_necesarios || data.escanos_necesarios || 0;
     const escanosObtenidos = data.senadores_obtenidos || data.diputados_obtenidos || data.escanos_obtenidos || 0;
     const mrAsignados = data.mr_asignados || data.mr_senadores || 0;
     const rpAsignados = data.rp_asignados || data.rp_senadores || 0;
-    const pmAsignados = data.pm_senadores || 0; // Solo para senado
+    const pmAsignados = data.pm_senadores || 0;
     
-    console.log('[MAYORÍAS] � Datos extraídos:', {
-      escanosNecesarios,
-      escanosObtenidos,
-      mrAsignados,
-      rpAsignados,
-      pmAsignados
-    });
-    
-    // 🎯 OPCIÓN 1: Guardar datos en window para que script.js los use
+    // Guardar datos en window para que script.js los use
     window.mayoriaForzadaData = {
       activa: true,
       partido: partido,
@@ -4220,14 +4202,28 @@ initializeSidebarControls() {
       data_completa: data
     };
     
-    console.log('[MAYORÍAS] 💾 Datos guardados en window.mayoriaForzadaData:', window.mayoriaForzadaData);
+    console.log('[MAYORÍAS] 💾 Datos guardados en window.mayoriaForzadaData');
     
-    // 🔄 Disparar actualización del sistema (tabla + seat chart)
+    // Actualizar notificación a "Actualizando visualización..."
+    if (window.notifications && window.notifications.isReady) {
+      window.notifications.update('mayoria-calculating', {
+        title: 'Actualizando visualización',
+        subtitle: 'Aplicando mayoría forzada...',
+        type: 'loading',
+        duration: 0
+      });
+    }
+    
+    // Disparar actualización del sistema
     if (typeof window.actualizarDesdeControles === 'function') {
-      console.log('[MAYORÍAS] 🚀 Llamando a actualizarDesdeControles()...');
+      console.log('[MAYORÍAS] 🚀 Actualizando sistema completo...');
+      window.actualizarDesdeControles();
+      
+      // Ocultar notificación después de un momento (handleResults mostrará la notificación final)
       setTimeout(() => {
-        window.actualizarDesdeControles();
-        console.log('[MAYORÍAS] ✅ Sistema actualizado (tabla y seat chart)');
+        if (window.notifications && window.notifications.isReady) {
+          window.notifications.hide('mayoria-calculating');
+        }
       }, 100);
     } else {
       console.error('[MAYORÍAS] ❌ window.actualizarDesdeControles no disponible');
