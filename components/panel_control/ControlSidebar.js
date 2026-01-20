@@ -2942,12 +2942,25 @@ initializeSidebarControls() {
       return;
     }
     
-    console.log('[DEBUG] 🔍 this.lastResult.meta:', this.lastResult.meta);
-    console.log('[DEBUG] 🔍 Keys en meta:', this.lastResult.meta ? Object.keys(this.lastResult.meta) : 'NO HAY META');
+    // 🔥 PRIORIDAD A MAYORÍA FORZADA: Si hay datos de mayoría guardados, usar esos
+    let metaSource = this.lastResult.meta;
+    
+    // Verificar si hay mayoría forzada activa con datos guardados
+    if (window.mayoriaForzadaData?.activa && 
+        this.lastResult.meta?.mr_distritos_por_estado && 
+        this.lastResult.meta?._mayoriaForzada) {
+      console.log('[DEBUG] 🎯 MAYORÍA FORZADA ACTIVA - Usando datos de mayoría guardados en meta');
+      // Ya está en this.lastResult.meta, solo lo usamos
+    } else {
+      console.log('[DEBUG] 📊 DATOS NORMALES - Usando this.lastResult.meta estándar');
+    }
+    
+    console.log('[DEBUG] 🔍 metaSource:', metaSource);
+    console.log('[DEBUG] 🔍 Keys en meta:', metaSource ? Object.keys(metaSource) : 'NO HAY META');
     
     // 🆕 FALLBACK: Si no hay meta, intentar cargar desde /data/initial
-    if (!this.lastResult.meta) {
-      console.log('[DEBUG] ⚠️ No hay meta en lastResult');
+    if (!metaSource) {
+      console.log('[DEBUG] ⚠️ No hay meta en this.lastResult');
       console.log('[DEBUG] 🔄 Intentando cargar desde /data/initial para cámara:', this.selectedChamber);
       
       try {
@@ -2966,10 +2979,10 @@ initializeSidebarControls() {
         console.log('[DEBUG] ✅ Datos recibidos de /data/initial');
         console.log('[DEBUG] 🔍 data.meta:', data.meta);
         
-        // Actualizar lastResult con los datos obtenidos
+        // Actualizar metaSource con los datos obtenidos
         if (data.meta) {
-          this.lastResult.meta = data.meta;
-          console.log('[DEBUG] ✅ meta actualizado desde /data/initial');
+          metaSource = data.meta;
+          console.log('[DEBUG] ✅ metaSource actualizado desde /data/initial');
         } else {
           console.log('[DEBUG] ❌ /data/initial tampoco devolvió meta');
           container.innerHTML = '<p style="padding: 1rem; text-align: center; color: #888;">No hay datos de distribución geográfica disponibles</p>';
@@ -2984,18 +2997,26 @@ initializeSidebarControls() {
       }
     }
     
-    const mrPorEstado = this.lastResult.meta.mr_por_estado;
+    // 🔥 PRIORIDAD: Si hay mayoría forzada, usar mr_distritos_por_estado
+    let mrPorEstado;
+    if (this.lastResult.meta?._mayoriaForzada && this.lastResult.meta?.mr_distritos_por_estado) {
+      console.log('[DEBUG] 🎯 Usando mr_distritos_por_estado de MAYORÍA FORZADA');
+      mrPorEstado = this.lastResult.meta.mr_distritos_por_estado;
+    } else {
+      console.log('[DEBUG] 📊 Usando mr_por_estado NORMAL');
+      mrPorEstado = metaSource.mr_por_estado;
+    }
     
     // 🆕 SELECCIÓN FLEXIBLE DE METADATOS (Restaurando funcionalidad)
     // Intentar leer la definición geográfica específica
-    let distritosPorEstado = this.lastResult.meta.distritos_por_estado || 
-                             this.lastResult.meta.senadores_por_estado ||
-                             this.lastResult.meta.mr_distritos_por_estado;
+    let distritosPorEstado = metaSource.distritos_por_estado || 
+                             metaSource.senadores_por_estado ||
+                             metaSource.mr_distritos_por_estado;
     
     // 🔍 DEBUG: Verificar si el backend envió el nuevo campo
-    console.log('[DEBUG] 📦 meta.distritos_por_estado desde backend:', this.lastResult.meta.distritos_por_estado ? '✅ EXISTE' : '❌ NO EXISTE');
-    if (this.lastResult.meta.distritos_por_estado) {
-      console.log('[DEBUG] 📊 Ejemplo distritos_por_estado:', Object.entries(this.lastResult.meta.distritos_por_estado).slice(0, 3));
+    console.log('[DEBUG] 📦 meta.distritos_por_estado desde backend:', metaSource.distritos_por_estado ? '✅ EXISTE' : '❌ NO EXISTE');
+    if (metaSource.distritos_por_estado) {
+      console.log('[DEBUG] 📊 Ejemplo distritos_por_estado:', Object.entries(metaSource.distritos_por_estado).slice(0, 3));
     }
                              
     // 🔥 FALLBACK ROBUSTO: Si no hay definición geográfica explícita, 
@@ -3008,7 +3029,7 @@ initializeSidebarControls() {
              distritosPorEstado[estado] = total;
          });
          // Guardar en meta para cachear
-         // this.lastResult.meta.distritos_por_estado = distritosPorEstado; // No cachear para evitar conflictos
+         // metaSource.distritos_por_estado = distritosPorEstado; // No cachear para evitar conflictos
     }
     
     // 🔥 DEBUG DETALLADO DE KEYS PARA DIAGNOSTICO
@@ -3024,7 +3045,7 @@ initializeSidebarControls() {
     if (!mrPorEstado || !distritosPorEstado) {
       console.log('[DEBUG] ❌ No hay datos de distribución geográfica en meta');
       console.log('[DEBUG] 💡 El backend debe enviar meta.mr_por_estado y meta.distritos_por_estado/senadores_por_estado');
-      console.log('[DEBUG] 🔍 ESTRUCTURA COMPLETA DE META:', JSON.stringify(this.lastResult.meta, null, 2));
+      console.log('[DEBUG] 🔍 ESTRUCTURA COMPLETA DE META:', JSON.stringify(metaSource, null, 2));
       
       // 🔄 Intentar fallback solo si no se ha intentado antes
       if (!this.lastResult.meta._fallbackAttempted) {
@@ -4128,6 +4149,15 @@ initializeSidebarControls() {
       console.log('[MAYORÍAS] 🔍 Endpoint:', endpoint);
       console.log('[MAYORÍAS] 🔍 Parámetros:', Object.fromEntries(params));
       
+      // 🔔 Mostrar notificación de procesamiento
+      if (window.notifications && window.notifications.isReady) {
+        window.notifications.loading(
+          'Calculando mayoría forzada...',
+          'Esto puede tomar unos segundos',
+          'calculating-majority'
+        );
+      }
+      
       // Hacer petición al backend (GET)
       console.log('[MAYORÍAS] 🚀 Haciendo fetch...');
       const response = await fetch(url);
@@ -4204,30 +4234,88 @@ initializeSidebarControls() {
     
     console.log('[MAYORÍAS] 💾 Datos guardados en window.mayoriaForzadaData');
     
-    // Actualizar notificación a "Actualizando visualización..."
-    if (window.notifications && window.notifications.isReady) {
-      window.notifications.update('mayoria-calculating', {
-        title: 'Actualizando visualización',
-        subtitle: 'Aplicando mayoría forzada...',
-        type: 'loading',
-        duration: 0
-      });
+    // 🗺️ GUARDAR DATOS DE DISTRIBUCIÓN POR ESTADO para la tabla de distritos
+    const mrPorEstado = data.mr_por_estado || data.mr_distritos_por_estado;
+    
+    if (mrPorEstado) {
+      console.log('[MAYORÍAS] 📊 Guardando distribución por estado para tabla de distritos');
+      
+      // Inicializar lastResult si no existe
+      if (!this.lastResult) {
+        this.lastResult = { meta: {}, resultados: [] };
+      }
+      if (!this.lastResult.meta) {
+        this.lastResult.meta = {};
+      }
+      
+      // Guardar datos de distribución por estado
+      if (data.mr_por_estado) {
+        this.lastResult.meta.mr_por_estado = data.mr_por_estado;
+        console.log('[MAYORÍAS] ✅ mr_por_estado guardado:', Object.keys(data.mr_por_estado).length, 'estados');
+      }
+      
+      if (data.mr_distritos_por_estado) {
+        this.lastResult.meta.mr_distritos_por_estado = data.mr_distritos_por_estado;
+      }
+      
+      // Inferir o copiar distritos_por_estado
+      if (data.distritos_por_estado) {
+        this.lastResult.meta.distritos_por_estado = data.distritos_por_estado;
+      } else if (data.mr_por_estado) {
+        // Inferir desde mr_por_estado
+        const distritosPorEstado = {};
+        Object.keys(data.mr_por_estado).forEach(estado => {
+          const total = Object.values(data.mr_por_estado[estado]).reduce((a, b) => a + b, 0);
+          distritosPorEstado[estado] = total;
+        });
+        this.lastResult.meta.distritos_por_estado = distritosPorEstado;
+        console.log('[MAYORÍAS] ✅ distritos_por_estado inferido');
+      }
+      
+      // Marcar que viene de mayoría forzada
+      this.lastResult.meta._mayoriaForzada = true;
+    } else {
+      console.warn('[MAYORÍAS] ⚠️ No se recibió mr_por_estado del backend');
     }
     
-    // Disparar actualización del sistema
-    if (typeof window.actualizarDesdeControles === 'function') {
-      console.log('[MAYORÍAS] 🚀 Actualizando sistema completo...');
-      window.actualizarDesdeControles();
-      
-      // Ocultar notificación después de un momento (handleResults mostrará la notificación final)
-      setTimeout(() => {
-        if (window.notifications && window.notifications.isReady) {
-          window.notifications.hide('mayoria-calculating');
-        }
-      }, 100);
-    } else {
-      console.error('[MAYORÍAS] ❌ window.actualizarDesdeControles no disponible');
-    }
+    // 🔥 Disparar evento personalizado para que script.js actualice todo
+    console.log('[MAYORÍAS] ✅ Datos de mayoría forzada aplicados - disparando evento de actualización...');
+    
+    // Construir objeto de datos compatible con el formato que espera script.js
+    const mayoriaData = {
+      plan: data.plan || 'vigente',
+      seat_chart: data.seat_chart,
+      kpis: data.kpis || {},
+      resultados: data.resultados || [],
+      meta: this.lastResult.meta, // Usar el meta que acabamos de guardar
+      mayorias: {
+        activa: true,
+        partido: data.partido,
+        tipo: data.tipo_mayoria,
+        data: data
+      }
+    };
+    
+    // Guardar también en this.lastResult para que esté disponible
+    this.lastResult = { ...this.lastResult, ...mayoriaData };
+    
+    // Disparar evento con los datos
+    const event = new CustomEvent('mayoria-forzada-aplicada', {
+      detail: mayoriaData,
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+    
+    // Ocultar notificación y mostrar éxito
+    setTimeout(() => {
+      if (window.notifications && window.notifications.isReady) {
+        window.notifications.hide('calculating-majority');
+        window.notifications.success('Mayoría forzada aplicada', {
+          subtitle: `${data.partido}: ${data.diputados_obtenidos || data.senadores_obtenidos} escaños`,
+          duration: 3000
+        });
+      }
+    }, 100);
   }
   
   // ⚠️ DEPRECATED: Función antigua que mostraba solo resumen

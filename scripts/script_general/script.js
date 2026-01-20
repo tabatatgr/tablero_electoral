@@ -242,6 +242,98 @@ function initializeAllFunctionality() {
     }
 }
 
+// ===== LISTENER PARA MAYORÍA FORZADA =====
+document.addEventListener('mayoria-forzada-aplicada', async function(event) {
+    console.log('[MAYORÍA] 🎯 Evento recibido, actualizando visualización...', event.detail);
+    
+    const data = event.detail;
+    
+    try {
+        // 1. ACTUALIZAR SEAT CHART
+        if (data.seat_chart) {
+            const seatChart = document.querySelector('seat-chart');
+            if (seatChart) {
+                const requestId = Date.now() + '_mayoria';
+                const seatArray = Array.isArray(data.seat_chart) ? data.seat_chart : [];
+                
+                const normalizedData = seatArray.map(item => ({
+                    party: item.party,
+                    seats: item.seats || 0,
+                    mr_seats: item.mr || item.mr_seats || 0,
+                    rp_seats: item.rp || item.rp_seats || 0,
+                    pm_seats: item.pm || item.pm_seats || 0,
+                    votes_percent: item.percent || item.votes_percent || 0,
+                    color: item.color || '#999999'
+                }));
+                
+                const contentHash = JSON.stringify(normalizedData).substring(0, 15);
+                const renderKey = `${requestId}_seats`;
+                
+                seatChart.setAttribute('data-key', renderKey);
+                seatChart.setAttribute('data', JSON.stringify(normalizedData));
+                
+                console.log('[MAYORÍA] ✅ Seat chart actualizado');
+            }
+        }
+        
+        // 2. ACTUALIZAR KPIs
+        if (data.kpis) {
+            const indicadores = document.querySelectorAll('.indicadores-resumen indicador-box');
+            if (indicadores.length >= 4) {
+                const kpiKey = `mayoria_kpis_${Date.now()}`;
+                
+                indicadores[0].setAttribute('data-key', `${kpiKey}_1`);
+                indicadores[0].setAttribute('valor', data.kpis.total_escanos || 0);
+                
+                const backendRatio = data.kpis.ratio_promedio ?? data.kpis.ratio_promedio_ponderado_por_votos ?? null;
+                indicadores[1].setAttribute('data-key', `${kpiKey}_2`);
+                if (backendRatio != null) {
+                    indicadores[1].setAttribute('valor', Number(backendRatio).toFixed(3));
+                } else {
+                    indicadores[1].setAttribute('valor', (data.kpis.mae_votos_vs_escanos || 0).toFixed(2));
+                }
+                
+                indicadores[2].setAttribute('data-key', `${kpiKey}_3`);
+                indicadores[2].setAttribute('valor', (data.kpis.gallagher || 0).toFixed(2));
+                
+                indicadores[3].setAttribute('data-key', `${kpiKey}_4`);
+                indicadores[3].setAttribute('valor', (data.kpis.total_votos || 0).toLocaleString('es-MX'));
+                
+                console.log('[MAYORÍA] ✅ KPIs actualizados');
+            }
+        }
+        
+        // 3. ACTUALIZAR TABLAS
+        const sidebar = document.querySelector('control-sidebar');
+        if (sidebar && data.seat_chart) {
+            // Guardar datos en sidebar
+            sidebar.lastResult = data;
+            
+            // Actualizar tabla de resultados
+            if (sidebar.transformSeatChartToTable && sidebar.updateResultsTable) {
+                const resultadosTabla = sidebar.transformSeatChartToTable(data.seat_chart);
+                const config = {
+                    sistema: sidebar.getActiveSystem ? sidebar.getActiveSystem() : 'mixto',
+                    pm_activo: sidebar.isPMActive ? sidebar.isPMActive() : false
+                };
+                sidebar.updateResultsTable(resultadosTabla, config);
+                console.log('[MAYORÍA] ✅ Tabla de resultados actualizada');
+            }
+            
+            // Actualizar tabla de estados
+            if (sidebar.updateStatesTable) {
+                await sidebar.updateStatesTable();
+                console.log('[MAYORÍA] ✅ Tabla de estados actualizada');
+            }
+        }
+        
+        console.log('[MAYORÍA] ✅ Todas las visualizaciones actualizadas correctamente');
+        
+    } catch (error) {
+        console.error('[MAYORÍA] ❌ Error actualizando visualización:', error);
+    }
+});
+
 // ===== SIDEBAR FUNCTIONALITY =====
 function initializeEnhancedSidebar() {
     console.log(' Initializing enhanced sidebar...');
